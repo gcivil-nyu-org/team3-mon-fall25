@@ -1,0 +1,10 @@
+# CI/CD workflow for the backend.
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main

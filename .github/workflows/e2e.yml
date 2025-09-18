@@ -1,0 +1,10 @@
+# CI/CD workflow for end-to-end tests.
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
