@@ -1,35 +1,47 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from "react";
+import { Outlet, Link } from "react-router-dom";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#56018D",
+        color: "#fff",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Global Navbar */}
+      <nav
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          gap: "40px",
+          padding: "20px 0",
+          fontSize: "1.2rem",
+          fontWeight: "500",
+          backgroundColor: "#56018D",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <Link to="/" style={{ color: "#fff", textDecoration: "none" }}>
+          Home
+        </Link>
+        <Link to="/create-listing" style={{ color: "#fff", textDecoration: "none" }}>
+          Create Listing
+        </Link>
+      </nav>
 
-export default App
+      {/* Render page content here */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Outlet />
+      </div>
+    </div>
+  );
+}
