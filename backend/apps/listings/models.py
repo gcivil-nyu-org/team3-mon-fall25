@@ -1,7 +1,6 @@
 from django.db import models
 
 # Create your models here.
-from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 
 
@@ -27,7 +26,7 @@ class Listing(models.Model):
         db_table = 'listings'
         # used for efficient filtering
         indexes = [
-            models.Index(fields=['user']),
+            # models.Index(fields=['user']),
             models.Index(fields=['category']),
             models.Index(fields=['status']),
         ]
