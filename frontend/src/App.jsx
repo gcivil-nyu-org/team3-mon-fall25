@@ -36,6 +36,10 @@ export default function App() {
         <Link to="/create-listing" style={{ color: "#fff", textDecoration: "none" }}>
           Create Listing
         </Link>
+         <Link to="/my-listings" style={{ color: "#fff", textDecoration: "none" }}>
+          My Listings
+        </Link>
+
       </nav>
 
       {/* Render page content here */}
