@@ -16,7 +16,7 @@ const CreateListing = () => {
     <div
       style={{
         textAlign: "center",
-        maxWidth: "600px",
+        width: "600px",
         margin: "0 auto",
         padding: "2rem",
       }}
