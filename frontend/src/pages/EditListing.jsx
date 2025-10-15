@@ -1,11 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 const EditListing = () => {
+  const { id } = useParams();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [file, setFile] = useState(null);
+
+  useEffect(() => {
+    // TODO: Placeholder for fetching listing data
+    const fetchListingData = async () => {
+      console.log(`Fetching data for listing ${id}...`);
+      // TODO: Replace with actual API call
+      const mockData = {
+        title: "Sample MacBook Pro",
+        description: "This is a great laptop.",
+        price: "1150",
+        category: "Electronics",
+      };
+      setTitle(mockData.title);
+      setDescription(mockData.description);
+      setPrice(mockData.price);
+      setCategory(mockData.category);
+    };
+
+    fetchListingData();
+  }, [id]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
