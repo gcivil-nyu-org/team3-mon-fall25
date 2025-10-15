@@ -1,10 +1,11 @@
 import React from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { FaBoxOpen, FaDollarSign, FaEdit, FaCheckCircle, FaTrash } from "react-icons/fa";
 import "./ListingDetail.css";
 
 export default function ListingDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   // 🔧 Placeholder data — will later come from backend
   const listing = {
@@ -37,9 +38,8 @@ export default function ListingDetail() {
         <div className="listing-actions">
           <button
             className="btn edit"
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log("Edit clicked");
+            onClick={() => {
+              navigate(`/listing/${id}/edit`);
             }}
           >
             <FaEdit /> Edit Listing
