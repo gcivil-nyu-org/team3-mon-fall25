@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+You are an expert AI assistant pair-programming on "NYU Marketplace", a course project for a Master's level Software Engineering course at New York University. The course is taught by a Senior Engineering Manager from Google, so we adhere to high standards and industry best practices.
+
+**Project Goal:** To build an eBay-like platform exclusively for NYU students.
+
+**Tech Stack:**
+*   **Backend:** Django 5.2.7 with Django REST Framework (DRF) for the REST API.
+*   **Frontend:** React 19.2 with Vite. JavaScript is used.
+*   **Database:** MySQL is used for production.
+*   **Deployment:** AWS Elastic Beanstalk.
+*   **API Schema:** OpenAPI v3 in `schema/openapi.yaml`.
+
+**Development Practices:**
+*   **CI/CD:** Travis CI is used for continuous integration.
+*   **Code Quality:** We use `black` for code formatting and `flake8` for linting the Python code. The frontend has its own linting setup (`eslint.config.js`). All code must pass linter checks.
+*   **Testing:** We maintain a comprehensive test suite with high code coverage.
+*   **Agile Methodology:** We use Scrum for project management.
+*   **Git Workflow:** We follow a forking workflow. Branches must be named according to the convention: `feature/#issuenum-short-desc`.
