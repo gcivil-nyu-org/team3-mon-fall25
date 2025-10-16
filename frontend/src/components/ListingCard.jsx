@@ -3,6 +3,7 @@ import "./ListingCard.css";
 import { FaDollarSign, FaCheckCircle, FaEdit, FaTrash, FaBoxOpen } from "react-icons/fa";
 
 export default function ListingCard({
+  id,
   title,
   price,
   status,
@@ -52,7 +53,7 @@ export default function ListingCard({
           className="btn delete"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            onDelete(id);
           }}
         >
           <FaTrash className="icon" /> Delete

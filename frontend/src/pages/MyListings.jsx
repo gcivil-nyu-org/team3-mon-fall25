@@ -37,9 +37,9 @@ export default function MyListings() {
         <ListingCard
           key={listing.id}
           {...listing}
-          onMarkSold={(e) => { e.stopPropagation(); markAsSold(listing.id); }}
-          onEdit={(e) => { e.stopPropagation(); editListing(listing.id); }}
-          onDelete={(e) => { e.stopPropagation(); deleteListing(listing.id); }}
+          onMarkSold={() => markAsSold(listing.id)}
+          onEdit={() => editListing(listing.id)}
+          onDelete={() => deleteListing(listing.id)}
           onViewDetails={() => viewDetails(listing.id)} 
         />
       ))}
