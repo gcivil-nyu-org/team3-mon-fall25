@@ -18,7 +18,6 @@ class ListingCreateSerializer(serializers.ModelSerializer):
             'status',
             'location',
             'images'
-            # add owenr in the future
         ]
         read_only_fields = ['listing_id']
 
@@ -43,7 +42,9 @@ class ListingImageSerializer(serializers.ModelSerializer):
 # Detail page — GET /api/listings/<id>/
 class ListingDetailSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
-    
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_netid = serializers.CharField(source='user.netid', read_only=True)
+
     class Meta:
         model = Listing
         fields = [
@@ -57,9 +58,10 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'images',
-            # add owenr in the future
+            'user_email',
+            'user_netid',
         ]
-        read_only_fields = ['listing_id', 'created_at', 'updated_at']
+        read_only_fields = ['listing_id', 'created_at', 'updated_at', 'user_email', 'user_netid']
 
 
 # Update listing— PUT / PATCH

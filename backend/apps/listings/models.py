@@ -12,7 +12,7 @@ class Listing(models.Model):
     ]
 
     listing_id = models.AutoField(primary_key=True)
-    # user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='listings')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='listings', null=True, blank=True)
     category = models.CharField(max_length=50)
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -26,7 +26,7 @@ class Listing(models.Model):
         db_table = 'listings'
         # used for efficient filtering
         indexes = [
-            # models.Index(fields=['user']),
+            models.Index(fields=['user']),
             models.Index(fields=['category']),
             models.Index(fields=['status']),
         ]
