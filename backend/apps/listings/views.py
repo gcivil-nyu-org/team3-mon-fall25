@@ -5,7 +5,14 @@ from .serializers import ListingCreateSerializer, ListingUpdateSerializer, Compa
 
 # Create your views here.
 
-class ListingViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
+class ListingViewSet(
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    ):
     """
     A viewset for creating listings.
     Exposes a POST endpoint to /api/listings/.

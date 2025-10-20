@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ListingCard from "../components/ListingCard";
+import { deleteListingAPI } from "../api/listings";
 
 export default function MyListings() {
   const navigate = useNavigate(); // hook for redirection
