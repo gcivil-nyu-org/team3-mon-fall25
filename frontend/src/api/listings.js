@@ -28,7 +28,7 @@ export async function getMyListings() {
 }
 
 
-export async function markListingSold(listing){
+export async function markListingSold(listing) {
     const payload = {
         category: listing.category,
         title: listing.title,
@@ -38,9 +38,7 @@ export async function markListingSold(listing){
         location: listing.location,
     };
     return putListing(listing.listing_id, payload)
-import apiClient from './client';
-import { endpoints } from './endpoints';
-
+}
 // Delete listing
 export async function deleteListingAPI(listingId) {
   try {
