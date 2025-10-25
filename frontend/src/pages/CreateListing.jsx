@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createListing } from "@/api/listings.js";
 
 const CreateListing = () => {
   const [title, setTitle] = useState("");
@@ -7,9 +8,27 @@ const CreateListing = () => {
   const [category, setCategory] = useState("");
   const [file, setFile] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({ title, description, price, category, file });
+
+    try{
+        const payload = {
+            category,
+            title,
+            description,
+            price,
+        };
+
+        await createListing(payload);
+        setTitle(""); setDescription(""); setPrice(""); setCategory(""); setFile(null);
+    }catch (err){
+        const msg =
+            err.response?.data?.detail ||
+            err.response?.data||
+            err.message||
+            "Failed to create listing";
+        console.log(msg)
+    }
   };
 
   return (

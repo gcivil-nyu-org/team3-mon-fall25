@@ -26,7 +26,6 @@ class Listing(models.Model):
         db_table = 'listings'
         # used for efficient filtering
         indexes = [
-            models.Index(fields=['user']),
             models.Index(fields=['category']),
             models.Index(fields=['status']),
         ]

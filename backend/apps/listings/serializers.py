@@ -1,3 +1,4 @@
+from django.template.context_processors import request
 from rest_framework import serializers
 from django.db import models
 from apps.listings.models import Listing, ListingImage
