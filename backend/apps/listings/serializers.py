@@ -41,6 +41,13 @@ class ListingCreateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['listing_id', 'uploaded_images']
 
+    def validate(self, data):
+        """Ensure user is authenticated"""
+        request = self.context.get('request')
+        if request and not request.user.is_authenticated:
+            raise serializers.ValidationError("Authentication required to create listings")
+        return data
+
     def validate_price(self, value):
         if value < 0:
             raise serializers.ValidationError("Price must be non-negative.")
@@ -145,6 +152,19 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             'update_images',
             'images',
         ]
+
+    def validate(self, data):
+        """Ensure user is authenticated and owns the listing"""
+        request = self.context.get('request')
+        if request and not request.user.is_authenticated:
+            raise serializers.ValidationError("Authentication required to update listings")
+
+        # Check ownership - this is handled by permission class but adding extra validation
+        instance = getattr(self, 'instance', None)
+        if instance and instance.user != request.user:
+            raise serializers.ValidationError("You can only update your own listings")
+
+        return data
 
     def validate_price(self, value):
         if value < 0:
