@@ -32,7 +32,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         - First time: creates user and returns JWT
         - Subsequent times: validates password and returns JWT
 
-        POST /api/auth/login/
+        POST /api/v1/auth/login/
         """
         serializer = UserAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -75,7 +75,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         """
         Get current authenticated user's details
 
-        GET /api/auth/me/
+        GET /api/v1/auth/me/
         """
         serializer = UserDetailSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)

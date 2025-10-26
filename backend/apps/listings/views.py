@@ -23,7 +23,7 @@ class ListingViewSet(
     ):
     """
     A viewset for creating listings.
-    Exposes a POST endpoint to /api/listings/.
+    Exposes a POST endpoint to /api/v1/listings/.
     Supports multipart/form-data for image uploads.
     """
     queryset = Listing.objects.all()

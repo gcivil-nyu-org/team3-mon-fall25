@@ -17,7 +17,7 @@ class ListingImageSerializer(serializers.ModelSerializer):
         ]
 
 
-# Create listing — only used for POST /api/listings/
+# Create listing — only used for POST /api/v1/listings/
 class ListingCreateSerializer(serializers.ModelSerializer):
     images = serializers.ListField(
         child=serializers.ImageField(max_length=100000, allow_empty_file=False, use_url=False),
@@ -83,7 +83,7 @@ class ListingCreateSerializer(serializers.ModelSerializer):
         return listing
 
 
-# Detail page — GET /api/listings/<id>/
+# Detail page — GET /api/v1/listings/<id>/
 class ListingDetailSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
@@ -255,7 +255,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-# Compact list — GET /api/listings/
+# Compact list — GET /api/v1/listings/
 class CompactListingSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
 

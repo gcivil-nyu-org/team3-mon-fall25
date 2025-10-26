@@ -8,13 +8,13 @@ urlpatterns = router.urls
 """
     Following APIs are Supported:
 
-       METHOD       API Endpoints              Function                     Fields
+       METHOD       API Endpoints                  Function                     Fields
 
-    1. POST         /api/listings/             create a listing             category, title, description, price, status, location, images (optional, max 10)
-    2. GET          /api/listings/             list all listings            listing_id, category, title, price, status, primary_image
-    3. GET          /api/listings/<id>/        retrieve a single listing    listing_id, category, title, description, price, status, location, created_at, updated_at, images, user_email, user_netid
-    4. PUT/PATCH    /api/listings/<id>/        update a listing             category, title, description, price, status, location, new_images (optional), remove_image_ids (optional), update_images (optional)
-    5. DELETE       /api/listings/<id>/        delete a listing             (deletes listing and all associated images from S3)
+    1. POST         /api/v1/listings/             create a listing             category, title, description, price, status, location, images (optional, max 10)
+    2. GET          /api/v1/listings/             list all listings            listing_id, category, title, price, status, primary_image
+    3. GET          /api/v1/listings/<id>/        retrieve a single listing    listing_id, category, title, description, price, status, location, created_at, updated_at, images, user_email, user_netid
+    4. PUT/PATCH    /api/v1/listings/<id>/        update a listing             category, title, description, price, status, location, new_images (optional), remove_image_ids (optional), update_images (optional)
+    5. DELETE       /api/v1/listings/<id>/        delete a listing             (deletes listing and all associated images from S3)
 
     Image Management in Update (PUT/PATCH):
     - new_images: List of image files to upload (max 10 total images per listing)
