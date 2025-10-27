@@ -1,55 +1,58 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-export default function Home() {
+export default function Home(){
+  const navigate = useNavigate();
+
   return (
-    <div
-      style={{
-        textAlign: "center",
-        maxWidth: "700px",
-        margin: "0 auto",
-        padding: "2rem",
-      }}
-    >
-      <h1
+    <main className="container" style={{ padding: "32px 0 56px" }}>
+      {/* Hero */}
+      <section
         style={{
-          fontSize: "3.5rem",
-          fontWeight: "800",
-          marginBottom: "1rem",
+          background: "linear-gradient(180deg,#ffffff 0%,#fafafb 100%)",
+          border: "1px solid var(--border)",
+          borderRadius: 24,
+          padding: "56px 24px",
+          textAlign: "center",
+          color: "var(--ink)"
         }}
       >
-        Welcome to NYU Marketplace
-      </h1>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>NYU Marketplace</h1>
+        <p style={{ margin: "12px auto 0", color: "var(--muted)", maxWidth: 760, fontSize: 18, lineHeight: 1.6 }}>
+          Buy and sell with fellow NYU students. Find great deals on textbooks, furniture, electronics, and more.
+        </p>
 
-      <p
-        style={{
-          fontSize: "1.3rem",
-          marginBottom: "3rem",
-          lineHeight: "1.6",
-          opacity: 0.9,
-        }}
-      >
-        Your one-stop platform for discovering, posting, and managing listings
-        within the NYU community.
-      </p>
+        <div style={{ marginTop: 24, display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+          <Link to="/browse" className="cta cta--primary">
+            <span className="cta__icon" aria-hidden>🔎</span>
+            Browse Listings
+          </Link>
+          <Link to="/create-listing" className="cta cta--outline">
+            <span className="cta__icon" aria-hidden>👜</span>
+            Create Listing
+          </Link>
+        </div>
+      </section>
 
-      <Link
-        to="/create-listing"
-        style={{
-          backgroundColor: "#fff",
-          color: "#56018D",
-          padding: "14px 40px",
-          fontSize: "1.2rem",
-          fontWeight: "600",
-          textDecoration: "none",
-          borderRadius: "8px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-          transition: "all 0.3s ease",
-        }}
-        onMouseOver={(e) => (e.target.style.backgroundColor = "#e9ddf5")}
-        onMouseOut={(e) => (e.target.style.backgroundColor = "#fff")}
-      >
-        + Create a Listing
-      </Link>
-    </div>
+      {/* Features */}
+      <section style={{ marginTop: 40 }}>
+        <div className="features">
+          <div className="feature">
+            <div className="feature__icon">🔍</div>
+            <h3 className="feature__title">Easy to Find</h3>
+            <p className="feature__body">Search and filter through listings to find exactly what you need</p>
+          </div>
+          <div className="feature">
+            <div className="feature__icon">🛡️</div>
+            <h3 className="feature__title">Safe & Secure</h3>
+            <p className="feature__body">Connect only with verified NYU students in your dorm community</p>
+          </div>
+          <div className="feature">
+            <div className="feature__icon">📉</div>
+            <h3 className="feature__title">Great Deals</h3>
+            <p className="feature__body">Find affordable items from students who know what you need</p>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
