@@ -50,7 +50,7 @@ class ListingViewSet(
 ):
     """
     A viewset for creating listings.
-    Exposes a POST endpoint to /api/listings/.
+    Exposes a POST endpoint to /api/v1/listings/.
     Supports multipart/form-data for image uploads.
     """
 
@@ -92,7 +92,7 @@ class ListingViewSet(
     def user_listings(self, request):
         """
         Get all listings for the authenticated user.
-        Endpoint: GET /api/listings/user/
+        Endpoint: GET /api/v1/listings/user/
         """
         user_listings = Listing.objects.filter(user=request.user)
         serializer = self.get_serializer(user_listings, many=True)
