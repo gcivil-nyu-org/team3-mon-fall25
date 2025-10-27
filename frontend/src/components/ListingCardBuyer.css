@@ -1,0 +1,100 @@
+/* Compact buyer card: NYU-ish look */
+:root {
+  --purple: #56018D;
+  --border: #E5E7EB;
+  --ink: #111827;
+  --muted: #6B7280;
+  --card: #ffffff;
+}
+
+.buyer-card {
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(17,24,39,0.03);
+  transition: box-shadow .15s, transform .15s;
+}
+
+.buyer-card:hover {
+  box-shadow: 0 8px 24px rgba(17,24,39,0.08);
+  transform: translateY(-2px);
+}
+
+.buyer-card__imgWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3; /* keeps consistent height */
+  background: #f3f4f6;
+}
+
+.buyer-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.buyer-card__sold {
+  position: absolute;
+  inset: 0;
+  background: rgba(17,24,39,0.45);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.buyer-card__body {
+  padding: 12px;
+}
+
+.buyer-card__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.buyer-card__title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--ink);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buyer-card__price {
+  font-weight: 800;
+  color: var(--purple);
+  font-size: 16px;
+}
+
+.buyer-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.buyer-card__badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+}
+
+.buyer-card__badge.is-active { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
+.buyer-card__badge.is-sold   { background: #F3F4F6; color: #6B7280; }
+
+.buyer-card__loc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

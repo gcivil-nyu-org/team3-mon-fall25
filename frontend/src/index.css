@@ -1,108 +1,22 @@
-/* Reset default browser styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* Reset */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* Global root variables */
 :root {
-  --nyu-purple: #56018d;
-  --text-color: #ffffff;
-  --accent-color: #ffffff;
-  --hover-purple: #e9ddf5;
-
-  font-family: "Segoe UI", Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --purple: #56018D;
+  --bg: #F5F6F8;
+  --border: #E5E7EB;
+  --ink: #111827;
+  --muted: #6B7280;
 }
 
-/*  Make background violet for the entire app */
-html,
-body,
-#root {
-  height: 100%;
-  min-height: 100vh;
-  background-color: var(--nyu-purple);
-  color: var(--text-color);
-  display: flex;
-  flex-direction: column;
-}
+html, body, #root { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: "Segoe UI", Avenir, Helvetica, Arial, sans-serif; }
 
 /* Links */
-a {
-  font-weight: 500;
-  color: var(--accent-color);
-  text-decoration: none;
-  transition: color 0.2s ease-in-out;
-}
+a { color: inherit; text-decoration: none; }
 
-a:hover {
-  color: var(--hover-purple);
-}
+/* Buttons (base) */
+button { font-family: inherit; }
 
-/*  Typography */
-h1,
-h2,
-h3,
-h4,
-h5 {
-  font-weight: 800;
-  color: var(--text-color);
-}
-
-/* Buttons */
-button {
-  border-radius: 8px;
-  border: none;
-  padding: 0.8em 1.5em;
-  font-size: 1.1em;
-  font-weight: 600;
-  font-family: inherit;
-  background-color: var(--accent-color);
-  color: var(--nyu-purple);
-  cursor: pointer;
-  transition: background-color 0.25s;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-button:hover {
-  background-color: var(--hover-purple);
-}
-
-/*  Inputs & textareas */
-input,
-textarea,
-select {
-  width: 100%;
-  padding: 0.9rem 1rem;
-  font-size: 1rem;
-  font-family: inherit;
-  border: none;
-  border-radius: 8px;
-  background-color: #ffffff;
-  color: var(--nyu-purple);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  outline: none;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #777;
-}
-
-/* Responsive typography */
-h1 {
-  font-size: 3.5rem;
-  line-height: 1.2;
-}
-
-@media (max-width: 768px) {
-  h1 {
-    font-size: 2.5rem;
-  }
-}
+/* Container helper (used by pages) */
+.container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
