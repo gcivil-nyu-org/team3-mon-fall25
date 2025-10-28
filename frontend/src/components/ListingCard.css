@@ -1,0 +1,120 @@
+/* ListingCard.css */
+
+/* NYU brand colors */
+:root {
+  --nyu-purple: #57068c;
+  --nyu-purple-dark: #4b2e83;
+  --nyu-accent: #5a2ca0;
+  --light-bg: #f9f9ff;
+  --white: #ffffff;
+  --text-dark: #1a1a1a;
+}
+
+.listing-card {
+  background: var(--white);
+  color: var(--text-dark);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.listing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.image-placeholder {
+  background: var(--light-bg);
+  border-radius: 12px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.listing-info {
+  text-align: center;
+}
+
+.listing-title {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+  color: var(--nyu-purple-dark);
+}
+
+.price {
+  font-size: 1.2rem;
+  margin: 4px 0;
+  color: var(--nyu-purple);
+  font-weight: 600;
+}
+
+.status {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: var(--text-dark);
+}
+
+.status.active {
+  color: green;
+}
+
+.status.sold {
+  color: #a31f34;
+}
+
+.listing-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn .icon {
+  font-size: 1rem;
+}
+
+.btn.sold {
+  background: var(--nyu-accent);
+  color: var(--white);
+}
+.btn.sold:hover {
+  background: var(--nyu-purple);
+}
+
+.btn.edit {
+  background: var(--nyu-purple-dark);
+  color: var(--white);
+}
+.btn.edit:hover {
+  background: var(--nyu-purple);
+}
+
+.btn.delete {
+  background: #a31f34;
+  color: var(--white);
+}
+.btn.delete:hover {
+  background: #8b1a28;
+}

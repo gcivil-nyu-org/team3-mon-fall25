@@ -1,0 +1,100 @@
+.listing-detail-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1rem;
+  background: #4b0082; /* NYU purple */
+  min-height: 100vh;
+}
+
+.listing-detail-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.5rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 250px;
+  background: #f4f4f4;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.listing-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #2d2d2d;
+}
+
+.listing-price {
+  font-size: 1.5rem;
+  color: #5A2D82;
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.listing-status {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.listing-status.active {
+  color: green;
+}
+
+.listing-status.sold {
+  color: red;
+}
+
+.listing-description {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 2rem;
+  color: #444;
+  line-height: 1.6;
+}
+
+.listing-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.btn {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.3s;
+}
+
+.btn.edit {
+  background: #5A2D82;
+}
+
+.btn.sold {
+  background: #4CAF50;
+}
+
+.btn.delete {
+  background: #D32F2F;
+}
+
+.btn:hover {
+  filter: brightness(1.1);
+}
