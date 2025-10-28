@@ -268,3 +268,88 @@ class TestListingViewSet:
         ).exists()
         # Check that is_primary was updated.
         assert listing.images.get(image_id=image2.image_id).is_primary is True
+
+    def test_user_can_update_own_listing_with_put(self, authenticated_client):
+        """
+        Verify that a user can update their own listing using PUT.
+        This tests the 'update' action, as opposed to 'partial_update'.
+        """
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+        updated_data = {
+            "title": "Updated via PUT",
+            "price": 99.99,
+            "category": "Books",
+            "description": "An updated description.",
+        }
+
+        response = client.put(
+            f"/api/v1/listings/{listing.listing_id}/",
+            updated_data,
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        listing.refresh_from_db()
+        assert listing.title == updated_data["title"]
+        assert float(listing.price) == updated_data["price"]
+
+    def test_s3_delete_failure_handled_gracefully(self, authenticated_client):
+        """
+        Verify that a listing is still deleted even if S3 image deletion fails.
+        """
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+        ListingImageFactory(listing=listing)
+
+        with patch("utils.s3_service.s3_service.delete_image") as mock_delete, patch(
+            "apps.listings.views.logger"
+        ) as mock_logger:
+            mock_delete.side_effect = Exception("S3 delete failed")
+            response = client.delete(f"/api/v1/listings/{listing.listing_id}/")
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not Listing.objects.filter(pk=listing.pk).exists()
+            mock_logger.error.assert_called_once()
+
+    def test_compact_serializer_primary_image_logic(self, api_client):
+        """
+        Test the primary_image logic in the CompactListingSerializer.
+        """
+        # 1. Listing with a primary image
+        listing1 = ListingFactory()
+        img1 = ListingImageFactory(
+            listing=listing1, is_primary=True, image_url="primary.jpg"
+        )
+        ListingImageFactory(listing=listing1, is_primary=False)
+
+        # 2. Listing with no primary image, but other images
+        listing2 = ListingFactory()
+        img2 = ListingImageFactory(
+            listing=listing2, is_primary=False, display_order=0, image_url="first.jpg"
+        )
+        ListingImageFactory(listing=listing2, is_primary=False, display_order=1)
+
+        # 3. Listing with no images
+        listing3 = ListingFactory()
+
+        response = api_client.get("/api/v1/listings/")
+        assert response.status_code == status.HTTP_200_OK
+        results = {item["listing_id"]: item for item in response.data}
+
+        assert results[listing1.listing_id]["primary_image"] == "primary.jpg"
+        assert results[listing2.listing_id]["primary_image"] == "first.jpg"
+        assert results[listing3.listing_id]["primary_image"] is None
+
+    def test_update_listing_with_invalid_image_update_data(self, authenticated_client):
+        """
+        Test that updating a listing with malformed update_images data fails.
+        """
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+        response = client.patch(
+            f"/api/v1/listings/{listing.listing_id}/",
+            {"update_images": json.dumps([{"wrong_key": 1}])},
+            format="multipart",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
