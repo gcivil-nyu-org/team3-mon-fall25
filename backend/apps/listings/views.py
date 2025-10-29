@@ -8,6 +8,7 @@ from rest_framework.permissions import (
     SAFE_METHODS,
 )
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from .models import Listing
 from .serializers import (
@@ -18,6 +19,9 @@ from .serializers import (
 )
 from utils.s3_service import s3_service
 import logging
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import ListingFilter
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +58,35 @@ class ListingViewSet(
     Supports multipart/form-data for image uploads.
     """
 
-    queryset = Listing.objects.all()
+    queryset = Listing.objects.filter(status="active")
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_class = ListingFilter
+    ordering_fields = ['created_at', 'price', 'title']
+    ordering = ['-created_at']
+    search_fields = ['title', 'description', 'location']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        
+        allowed_fields = {'created_at', 'price', 'title'}
+        ordering_param = self.request.query_params.get('ordering')
+
+        if ordering_param:
+            #any mistake if made at the end of the URL will be stripped
+            ordering_param = ordering_param.strip() 
+            raw = ordering_param.lstrip('-')
+            if raw not in allowed_fields:
+                raise ValidationError({"ordering": ["Invalid ordering field."]})
+            queryset = queryset.order_by(ordering_param)
+        else:
+            queryset = queryset.order_by('-created_at')
+
+        return queryset
+
 
     def get_serializer_class(self):
         if self.action == "create":
