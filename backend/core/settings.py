@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import pymysql
+
+pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,12 +43,21 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "marketplace-env.eba-2uqrmgb2.us-east-1.elasticbeanstalk.com",
-]
+# ALLOWED_HOSTS = [
+#     "127.0.0.1",
+#     "localhost",
+#     "marketplace-env.eba-2uqrmgb2.us-east-1.elasticbeanstalk.com",
+# ]
 
+ALLOWED_HOSTS_ENV = os.environ.get("ALLOWED_HOSTS")
+
+# I've set : "127.0.0.1,localhost,nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com"
+# to the env ALLOWED_HOSTS.
+if ALLOWED_HOSTS_ENV:
+    ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",")]
+else:
+    # For development (local runserver)
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 # Application definition
 
@@ -79,7 +91,7 @@ ROOT_URLCONF = "core.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "frontend_build"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -98,10 +110,22 @@ WSGI_APPLICATION = "core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.mysql"),
+        "NAME": os.getenv("DB_NAME", "nyu_marketplace"),
+        "USER": os.getenv("DB_USER", "nyu_app"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "yourpassword"),
+        "HOST": os.getenv("DB_HOST", "nyu-marketplace-mysql.c4d68gyyij18.us-east-1.rds.amazonaws.com"),
+        "PORT": os.getenv("DB_PORT", "3306"),
+        "OPTIONS": {"init_command": "SET sql_mode='STRICT_ALL_TABLES'"},
     }
 }
 
@@ -141,6 +165,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [ BASE_DIR / "static" ]
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+TEMPLATES[0]["DIRS"] = [
+    BASE_DIR / "frontend_build",   # index.html from Vite build
+    BASE_DIR / "staticfiles",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -178,6 +209,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite default port
     "http://127.0.0.1:5173",
+    "https://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -186,6 +218,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
 ]
 
 # For development, we can also exempt API endpoints from CSRF
