@@ -354,3 +354,91 @@ class TestListingViewSet:
             format="multipart",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    # -------------------------------
+    # Tests for /api/v1/listings/search/?q=...
+    # -------------------------------
+
+    def test_search_requires_q_param(self, api_client):
+        resp = api_client.get("/api/v1/listings/search/")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "q" in resp.data["detail"].lower()
+
+    def test_search_matches_title_description_location_and_category(self, api_client):
+        # Matches by title
+        ListingFactory(title="Vintage desk", description="solid oak", category="Furniture")
+        # Matches by description
+        ListingFactory(title="Lamp", description="Great desk lamp", category="Electronics")
+        # Matches by location
+        ListingFactory(title="Couch", description="Leather", location="West Desk Hall")
+        # Matches by category (the custom search action includes category)
+        ListingFactory(title="Something", description="misc", category="Desk Accessories")
+        # Non-matching
+        ListingFactory(title="Unrelated item", description="nothing here", category="Sports")
+
+        r = api_client.get("/api/v1/listings/search/?q=desk")
+        assert r.status_code == status.HTTP_200_OK
+        # search action is paginated; expect count/results keys
+        assert {"count", "results"}.issubset(set(r.data.keys()))
+        titles = {row["title"] for row in r.data["results"]}
+        # Should include at least the first four created above (title/desc/location/category matches)
+        assert "Vintage desk" in titles
+        assert "Lamp" in titles
+        assert "Couch" in titles
+        assert "Something" in titles
+        # Should NOT include the unrelated one
+        assert "Unrelated item" not in titles
+
+    def test_search_respects_active_status_only(self, api_client):
+        # Active matches
+        ListingFactory(title="Desk chair", status="active")
+        # Inactive should not be returned (base queryset filters status='active')
+        ListingFactory(title="Desk mat", status="inactive")
+        # Sold should not be returned
+        ListingFactory(title="Desk riser", status="sold")
+
+        r = api_client.get("/api/v1/listings/search/?q=desk")
+        assert r.status_code == status.HTTP_200_OK
+        titles = [row["title"] for row in r.data["results"]]
+        assert "Desk chair" in titles
+        assert "Desk mat" not in titles
+        assert "Desk riser" not in titles
+
+    def test_search_respects_ordering(self, api_client):
+        ListingFactory(title="A", price=30)
+        ListingFactory(title="B", price=10)
+        ListingFactory(title="C", price=20)
+
+        # Ascending by price
+        r1 = api_client.get("/api/v1/listings/search/?q=&ordering=price")
+        assert r1.status_code == status.HTTP_200_OK
+        titles1 = [row["title"] for row in r1.data["results"]]
+        assert titles1 == ["B", "C", "A"]
+
+        # Descending by price
+        r2 = api_client.get("/api/v1/listings/search/?q=&ordering=-price")
+        assert r2.status_code == status.HTTP_200_OK
+        titles2 = [row["title"] for row in r2.data["results"]]
+        assert titles2 == ["A", "C", "B"]
+
+    def test_search_pagination_defaults_and_overrides(self, api_client):
+        # Create more than one page (default page_size=12 in ListingPagination)
+        ListingFactory.create_batch(15, title="Desk item")
+
+        # Page 1 default page_size=12
+        r1 = api_client.get("/api/v1/listings/search/?q=desk")
+        assert r1.status_code == status.HTTP_200_OK
+        assert r1.data["count"] == 15
+        assert len(r1.data["results"]) == 12
+        assert r1.data["next"] is not None
+
+        # Page 2
+        r2 = api_client.get("/api/v1/listings/search/?q=desk&page=2")
+        assert r2.status_code == status.HTTP_200_OK
+        assert len(r2.data["results"]) == 3
+        assert r2.data["previous"] is not None
+
+        # Override page_size (capped by max_page_size=60)
+        r3 = api_client.get("/api/v1/listings/search/?q=desk&page_size=5")
+        assert r3.status_code == status.HTTP_200_OK
+        assert len(r3.data["results"]) == 5
