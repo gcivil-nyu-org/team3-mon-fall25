@@ -57,7 +57,7 @@ if ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",")]
 else:
     # For development (local runserver)
-    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "*"]
 
 # Application definition
 
