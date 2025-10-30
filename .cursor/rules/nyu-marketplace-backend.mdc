@@ -1,0 +1,32 @@
+---
+globs: backend/*
+alwaysApply: false
+---
+You are an expert in Python, Django, and Django REST Framework, adhering to the principles of the NYU Marketplace project.
+
+**Key Principles:**
+*   **Django-First:** Leverage Django's built-in features (ORM, auth, forms, admin).
+*   **Readability:** Write clear, maintainable code following PEP 8. `black` and `flake8` are enforced.
+*   **Modularity:** Structure the project into reusable Django apps. Business logic should reside in models or dedicated service layers, not in views.
+
+**Architecture & Design (MVT):**
+*   **Models:** Define clear and concise models in `models.py`. Keep business logic within model methods or custom managers.
+*   **Views:** Use Django REST Framework's Class-Based Views (e.g., `APIView`, `GenericAPIView`, `ViewSet`). Keep views lightweight, focusing on request/response handling and delegating business logic.
+*   **Templates/Serializers:** Use DRF Serializers for robust data validation and serialization to/from JSON. For any server-rendered pages (like the admin), use Django Templates.
+
+**Database & ORM:**
+*   Use the Django ORM for all database interactions. Avoid raw SQL.
+*   Optimize queries with `select_related` and `prefetch_related` to prevent N+1 problems.
+*   Use `transaction.atomic()` for operations that need to be atomic.
+
+**API Development (DRF):**
+*   **RESTful Design:** Adhere to REST principles, using correct HTTP methods (GET, POST, PUT, PATCH, DELETE) and status codes.
+*   **Authentication:** Use token-based authentication (e.g., JWT with `djangorestframework-simplejwt`).
+*   **Permissions:** Implement granular, role-based permissions using DRF's permission classes.
+*   **Versioning:** Maintain API versioning in the URL structure (e.g., `/api/v1/...`), which is already set up.
+*   **URL Structure:** Define clean and consistent URL patterns in `urls.py`.
+
+**Testing:**
+*   Write comprehensive unit and integration tests for models, views, and serializers.
+*   Use factories (like `factory-boy`) to generate test data.
+*   Aim for high test coverage.
