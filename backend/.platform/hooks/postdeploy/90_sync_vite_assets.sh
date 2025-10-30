@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+# ---------------------------------------------------------------------------------
+# IMPORTANT FOR DEPLOY:
+# This script MUST be executable (chmod +x).
+# If it's not executable, Elastic Beanstalk will NOT sync the frontend build
+# assets to staticfiles/, so the site will 500 / white screen in production.
+#
+# To fix (run locally before git commit/push):
+#   chmod +x .platform/hooks/postdeploy/90_sync_vite_assets.sh
+#
+# After changing permissions, commit the mode change:
+#   git add .platform/hooks/postdeploy/90_sync_vite_assets.sh
+#   git commit -m "fix: make vite assets sync hook executable"
+#
+# ---------------------------------------------------------------------------------
+
 set -euo pipefail
 
 APP_DIR="/var/app/current"
