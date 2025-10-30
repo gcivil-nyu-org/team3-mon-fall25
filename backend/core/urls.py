@@ -23,6 +23,7 @@ from django.views.decorators.cache import never_cache
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+import os
 
 # # SPA index.html（No CSRF). To avoid CSRF middleware's intercept
 # spa_view = method_decorator(csrf_exempt, name="dispatch")(
