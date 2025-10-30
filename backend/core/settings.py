@@ -50,7 +50,7 @@ DEBUG = False
 # ]
 
 ALLOWED_HOSTS_ENV = os.environ.get("ALLOWED_HOSTS")
-ALLOWED_HOSTS += ["*"]
+ALLOWED_HOSTS = ["*"]
 # I've set : "127.0.0.1,localhost,nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com"
 # to the env ALLOWED_HOSTS.
 # if ALLOWED_HOSTS_ENV:
