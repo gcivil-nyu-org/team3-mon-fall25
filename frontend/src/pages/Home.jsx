@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import logoImage from "../assets/images/nyu-marketplace-logo.png";
 
 export default function Home(){
   const navigate = useNavigate();
@@ -8,11 +9,19 @@ export default function Home(){
       {/* Hero Section */}
       <section style={{ background: "#F5F5F5", padding: "100px 24px" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", textAlign: "center" }}>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#111" }}>
-            NYU Marketplace
-          </h1>
+          <div style={{ marginBottom: 10 }}>
+            <img 
+              src={logoImage} 
+              alt="NYU Marketplace"
+              style={{ 
+                height: "200px",
+                margin: "0 auto",
+                display: "block"
+              }}
+            />
+          </div>
           <p style={{
-            margin: "20px auto 0",
+            margin: "10px auto 0",
             color: "#6b7280",
             maxWidth: 600,
             fontSize: 17,
@@ -71,7 +80,7 @@ export default function Home(){
       </section>
 
       {/* Feature Cards Section */}
-      <section style={{ padding: "80px 24px", background: "#F5F5F5" }}>
+      <section style={{ padding: "40px 24px", background: "#F5F5F5" }}>
         <div style={{
           maxWidth: 1120,
           margin: "0 auto",

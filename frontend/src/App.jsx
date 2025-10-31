@@ -2,6 +2,7 @@ import React from "react";
 import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import "./App.css";
+import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
 export default function App() {
   const { user, logout } = useAuth();
@@ -30,7 +31,20 @@ export default function App() {
   <div className="container nav">
     {/* Brand (left) */}
     <div className="nav__brand">
-      <div className="nav__logo">NYU</div>
+      <img 
+        src={logoImage} 
+        alt="NYU Marketplace"
+        style={{ 
+          height: "45px",
+          width: "auto",
+          maxWidth: "90px",
+          marginRight: "12px",
+          borderRadius: "10px",
+          padding: "4px",
+          background: "#ffffff20",  // semi-transparent white for a subtle highlight
+          backdropFilter: "blur(5px)"
+        }}
+      />
       <span className="nav__brandText">Buy & Sell on Campus</span>
     </div>
 

@@ -116,9 +116,18 @@ export default function BrowseListings() {
         if (filters.location) apiParams.location = filters.location;
         if (filters.priceMin !== "" && filters.priceMin != null) apiParams.min_price = filters.priceMin;
         if (filters.priceMax !== "" && filters.priceMax != null) apiParams.max_price = filters.priceMax;
+        if (filters.dateRange) {
+          const postedWithin = dateRangeToPostedWithin(filters.dateRange);
+          if (postedWithin !== undefined) apiParams.posted_within = postedWithin;
+        }
+        if (filters.availableOnly) apiParams.available_only = true;
 
-        const postedWithin = dateRangeToPostedWithin(filters.dateRange);
-        if (postedWithin !== undefined) apiParams.posted_within = postedWithin;
+        // Add extra filter fields if present (for extensibility)
+        Object.keys(filters).forEach((key) => {
+          if (!(key in apiParams) && filters[key] !== "" && filters[key] != null) {
+            apiParams[key] = filters[key];
+          }
+        });
 
         // pagination
         apiParams.page = page;
@@ -151,7 +160,9 @@ export default function BrowseListings() {
 
   // Handlers
   const handleSearch = (nextQ) => {
-    syncUrl(filters, { q: nextQ ?? "", page: 1 });
+  // Prevent whitespace-only search
+  if (nextQ && nextQ.trim().length === 0) return;
+  syncUrl(filters, { q: nextQ ?? "", page: 1 });
   };
 
   const handleSort = (nextSort) => {
@@ -236,8 +247,11 @@ export default function BrowseListings() {
             {/* Empty */}
             {!loading && !error && items.length === 0 && (
               <Empty
-                title="No results"
-                body={q ? "Try a different keyword or clearing filters." : "No active listings yet."}
+                title={q ? `No results for "${q}"` : "No results"}
+                body={q
+                  ? "No items match your search. Try different keywords or clear filters."
+                  : "No active listings yet."
+                }
               />
             )}
 
