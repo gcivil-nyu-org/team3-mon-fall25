@@ -1,7 +1,11 @@
 import apiClient from "./client"
 import {endpoints} from "./endpoints.js";
 
-
+export async function getListings(params = {}) {
+    const { data } = await apiClient.get(endpoints.listings, { params });
+    return data;
+  }
+  
 export async function getListing(id) {
     const {data} = await apiClient.get(`${endpoints.listings}${id}/`);
     return data;
