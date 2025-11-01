@@ -107,8 +107,8 @@ jobs:
         - mkdir 'backend/static'
       
       install:
-        # Install all Python backend dependencies
-        - pip install -r backend/requirements.txt
+        - pip install uv
+        - uv pip install -r backend/requirements.txt
       
       script:
         # --- Run all backend quality checks ---
@@ -183,17 +183,11 @@ jobs:
       script:
         - echo "Starting production build for frontend..."
         - cd frontend
-        - npm run build  # This builds the app into 'frontend/dist'
+        - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
         - cd ..
         - echo "Frontend build complete."
-        
-        - echo "Moving frontend build into backend..."
-        # 1. Remove the old/stale build directory from the backend
-        - rm -rf backend/frontend_build
-        # 2. Move the new 'dist' folder and rename it to 'frontend_build'
-        #    Django's settings.py is configured to find this exact folder.
-        - mv frontend/dist backend/frontend_build
-        - echo "Frontend assets now at backend/frontend_build/"
+        - echo "Frontend assets built at backend/frontend_build/"
+        # NOTE: No need to move files - vite.config.js already outputs to backend/frontend_build
         # The 'deploy' step below will now pick up the 'backend' folder
         # which contains the newly built frontend.
       
@@ -247,12 +241,11 @@ jobs:
         # This is identical to the 'dev' deploy job
         - echo "Starting production build for frontend..."
         - cd frontend
-        - npm run build
+        - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
         - cd ..
-        - echo "Moving frontend build into backend..."
-        - rm -rf backend/frontend_build
-        - mv frontend/dist backend/frontend_build
-        - echo "Frontend assets now at backend/frontend_build/"
+        - echo "Frontend build complete."
+        - echo "Frontend assets built at backend/frontend_build/"
+        # NOTE: No need to move files - vite.config.js already outputs to backend/frontend_build
       
       deploy:
         provider: elasticbeanstalk
