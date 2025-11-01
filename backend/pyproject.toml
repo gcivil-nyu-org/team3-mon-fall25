@@ -1,5 +1,5 @@
 # Poetry/uv; pin Python & tools (black/ruff/mypy/pytest)
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.settings"
+DJANGO_SETTINGS_MODULE = "core.settings_local" # will be override by via environment variable
 python_files = "tests.py test_*.py *_tests.py"

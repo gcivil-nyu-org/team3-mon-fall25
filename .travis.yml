@@ -89,6 +89,7 @@ jobs:
       env:
         # These are "dummy" (fake) secrets for the CI TEST environment.
         # The app needs them to run, but they don't point to real resources.
+        - DJANGO_SETTINGS_MODULE=core.settings_dev
         - DJANGO_SECRET_KEY=dummy-ci-key-for-travis
         - DB_ENGINE=django.db.backends.mysql
         - DB_NAME=test_db
@@ -103,6 +104,7 @@ jobs:
       before_script:
         # Create the test database before running tests
         - mysql -e 'CREATE DATABASE test_db;'
+        - mkdir 'backend/static'
       
       install:
         # Install all Python backend dependencies
@@ -157,6 +159,9 @@ jobs:
       stage: deploy
       language: python  # Use Python for 'dpl' deploy tool
       python: "3.11"
+
+      env: 
+        - DJANGO_SETTINGS_MODULE=core.settings_dev
       
       cache: # Cache node_modules for faster build
         directories:
@@ -218,7 +223,10 @@ jobs:
       stage: deploy
       language: python
       python: "3.11"
-      
+
+      env: 
+        - DJANGO_SETTINGS_MODULE=core.settings_prod
+
       cache:
         directories:
           - frontend/node_modules

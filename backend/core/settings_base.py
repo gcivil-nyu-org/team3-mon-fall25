@@ -1,13 +1,17 @@
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
-from datetime import timedelta # JWT settings
+from datetime import timedelta  # JWT settings
 from dotenv import load_dotenv
 import os
-import pymysql
 
+# Conditionally import pymysql only if using MySQL
+# This allows SQLite-based settings (like settings_local) to work without pymysql
+try:
+    import pymysql
 
-# Set MySQL
-pymysql.install_as_MySQLdb()
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass  # pymysql not needed for SQLite
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -91,10 +95,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [ BASE_DIR / "static" ]
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 TEMPLATES[0]["DIRS"] = [
-    BASE_DIR / "frontend_build",   # index.html from Vite build
+    BASE_DIR / "frontend_build",  # index.html from Vite build
     BASE_DIR / "staticfiles",
 ]
 
