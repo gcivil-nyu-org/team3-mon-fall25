@@ -10,7 +10,7 @@ export default defineConfig({
 
   // production or development
   base: isProduction ? '/static/' : '/',
-  
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -35,7 +35,14 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/setupTests.js',
-      ]
+      ],
+      // Enforce 85% coverage threshold - CI will fail if not met
+      thresholds: {
+        lines: 85,
+        functions: 85,
+        branches: 85,
+        statements: 85
+      }
     }
   }
 })

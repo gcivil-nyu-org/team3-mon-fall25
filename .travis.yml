@@ -119,8 +119,18 @@ jobs:
         - python backend/manage.py check
         - echo "Running Django collectstatic (validation)..."
         - python backend/manage.py collectstatic --noinput
-        - echo "Running backend tests..."
-        - pytest backend/ # Finds pyproject.toml
+        - echo "Running backend tests with coverage..."
+        - cd backend
+        - coverage run -m pytest .
+        - echo "Generating coverage report..."
+        - coverage report --fail-under=85
+        - coverage html
+        - cd ..
+      
+      after_success:
+        # Upload coverage to Coveralls (optional - requires COVERALLS_REPO_TOKEN)
+        - echo "Uploading coverage to Coveralls..."
+        - cd backend && coveralls || echo "Coveralls upload failed or not configured"
 
     # Job 1.2: Frontend (React) Tests
     - name: "Frontend (React) Tests"
@@ -142,8 +152,8 @@ jobs:
         # --- Run all frontend quality checks ---
         #- echo "Running frontend lint..."
         #- npm run lint --prefix frontend
-        - echo "Running frontend tests..."
-        - npm run test:run --prefix frontend
+        - echo "Running frontend tests with coverage..."
+        - npm run test:coverage --prefix frontend
         - echo "Validating frontend production build..."
         - npm run build --prefix frontend # Just validates that the build succeeds
 
