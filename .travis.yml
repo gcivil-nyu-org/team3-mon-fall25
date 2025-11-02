@@ -222,20 +222,16 @@ jobs:
           repo: iridiumtao/NYU-Marketplace
 
     # Job 2.2: Deploy to PROD Environment
-    - name: "Build & Deploy to PROD (AWS EB)"
+    - name: "Build & Deploy to AWS EB"
       stage: deploy
       language: python
       python: "3.11"
-
-      env: 
-        - DJANGO_SETTINGS_MODULE=core.settings_prod
-
+      
       cache:
         directories:
           - frontend/node_modules
       
       install:
-        # This is identical to the 'dev' deploy job
         - echo "Installing deploy tools..."
         - pip install dpl
         - echo "Installing Node.js..."
@@ -247,33 +243,42 @@ jobs:
         - cd ..
 
       script:
-        # This is identical to the 'dev' deploy job
         - echo "Starting production build for frontend..."
         - cd frontend
         - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
         - cd ..
         - echo "Frontend build complete."
-        - echo "Frontend assets built at backend/frontend_build/"
-        # NOTE: No need to move files - vite.config.js already outputs to backend/frontend_build
       
       deploy:
-        provider: elasticbeanstalk
-        access_key_id: $AWS_ACCESS_KEY_ID
-        secret_access_key: $AWS_SECRET_ACCESS_KEY
+        # Deploy to DEV
+        - provider: elasticbeanstalk
+          access_key_id: $AWS_ACCESS_KEY_ID
+          secret_access_key: $AWS_SECRET_ACCESS_KEY
+          region: "us-east-1"
+          app: "nyu-marketplace"
+          env: "nyu-marketplace-dev"
+          bucket: "nyu-marketplace-dev-images"
+          edge: true
+          cleanup: false
+          on:
+            branch: develop
+            # TODO: Change to gcivil-nyu-org/team3-mon-fall25
+            repo: iridiumtao/NYU-Marketplace
         
-        # --- Fill in your AWS "Prod" Environment Details ---
-        region: "us-east-1"
-        app: "nyu-marketplace" # (Likely same as dev)
-        env: "nyu-marketplace-prod" # (Your "prod" EB Environment Name)
-        bucket: "your-eb-deploy-s3-bucket" # (Likely same as dev)
-        
-        # --- Monorepo Configuration ---
-        edge: true
-        
-        cleanup: false
-        on:
-          branch: main
-          repo: gcivil-nyu-org/team3-mon-fall25
+        # Deploy to PROD
+        - provider: elasticbeanstalk
+          access_key_id: $AWS_ACCESS_KEY_ID
+          secret_access_key: $AWS_SECRET_ACCESS_KEY
+          region: "us-east-1"
+          app: "nyu-marketplace"
+          env: "nyu-marketplace-prod"
+          bucket: "nyu-marketplace-images"
+          edge: true
+          cleanup: false
+          on:
+            branch: main
+            # TODO: Change to gcivil-nyu-org/team3-mon-fall25
+            repo: iridiumtao/NYU-Marketplace
 
 # -----------------------------------------------------------------------------
 # (Optional but Recommended) Disable email spam
