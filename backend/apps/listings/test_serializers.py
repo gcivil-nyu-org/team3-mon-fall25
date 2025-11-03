@@ -9,7 +9,7 @@ from apps.listings.serializers import (
     ListingUpdateSerializer,
     CompactListingSerializer,
 )
-from apps.listings.models import Listing, ListingImage
+from apps.listings.models import ListingImage
 from tests.factories.factories import UserFactory, ListingFactory, ListingImageFactory
 from PIL import Image
 import io

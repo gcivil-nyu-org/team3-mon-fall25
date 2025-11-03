@@ -1,4 +1,3 @@
-from django.template.context_processors import request
 from rest_framework import serializers
 from django.db import models
 from apps.listings.models import Listing, ListingImage
@@ -115,9 +114,11 @@ class ListingCreateSerializer(serializers.ModelSerializer):
                 # If any image upload fails, we should handle it gracefully
                 # For now, log the error and continue with other images
                 logger.error(
-                    f"Failed to upload image for listing {listing.listing_id}: {str(e)}"
+                    f"Failed to upload image for listing "
+                    f"{listing.listing_id}: {str(e)}"
                 )
-                # Optionally, you could delete the listing if no images were uploaded successfully
+                # Optionally, you could delete the listing if no images were
+                # uploaded successfully
 
         return listing
 
@@ -195,7 +196,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                 "Authentication required to update listings"
             )
 
-        # Check ownership - this is handled by permission class but adding extra validation
+        # Check ownership - this is handled by permission class but adding
+        # extra validation
         instance = getattr(self, "instance", None)
         if instance and instance.user != request.user:
             raise serializers.ValidationError("You can only update your own listings")
@@ -234,7 +236,7 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             if "image_id" not in item:
                 raise serializers.ValidationError(
                     "Each update_images item must have 'image_id'"
-                )
+                )  # noqa: E501
             # Can have 'display_order' and/or 'is_primary'
         return value
 
@@ -261,7 +263,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                     # Delete from database
                     img.delete()
                     logger.info(
-                        f"Deleted image {img.image_id} from listing {instance.listing_id}"
+                        f"Deleted image {img.image_id} from listing "
+                        f"{instance.listing_id}"
                     )
                 except Exception as e:
                     logger.error(f"Failed to delete image {img.image_id}: {str(e)}")
@@ -275,7 +278,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             # Check total image limit
             if current_count + len(new_images) > 10:
                 raise serializers.ValidationError(
-                    f"Cannot add {len(new_images)} images. Listing already has {current_count} images. Maximum is 10."
+                    f"Cannot add {len(new_images)} images. Listing already "
+                    f"has {current_count} images. Maximum is 10."
                 )
 
             max_order = (

@@ -1,5 +1,7 @@
 from pathlib import Path
-from django.core.management.utils import get_random_secret_key
+from django.core.management.utils import (
+    get_random_secret_key,
+)  # noqa: F401 - used by settings_local
 from datetime import timedelta  # JWT settings
 from dotenv import load_dotenv
 import os

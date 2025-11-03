@@ -4,7 +4,6 @@ from django.conf import settings
 import uuid
 import logging
 from PIL import Image
-from io import BytesIO
 
 logger = logging.getLogger(__name__)
 

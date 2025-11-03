@@ -18,7 +18,13 @@ class ListingFilter(django_filters.FilterSet):
 
     class Meta:
         model = Listing
-        fields = ["min_price", "max_price", "location", "category", "posted_within"]
+        fields = [
+            "min_price",
+            "max_price",
+            "location",
+            "category",
+            "posted_within",
+        ]
 
     def filter_min_price(self, queryset, name, value):
         if value is None:
@@ -53,7 +59,8 @@ class ListingFilter(django_filters.FilterSet):
                         {"price": ["min_price cannot be greater than max_price."]}
                     )
             except (InvalidOperation, TypeError):
-                # If min_price itself is invalid, let its own validator handle on its call path
+                # If min_price itself is invalid, let its own validator
+                # handle on its call path
                 pass
 
         return queryset.filter(price__lte=amount)

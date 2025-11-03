@@ -196,7 +196,7 @@ class TestListingViewSet:
         client, user = authenticated_client
         with patch("utils.s3_service.s3_service.upload_image") as mock_upload, patch(
             "apps.listings.serializers.logger"
-        ) as mock_logger:
+        ):
             mock_upload.side_effect = serializers.ValidationError("S3 is down")
 
             # A simple mock for a file upload
@@ -226,7 +226,7 @@ class TestListingViewSet:
         listing = ListingFactory(user=user)
         image1 = ListingImageFactory(listing=listing, is_primary=True)
         image2 = ListingImageFactory(listing=listing)
-        image3 = ListingImageFactory(listing=listing)
+        _image3 = ListingImageFactory(listing=listing)  # noqa: F841
 
         # Create a proper mock image file using PIL
         from PIL import Image
@@ -319,14 +319,14 @@ class TestListingViewSet:
         """
         # 1. Listing with a primary image
         listing1 = ListingFactory()
-        img1 = ListingImageFactory(
+        _img1 = ListingImageFactory(  # noqa: F841
             listing=listing1, is_primary=True, image_url="primary.jpg"
         )
         ListingImageFactory(listing=listing1, is_primary=False)
 
         # 2. Listing with no primary image, but other images
         listing2 = ListingFactory()
-        img2 = ListingImageFactory(
+        _img2 = ListingImageFactory(  # noqa: F841
             listing=listing2, is_primary=False, display_order=0, image_url="first.jpg"
         )
         ListingImageFactory(listing=listing2, is_primary=False, display_order=1)
