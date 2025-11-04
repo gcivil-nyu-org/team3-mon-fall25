@@ -12,14 +12,14 @@
 # |   | Backend (Django)  |  | Frontend      |
 # |   | Tests             |  | (React) Tests |
 # |   +-------------------+  +---------------+
-# |          |                      |
-# |          +---------+  +---------+
-# |                    |  |
-# |                    v  v
-# |              (Wait for BOTH)
-# |                    |
-# |             [  Success?  ]
-# |                    |
+# |          |                      |        |
+# |          +---------+  +---------+        |
+# |                    |  |                  |
+# |                    v  v                  |
+# |              (Wait for BOTH)             |
+# |                    |                     |
+# |             [  Success?  ]               |
+# |                    |                     |
 # +--------------------|---------------------+
 #                      |
 #                      v (Only if ALL test jobs pass)
@@ -57,8 +57,6 @@
 #              This is triggered ONLY on successful merges to 'develop' or 'main'.
 # -----------------------------------------------------------------------------
 
-# We use 'shell' as the base language because jobs
-# will specify their own (python or node_js).
 language: shell
 os: linux
 dist: noble
@@ -162,80 +160,16 @@ jobs:
     # These jobs ONLY run if the 'test' stage passes AND the commit
     # is on the 'develop' or 'main' branch of the main team repo.
     # -------------------------------------------------------------------------
-
-    # Job 2.1: Deploy to DEV Environment
-    - name: "Build & Deploy to DEV (AWS EB)"
-      stage: deploy
-      language: python  # Use Python for 'dpl' deploy tool
-      python: "3.11"
-
-      env: 
-        - DJANGO_SETTINGS_MODULE=core.settings_dev
-      
-      cache: # Cache node_modules for faster build
-        directories:
-          - frontend/node_modules
-      
-      install:
-        - echo "Installing deploy tools..."
-        - pip install dpl # Travis CI's deploy tool
-        
-        - echo "Installing Node.js..."
-        - nvm install 20  # Install Node.js in the Python environment
-        - nvm use 20
-        
-        - echo "Installing frontend dependencies for build..."
-        - cd frontend
-        - npm install
-        - cd ..
-
-      script:
-        - echo "Starting production build for frontend..."
-        - cd frontend
-        - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
-        - cd ..
-        - echo "Frontend build complete."
-        - echo "Frontend assets built at backend/frontend_build/"
-        # NOTE: No need to move files - vite.config.js already outputs to backend/frontend_build
-        # The 'deploy' step below will now pick up the 'backend' folder
-        # which contains the newly built frontend.
-      
-      deploy:
-        provider: elasticbeanstalk
-        # These are *secure* variables set in the Travis CI project settings.
-        # They are the REAL keys for your AWS deployment user.
-        access_key_id: $AWS_ACCESS_KEY_ID
-        secret_access_key: $AWS_SECRET_ACCESS_KEY
-        
-        # --- Fill in your AWS "Dev" Environment Details ---
-        region: "us-east-1" # (From your settings.py)
-        app: "nyu-marketplace" # (Your EB Application Name)
-        env: "nyu-marketplace-dev" # (Your "dev" EB Environment Name)
-        bucket: "your-eb-deploy-s3-bucket" # (Your EB S3 bucket)
-        
-        # --- Monorepo Configuration ---
-        edge: true           # Use the newer 'dpl v2'
-        
-        cleanup: false # Don't remove files before deploying
-        on:
-          branch: develop
-          repo: iridiumtao/NYU-Marketplace
-
-    # Job 2.2: Deploy to PROD Environment
-    - name: "Build & Deploy to PROD (AWS EB)"
+    - name: "Build & Deploy to AWS EB"
       stage: deploy
       language: python
       python: "3.11"
-
-      env: 
-        - DJANGO_SETTINGS_MODULE=core.settings_prod
-
+      
       cache:
         directories:
           - frontend/node_modules
       
       install:
-        # This is identical to the 'dev' deploy job
         - echo "Installing deploy tools..."
         - pip install dpl
         - echo "Installing Node.js..."
@@ -247,33 +181,51 @@ jobs:
         - cd ..
 
       script:
-        # This is identical to the 'dev' deploy job
         - echo "Starting production build for frontend..."
         - cd frontend
         - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
         - cd ..
         - echo "Frontend build complete."
-        - echo "Frontend assets built at backend/frontend_build/"
-        # NOTE: No need to move files - vite.config.js already outputs to backend/frontend_build
+      
+      # package the backend directory into a zip file to only deploy the backend code
+      before_deploy:
+        - echo "Creating deployment package from backend directory..."
+        - cd backend
+        - zip -r ../deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc"
+        - cd ..
+        - ls -lh deploy.zip
       
       deploy:
-        provider: elasticbeanstalk
-        access_key_id: $AWS_ACCESS_KEY_ID
-        secret_access_key: $AWS_SECRET_ACCESS_KEY
+        # Deploy to DEV
+        - provider: elasticbeanstalk
+          access_key_id: $AWS_ACCESS_KEY_ID
+          secret_access_key: $AWS_SECRET_ACCESS_KEY
+          region: "us-east-1"
+          app: "nyu-marketplace"
+          env: "nyu-marketplace-dev"
+          bucket: "nyu-marketplace-dev-images"
+          edge: true
+          cleanup: false
+          zip_file: deploy.zip
+          on:
+            branch: develop
+            # TODO: Change to gcivil-nyu-org/team3-mon-fall25
+            repo: iridiumtao/NYU-Marketplace
         
-        # --- Fill in your AWS "Prod" Environment Details ---
-        region: "us-east-1"
-        app: "nyu-marketplace" # (Likely same as dev)
-        env: "nyu-marketplace-prod" # (Your "prod" EB Environment Name)
-        bucket: "your-eb-deploy-s3-bucket" # (Likely same as dev)
-        
-        # --- Monorepo Configuration ---
-        edge: true
-        
-        cleanup: false
-        on:
-          branch: main
-          repo: gcivil-nyu-org/team3-mon-fall25
+        # Deploy to PROD
+        - provider: elasticbeanstalk
+          access_key_id: $AWS_ACCESS_KEY_ID
+          secret_access_key: $AWS_SECRET_ACCESS_KEY
+          region: "us-east-1"
+          app: "nyu-marketplace"
+          env: "nyu-marketplace-env"
+          bucket: "nyu-marketplace-images"
+          edge: true
+          cleanup: false
+          zip_file: deploy.zip
+          on:
+            branch: main
+            repo: gcivil-nyu-org/team3-mon-fall25
 
 # -----------------------------------------------------------------------------
 # (Optional but Recommended) Disable email spam

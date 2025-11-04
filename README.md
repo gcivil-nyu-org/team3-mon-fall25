@@ -1,5 +1,6 @@
 # NYU Marketplace
-
+[![Build Status](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25.svg?token=Xq8zJLesUKp4bvxArT4z&branch=develop)](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25)
+[![Coverage Status](https://coveralls.io/repos/github/gcivil-nyu-org/team3-mon-fall25/badge.svg?branch=feature/%23118-text-search-integration)](https://coveralls.io/github/gcivil-nyu-org/team3-mon-fall25?branch=feature/%23118-text-search-integration)
 ```bash
 ├── backend/        # Django backend — APIs, business logic, database models, tests
 │   ├── api/        # REST API endpoints (Django REST Framework)

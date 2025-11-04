@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------------
+# TEMPORARILY DISABLED:
+# This hook is disabled because collectstatic is already run in container_commands
+# (see .ebextensions/django.config).
+# 
+# Running collectstatic twice can cause issues, so we've commented this out.
+# If you need to re-enable this hook in the future, uncomment the lines below.
+# ---------------------------------------------------------------------------------
 # IMPORTANT FOR DEPLOY:
 # This script MUST be executable (chmod +x).
 # If it's not executable, Elastic Beanstalk will SKIP it and deploy will break
@@ -13,13 +20,14 @@
 #   git commit -m "fix: make collectstatic hook executable"
 #
 # ---------------------------------------------------------------------------------
-set -euo pipefail
+# set -euo pipefail
 
-cd /var/app/current
+# cd /var/app/current
 
-export DJANGO_SETTINGS_MODULE=core.settings
+# echo "[postdeploy] Running collectstatic"
+# echo "[postdeploy] Using DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-not set}"
 
-echo "[postdeploy] Running collectstatic"
+# /var/app/venv/*/bin/python manage.py collectstatic --noinput
+# echo "[postdeploy] collectstatic done."
 
-/var/app/venv/*/bin/python manage.py collectstatic --noinput
-echo "[postdeploy] collectstatic done."
+echo "[postdeploy] 50_collectstatic.sh is currently disabled (collectstatic runs in container_commands)"
