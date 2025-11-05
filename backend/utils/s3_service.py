@@ -50,7 +50,7 @@ class S3Service:
                 unique_filename,
                 ExtraArgs={
                     "ContentType": image_file.content_type,
-                    # "ACL": "public-read",
+                    "ACL": "public-read",
                 },
             )
 
