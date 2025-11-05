@@ -47,7 +47,6 @@ class ListingPagination(pagination.PageNumberPagination):
     max_page_size = 60
 
 
-
 # Create your views here.
 
 
@@ -69,31 +68,33 @@ class ListingViewSet(
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.OrderingFilter,
+        filters.SearchFilter,
+    ]
     filterset_class = ListingFilter
-    ordering_fields = ['created_at', 'price', 'title']
-    ordering = ['-created_at']
-    search_fields = ['title', 'description', 'location']
+    ordering_fields = ["created_at", "price", "title"]
+    ordering = ["-created_at"]
+    search_fields = ["title", "description", "location"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        
-        allowed_fields = {'created_at', 'price', 'title'}
-        ordering_param = self.request.query_params.get('ordering')
+        allowed_fields = {"created_at", "price", "title"}
+        ordering_param = self.request.query_params.get("ordering")
 
         if ordering_param:
-            #any mistake if made at the end of the URL will be stripped
-            ordering_param = ordering_param.strip() 
-            raw = ordering_param.lstrip('-')
+            # any mistake if made at the end of the URL will be stripped
+            ordering_param = ordering_param.strip()
+            raw = ordering_param.lstrip("-")
             if raw not in allowed_fields:
                 raise ValidationError({"ordering": ["Invalid ordering field."]})
             queryset = queryset.order_by(ordering_param)
         else:
-            queryset = queryset.order_by('-created_at')
+            queryset = queryset.order_by("-created_at")
 
         return queryset
-
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -135,32 +136,32 @@ class ListingViewSet(
         serializer = self.get_serializer(user_listings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
     @action(detail=False, methods=["get"], url_path="search")
     def search(self, request):
-        '''
+        """
         Search listings by keyword across title/description/location/category.
 
         Usage:
           GET /api/v1/listings/search/?q=desk
           GET /api/v1/listings/search/?q=lamp&ordering=price&page=2&page_size=12
 
-        '''
+        """
 
-        q =(request.GET.get("q") or "").strip()
+        q = (request.GET.get("q") or "").strip()
 
         if not q:
-            return Response({"error": "Please enter a search query 'q'."},
-                            status=status.HTTP_400_BAD_REQUEST
-                            )
+            return Response(
+                {"error": "Please enter a search query 'q'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         base_qs = self.get_queryset()
 
         qs = base_qs.filter(
-            Q(title__icontains=q) |
-            Q(description__icontains=q) |
-            Q(location__icontains=q) |
-            Q(category__icontains=q)
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(location__icontains=q)
+            | Q(category__icontains=q)
         )
 
         paginator = ListingPagination()

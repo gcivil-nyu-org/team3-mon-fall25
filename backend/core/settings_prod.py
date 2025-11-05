@@ -9,7 +9,7 @@ STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesSto
 ALLOWED_HOSTS = [
     "nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
     ".elasticbeanstalk.com",  # allow any EB CNAME
-    ".elb.amazonaws.com",     # allow the ALB health checker hostname
+    ".elb.amazonaws.com",  # allow the ALB health checker hostname
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -27,7 +27,9 @@ DATABASES = {
         "NAME": os.getenv("DB_NAME", "nyu_marketplace"),
         "USER": os.getenv("DB_USER", "nyu_app"),
         "PASSWORD": os.getenv("DB_PASSWORD", "yourpassword"),
-        "HOST": os.getenv("DB_HOST", "nyu-marketplace-mysql.c4d68gyyij18.us-east-1.rds.amazonaws.com"),
+        "HOST": os.getenv(
+            "DB_HOST", "nyu-marketplace-mysql.c4d68gyyij18.us-east-1.rds.amazonaws.com"
+        ),
         "PORT": os.getenv("DB_PORT", "3306"),
         "OPTIONS": {"init_command": "SET sql_mode='STRICT_ALL_TABLES'"},
     }
@@ -36,7 +38,7 @@ DATABASES = {
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTPONLY = False 
+CSRF_COOKIE_HTTPONLY = False
 
 # AWS S3 Configuration
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")

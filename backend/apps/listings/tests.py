@@ -77,7 +77,7 @@ class TestListingImageModel:
         assert list(images) == [image2, image1]
 
 
-# //filter testing section  
+# //filter testing section
 @pytest.mark.django_db
 class TestListingFilters:
     def setup_method(self):
@@ -96,7 +96,9 @@ class TestListingFilters:
         ListingFactory(price=5)
         ListingFactory(price=15)
         ListingFactory(price=25)
-        resp = self.client.get("/api/v1/listings/", {"min_price": "10", "max_price": "20"})
+        resp = self.client.get(
+            "/api/v1/listings/", {"min_price": "10", "max_price": "20"}
+        )
         assert resp.status_code == 200
         prices = [item["price"] for item in resp.json()]
         assert "15.00" in prices
@@ -130,11 +132,15 @@ class TestListingFilters:
         ListingFactory(price=10)
         ListingFactory(price=20)
         # Zero is allowed
-        resp = self.client.get("/api/v1/listings/", {"min_price": "0", "max_price": "5"})
+        resp = self.client.get(
+            "/api/v1/listings/", {"min_price": "0", "max_price": "5"}
+        )
         assert resp.status_code == 200
         assert len(resp.json()) == 1
         # Exact boundary match
-        resp = self.client.get("/api/v1/listings/", {"min_price": "10", "max_price": "10"})
+        resp = self.client.get(
+            "/api/v1/listings/", {"min_price": "10", "max_price": "10"}
+        )
         assert resp.status_code == 200
         assert len(resp.json()) == 1
 
@@ -255,7 +261,12 @@ class TestListingFilters:
         ListingFactory(category="Electronics", price=10, location="Manhattan")
         resp = self.client.get(
             "/api/v1/listings/",
-            {"category": "Books", "min_price": "5", "max_price": "20", "location": "manhattan"},
+            {
+                "category": "Books",
+                "min_price": "5",
+                "max_price": "20",
+                "location": "manhattan",
+            },
         )
         assert resp.status_code == 200
         assert len(resp.json()) == 1
@@ -283,7 +294,9 @@ class TestListingFilters:
 
     def test_error_handling_min_greater_than_max(self):
         """Test error when min_price > max_price"""
-        resp = self.client.get("/api/v1/listings/", {"min_price": "10", "max_price": "5"})
+        resp = self.client.get(
+            "/api/v1/listings/", {"min_price": "10", "max_price": "5"}
+        )
         assert resp.status_code == 400
         assert "price" in resp.json() or "min_price" in resp.json()
 
