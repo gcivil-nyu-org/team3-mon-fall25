@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import SearchBar from "../components/browse/SearchBar";
 import SortSelect from "../components/browse/SortSelect";
 import Filters from "../components/browse/Filters";
@@ -33,7 +33,6 @@ const dateRangeToPostedWithin = (dateRange) => {
 
 export default function BrowseListings() {
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
 
   // URL → state
   const q = params.get("q") ?? "";

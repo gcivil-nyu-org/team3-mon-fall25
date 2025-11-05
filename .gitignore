@@ -36,6 +36,7 @@ htmlcov/
 node_modules/
 dist/
 build/
+frontend_build/
 .npm/
 npm-debug.log*
 yarn-debug.log*

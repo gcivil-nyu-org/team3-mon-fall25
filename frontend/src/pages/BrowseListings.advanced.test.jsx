@@ -13,7 +13,7 @@ describe('BrowseListings advanced param mapping', () => {
 
   it('calls getListings with mapped ordering, posted_within and available_only when URL params set', async () => {
     // Return an array to exercise Array.isArray branch
-    getListings.mockImplementation(async (params) => {
+    getListings.mockImplementation(async () => {
       // return some results so the component renders ListingGrid
       return [ { listing_id: 1, title: 'X', price: '10.00', status: 'active' } ];
     });
