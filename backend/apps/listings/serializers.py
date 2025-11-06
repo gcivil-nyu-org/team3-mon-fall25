@@ -1,9 +1,10 @@
-from rest_framework import serializers
-from django.db import models
-from apps.listings.models import Listing, ListingImage
-from utils.s3_service import s3_service
-import logging
 import json
+import logging
+
+from apps.listings.models import Listing, ListingImage
+from django.db import models
+from rest_framework import serializers
+from utils.s3_service import s3_service
 
 logger = logging.getLogger(__name__)
 

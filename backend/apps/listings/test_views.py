@@ -1,12 +1,12 @@
-import pytest
-from rest_framework.test import APIClient
-from rest_framework import serializers, status
-from unittest.mock import patch
-import json
 import io
+import json
+from unittest.mock import patch
 
-from tests.factories.factories import UserFactory, ListingFactory, ListingImageFactory
+import pytest
 from apps.listings.models import Listing
+from rest_framework import serializers, status
+from rest_framework.test import APIClient
+from tests.factories.factories import ListingFactory, ListingImageFactory, UserFactory
 
 
 @pytest.fixture

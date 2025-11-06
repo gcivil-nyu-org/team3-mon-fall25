@@ -1,7 +1,9 @@
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
+
 from .models import Conversation, ConversationParticipant, Message
+
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
@@ -27,12 +29,15 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             text = (content.get("text") or "").strip()
             if not text:
                 return
-            msg = await self._create_msg(self.scope["user"].id, self.conversation_id, text)
+            msg = await self._create_msg(
+                self.scope["user"].id, self.conversation_id, text
+            )
             await self.channel_layer.group_send(
-                self.group_name, {"type": "message.new", "message": self._serialize(msg)}
+                self.group_name,
+                {"type": "message.new", "message": self._serialize(msg)},
             )
         elif typ == "read.update":
-            # TODO: implement read receipts broadcast if you want
+            # TODO: implement read receipts broadcast
             pass
 
     async def message_new(self, event):
@@ -40,7 +45,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _is_member(self, uid, conv_id):
-        return ConversationParticipant.objects.filter(conversation_id=conv_id, user_id=uid).exists()
+        return ConversationParticipant.objects.filter(
+            conversation_id=conv_id, user_id=uid
+        ).exists()
 
     @database_sync_to_async
     def _create_msg(self, uid, conv_id, text):

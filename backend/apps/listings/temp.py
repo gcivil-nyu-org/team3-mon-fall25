@@ -1,19 +1,24 @@
 import logging
 
 from django.db.models import Q
-from rest_framework import viewsets, mixins, status, pagination, filters
+from rest_framework import filters, mixins, pagination, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, BasePermission, IsAuthenticated, SAFE_METHODS
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import (
+    SAFE_METHODS,
+    BasePermission,
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
 from rest_framework.response import Response
-
 from utils.s3_service import s3_service
+
 from .models import Listing
 from .serializers import (
-    ListingCreateSerializer,
-    ListingUpdateSerializer,
     CompactListingSerializer,
+    ListingCreateSerializer,
     ListingDetailSerializer,
+    ListingUpdateSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,6 +40,7 @@ class IsOwnerOrReadOnly(BasePermission):
 
 
 # Create your views here.
+
 
 # Pagination used for list/search
 class ListingPagination(pagination.PageNumberPagination):
@@ -95,13 +101,12 @@ class ListingViewSet(
         q = self.request.GET.get("q")
         if q:
             qs = qs.filter(
-                Q(title__icontains=q) |
-                Q(description__icontains=q) |
-                Q(location__icontains=q) |
-                Q(category__icontains=q)
+                Q(title__icontains=q)
+                | Q(description__icontains=q)
+                | Q(location__icontains=q)
+                | Q(category__icontains=q)
             )
         return qs
-
 
     def perform_create(self, serializer):
         """Automatically set the user when creating a listing"""
@@ -126,7 +131,11 @@ class ListingViewSet(
         qs = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(qs)
         ser = CompactListingSerializer(page or qs, many=True)
-        return self.get_paginated_response(ser.data) if page is not None else Response(ser.data)
+        return (
+            self.get_paginated_response(ser.data)
+            if page is not None
+            else Response(ser.data)
+        )
 
     def perform_destroy(self, instance):
         """Delete listing and associated S3 images"""

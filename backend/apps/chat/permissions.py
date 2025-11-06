@@ -1,14 +1,14 @@
 from rest_framework.permissions import BasePermission
-from .models import ConversationParticipant, Conversation
+
+from .models import Conversation, ConversationParticipant
+
 
 class IsConversationMember(BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        # Determine conversation id from obj
         if isinstance(obj, Conversation):
             conv_id = obj.pk
         else:
-            # For objects like Message that have FK to Conversation
             conv_id = getattr(obj, "conversation_id", None)
             if conv_id is None:
                 conv = getattr(obj, "conversation", None)

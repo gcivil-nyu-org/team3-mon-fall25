@@ -1,8 +1,7 @@
-from django.db import transaction
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
-
-from rest_framework import viewsets, permissions, status
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -11,9 +10,9 @@ from .permissions import IsConversationMember
 from .serializers import (
     ConversationDetailSerializer,
     ConversationListSerializer,
-    MessageSerializer,
     DirectCreateSerializer,
     MessageCreateSerializer,
+    MessageSerializer,
 )
 
 User = get_user_model()
@@ -27,6 +26,7 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
       - POST /chat/conversations/<id>/send       -> send a message (REST optional)
       - POST /chat/conversations/<id>/read       -> mark read up to message
     """
+
     permission_classes = [permissions.IsAuthenticated, IsConversationMember]
     queryset = Conversation.objects.all().order_by("-last_message_at")
 
@@ -44,16 +44,13 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             return DirectCreateSerializer
         return ConversationDetailSerializer
 
-    # ---- queryset limited to the user's conversations ----
     def get_queryset(self):
         return (
-            Conversation.objects
-            .filter(participants__user=self.request.user)
+            Conversation.objects.filter(participants__user=self.request.user)
             .distinct()
             .order_by("-last_message_at")
         )
 
-    # ---- create/fetch a DIRECT chat with a peer ----
     @action(
         detail=False,
         methods=["post"],
@@ -76,9 +73,9 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
                 direct_key=dk, defaults={"created_by": request.user}
             )
             have = set(
-                ConversationParticipant.objects
-                .filter(conversation=conv)
-                .values_list("user_id", flat=True)
+                ConversationParticipant.objects.filter(conversation=conv).values_list(
+                    "user_id", flat=True
+                )
             )
             need = {request.user.id, peer.id} - have
             for uid in need:
@@ -89,7 +86,6 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
-    # ---- message history (cursor style) ----
     @action(detail=True, methods=["get"], url_path="messages")
     def messages(self, request, pk=None):
         conv = self.get_object()
@@ -111,7 +107,6 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
         next_before = page[-1].created_at.isoformat() if page else None
         return Response({"results": data, "next_before": next_before})
 
-    # ---- send a message via REST (optional; WS is primary) ----
     @action(detail=True, methods=["post"], url_path="send")
     def send(self, request, pk=None):
         conv = self.get_object()
@@ -126,7 +121,6 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
         Conversation.objects.filter(pk=conv.pk).update(last_message_at=m.created_at)
         return Response(MessageSerializer(m).data, status=201)
 
-    # ---- mark read up to a given message ----
     @action(detail=True, methods=["post"], url_path="read")
     def read(self, request, pk=None):
         conv = self.get_object()
@@ -137,23 +131,25 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "Invalid message_id"}, status=400)
 
         part = ConversationParticipant.objects.get(conversation=conv, user=request.user)
-        if (not part.last_read_message) or (part.last_read_message.created_at < msg.created_at):
+        if (not part.last_read_message) or (
+            part.last_read_message.created_at < msg.created_at
+        ):
             part.last_read_message = msg
             part.last_read_at = timezone.now()
             part.save(update_fields=["last_read_message", "last_read_at"])
 
-        return Response({"ok": True, "last_read_message": str(part.last_read_message_id)})
+        return Response(
+            {"ok": True, "last_read_message": str(part.last_read_message_id)}
+        )
 
-    # ---- list conversations with unread counts & last_message ----
     def list(self, request, *args, **kwargs):
         user = request.user
         convs = self.get_queryset()
 
         ids = [c.id for c in convs]
         last_msg_map = {}
-        for m in (
-            Message.objects.filter(conversation_id__in=ids)
-            .order_by("conversation_id", "-created_at")
+        for m in Message.objects.filter(conversation_id__in=ids).order_by(
+            "conversation_id", "-created_at"
         ):
             if m.conversation_id not in last_msg_map:
                 last_msg_map[m.conversation_id] = m
@@ -180,12 +176,16 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
                     ).count()
 
             item = ConversationListSerializer(c).data
-            item["last_message"] = None if not lm else {
-                "id": str(lm.id),
-                "text": lm.text,
-                "sender": lm.sender_id,
-                "created_at": lm.created_at,
-            }
+            item["last_message"] = (
+                None
+                if not lm
+                else {
+                    "id": str(lm.id),
+                    "text": lm.text,
+                    "sender": lm.sender_id,
+                    "created_at": lm.created_at,
+                }
+            )
             item["unread_count"] = unread
             payload.append(item)
 

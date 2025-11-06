@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Conversation, ConversationParticipant, Message
+
+from .models import Conversation, Message
+
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -42,9 +44,7 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
         fields = ("id", "last_message_at", "participants")
 
     def get_participants(self, obj):
-        return list(
-            obj.participants.values_list("user_id", flat=True)
-        )
+        return list(obj.participants.values_list("user_id", flat=True))
 
 
 class DirectCreateSerializer(serializers.Serializer):

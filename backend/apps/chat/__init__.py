@@ -1,1 +1,1 @@
-default_app_config = 'apps.chat.apps.ChatConfig'
+default_app_config = "apps.chat.apps.ChatConfig"

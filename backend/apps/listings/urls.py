@@ -1,5 +1,5 @@
-from rest_framework.routers import DefaultRouter
 from apps.listings.views import ListingViewSet
+from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register("listings", ListingViewSet, basename="listings")

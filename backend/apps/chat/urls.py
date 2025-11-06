@@ -1,12 +1,15 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from .views import ConversationViewSet
 
 router = DefaultRouter()
-router.register(r"chat/conversations", ConversationViewSet, basename="chat-conversation")
+router.register(
+    r"chat/conversations", ConversationViewSet, basename="chat-conversation"
+)
 urlpatterns = [path("", include(router.urls))]
 
-'''
+"""
    METHOD    AUTH    API Endpoints                                   Function                              Fields
 
 1. POST      Y       /api/v1/chat/conversations/direct/                 create/fetch DIRECT chat              peer_id
@@ -25,4 +28,4 @@ Authentication:
 - POST /api/chat/conversations/direct/: user must be logged in; creates or returns a 1-on-1 thread with peer_id.
 - POST /api/v1/listings/<id>/contact-seller/: user must be logged in; creates/returns a DIRECT chat with the listing owner.
 
-'''
+"""
