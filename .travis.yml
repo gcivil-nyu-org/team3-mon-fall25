@@ -53,8 +53,8 @@
 # This pipeline is structured in two stages:
 # 1. 'test':   Runs parallel jobs to validate backend and frontend code.
 #              This is triggered on ALL commits and Pull Requests.
-# 2. 'deploy': Runs jobs to build *and* deploy the application.
-#              This is triggered ONLY on successful merges to 'develop' or 'main'.
+# 2. 'deploy': Runs jobs to build *and* deploy the application
+#              on successful merges to 'develop' or 'main'.
 # -----------------------------------------------------------------------------
 
 language: shell
@@ -163,12 +163,12 @@ jobs:
     # STAGE 2: Deploy (CD)
     # This job ONLY runs if the 'test' stage passes.
     # - Finalize Coveralls runs on ALL branches (to complete coverage merge)
-    # - Build & Deploy to AWS runs ONLY on 'develop' or 'main' branch of the main team repo.
+    # - Build, then Deploy to AWS runs ONLY on 'develop' or 'main' branch of the main team repo.
     # -------------------------------------------------------------------------
     
-    # Job 2: Finalize Coverage & Deploy
+    # Job 2: Finalize Coverage, Build & Deploy
     - stage: deploy
-      name: "Finalize Coverage & Deploy to AWS EB"
+      name: "Finalize Coverage, Build & Deploy to AWS EB"
       language: node_js
       node_js: "20"
       
@@ -184,12 +184,22 @@ jobs:
 
       script:
         # Finalize Coveralls (runs on ALL branches)
-        - echo "Notifying Coveralls that all parallel jobs are complete..."
+        - echo "Notifying Coveralls that all parallel testing jobs are complete..."
         - 'curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$TRAVIS_BUILD_NUMBER&payload[status]=done"'
         # Build frontend (runs on ALL branches, but only needed for develop/main)
         - echo "Starting production build for frontend..."
         - cd frontend
-        - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
+        - |
+          if [[ "$TRAVIS_BRANCH" == "develop" ]]; then
+            echo "Building for DEV environment..."
+            npm run build:dev
+          elif [[ "$TRAVIS_BRANCH" == "main" ]]; then
+            echo "Building for PROD environment..."
+            npm run build:prod
+          else
+            echo "Unknown branch for deployment: $TRAVIS_BRANCH"
+            exit 1
+          fi
         - cd ..
         - echo "Frontend build complete."
       
