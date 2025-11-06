@@ -9,8 +9,12 @@ from apps.listings.serializers import (
     ListingUpdateSerializer,
     CompactListingSerializer,
 )
-from apps.listings.models import Listing, ListingImage
-from tests.factories.factories import UserFactory, ListingFactory, ListingImageFactory
+from apps.listings.models import ListingImage
+from tests.factories.factories import (
+    UserFactory,
+    ListingFactory,
+    ListingImageFactory,
+)
 from PIL import Image
 import io
 import json
@@ -51,7 +55,10 @@ class TestJSONSerializerField:
 @pytest.mark.django_db
 class TestListingCreateSerializer:
     def test_create_listing_with_image_upload_error(self):
-        """Test that partial image upload failures are logged but don't stop listing creation"""
+        """
+        Test that partial image upload failures are logged
+        but don't stop listing creation
+        """
         factory = APIRequestFactory()
         user = UserFactory()
         request = factory.post("/api/v1/listings/")

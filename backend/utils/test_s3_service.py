@@ -76,7 +76,7 @@ def test_delete_image_success(mock_settings, s3_service):
     # Mock Django settings
     mock_settings.AWS_S3_REGION_NAME = "us-east-1"
 
-    image_url = f"https://{s3_service.bucket_name}.s3.us-east-1.amazonaws.com/listings/1/test.jpg"
+    image_url = f"https://{s3_service.bucket_name}.s3.us-east-1.amazonaws.com/listings/1/test.jpg"  # noqa: E501
     expected_key = "listings/1/test.jpg"
 
     success = s3_service.delete_image(image_url)
@@ -108,7 +108,7 @@ def test_delete_image_generic_exception(mock_settings, s3_service):
     """
     mock_settings.AWS_S3_REGION_NAME = "us-east-1"
     s3_service.s3_client.delete_object.side_effect = Exception("Unexpected error")
-    image_url = f"https://{s3_service.bucket_name}.s3.us-east-1.amazonaws.com/listings/1/test.jpg"
+    image_url = f"https://{s3_service.bucket_name}.s3.us-east-1.amazonaws.com/listings/1/test.jpg"  # noqa: E501
 
     success = s3_service.delete_image(image_url)
 
@@ -133,7 +133,8 @@ def test_delete_image_invalid_url(mock_settings, s3_service):
 @patch("utils.s3_service.Image.open")
 def test_upload_image_generic_exception(mock_image_open, s3_service):
     """
-    Verify that a generic (non-ClientError) exception during upload is caught and re-raised.
+    Verify that a generic (non-ClientError) exception during upload is caught
+    and re-raised.
     """
     mock_file = MagicMock()
     mock_file.name = "test.jpg"

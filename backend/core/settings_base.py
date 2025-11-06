@@ -1,5 +1,4 @@
 from pathlib import Path
-from django.core.management.utils import get_random_secret_key
 from datetime import timedelta  # JWT settings
 from dotenv import load_dotenv
 import os
@@ -71,7 +70,7 @@ WSGI_APPLICATION = "core.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",  # noqa: E501
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",

@@ -17,11 +17,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include, re_path
-from django.views.generic import TemplateView
 from django.conf import settings
-from django.views.decorators.cache import never_cache
 from django.http import HttpResponse
-from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import os
 

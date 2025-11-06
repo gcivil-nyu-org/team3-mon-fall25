@@ -1,8 +1,7 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import logoImage from "../assets/images/nyu-marketplace-logo.png";
 
 export default function Home(){
-  const navigate = useNavigate();
 
   return (
     <>

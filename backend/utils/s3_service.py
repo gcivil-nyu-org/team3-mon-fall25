@@ -4,7 +4,6 @@ from django.conf import settings
 import uuid
 import logging
 from PIL import Image
-from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ class S3Service:
             )
 
             # Construct public URL
-            public_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{unique_filename}"
+            public_url = f"https://{self.bucket_name}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{unique_filename}"  # noqa: E501
 
             logger.info(f"Successfully uploaded image to S3: {public_url}")
             return public_url

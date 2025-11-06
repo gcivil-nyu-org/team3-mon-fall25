@@ -5,7 +5,7 @@ router = DefaultRouter()
 router.register("listings", ListingViewSet, basename="listings")
 urlpatterns = router.urls
 
-"""
+"""  # noqa
     Following APIs are Supported:
 
        METHOD    AUTH    API Endpoints                           Function                     Fields

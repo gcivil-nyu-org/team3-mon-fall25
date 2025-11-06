@@ -48,9 +48,9 @@ class ListingImage(models.Model):
     display_order = models.IntegerField(
         default=0
     )  # if there are multiple image order helps in ordering the images.
-    is_primary = models.BooleanField(
-        default=False
-    )  # first image to show when the user opens the listing. This need not always be the first image.
+    is_primary = models.BooleanField(default=False)
+    # First image to show when the user opens the listing.
+    # This need not always be the first image.
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

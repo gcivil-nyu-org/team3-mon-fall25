@@ -1,12 +1,13 @@
-from .settings_base import *
+from .settings_base import *  # noqa: F403, F401
 
 
 DEBUG = True
 
-if not SECRET_KEY:
-    SECRET_KEY = get_random_secret_key()
-    # SECURITY WARNING: Automatically write the generated secret key to a .env file if it doesn't exist
-    env_path = BASE_DIR / ".env"
+if not SECRET_KEY:  # noqa: F405
+    SECRET_KEY = get_random_secret_key()  # noqa: F405
+    # SECURITY WARNING: Automatically write the generated secret key
+    # to a .env file if it doesn't exist
+    env_path = BASE_DIR / ".env"  # noqa: F405
     if not env_path.exists():
         with open(env_path, "a") as env_file:
             env_file.write(f"DJANGO_SECRET_KEY={SECRET_KEY}\n")
@@ -32,9 +33,9 @@ CSRF_COOKIE_HTTPONLY = False
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
     }
 }
 
 # Debug extension
-INSTALLED_APPS += ["django_extensions"]
+INSTALLED_APPS += ["django_extensions"]  # noqa: F405
