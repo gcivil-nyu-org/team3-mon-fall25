@@ -32,7 +32,10 @@ DATABASES = {
         "NAME": os.environ.get("DB_NAME", "nyu_marketplace_dev"),
         "USER": os.environ.get("DB_USER", "nyu_app"),
         "PASSWORD": os.environ.get("DB_PASSWORD", "yourpassword"),
-        "HOST": os.environ.get("DB_HOST", "nyu-marketplace-dev-mysql.c4d68gyyij18.us-east-1.rds.amazonaws.com"),
+        "HOST": os.environ.get(
+            "DB_HOST",
+            "nyu-marketplace-dev-mysql.c4d68gyyij18.us-east-1.rds.amazonaws.com",
+        ),
         "PORT": os.environ.get("DB_PORT", "3306"),
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_ALL_TABLES'",

@@ -14,10 +14,14 @@ def test_integration_combined_filters(api_client=None):
     client = api_client or APIClient()
     resp = client.get(
         "/api/v1/listings/",
-        {"category": "Books", "min_price": "5", "max_price": "20", "location": "manhattan"},
+        {
+            "category": "Books",
+            "min_price": "5",
+            "max_price": "20",
+            "location": "manhattan",
+        },
     )
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data, list)
     assert len(data) == 1
-
