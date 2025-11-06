@@ -1,15 +1,13 @@
-from rest_framework.decorators import action
+import logging
+
 from django.db.models import Q
-from rest_framework import viewsets, mixins, status, pagination
-from rest_framework.permissions import (
-    IsAuthenticatedOrReadOnly,
-    BasePermission,
-    IsAuthenticated,
-    SAFE_METHODS,
-)
+from rest_framework import viewsets, mixins, status, pagination, filters
+from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, BasePermission, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
+
+from utils.s3_service import s3_service
 from .models import Listing
 from .serializers import (
     ListingCreateSerializer,
@@ -17,15 +15,6 @@ from .serializers import (
     CompactListingSerializer,
     ListingDetailSerializer,
 )
-from utils.s3_service import s3_service
-import logging
-from rest_framework import filters
-from django_filters.rest_framework import DjangoFilterBackend
-from .filters import ListingFilter
-
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from apps.chat.models import Conversation, ConversationParticipant
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +34,13 @@ class IsOwnerOrReadOnly(BasePermission):
         return obj.user == request.user
 
 
+# Create your views here.
+
+# Pagination used for list/search
 class ListingPagination(pagination.PageNumberPagination):
     page_size = 12
     page_size_query_param = "page_size"
     max_page_size = 60
-
-
-# Create your views here.
 
 
 class ListingViewSet(
@@ -68,37 +57,15 @@ class ListingViewSet(
     Supports multipart/form-data for image uploads.
     """
 
-    queryset = Listing.objects.filter(status="active")
+    queryset = Listing.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    filter_backends = [
-        DjangoFilterBackend,
-        filters.OrderingFilter,
-        filters.SearchFilter,
-    ]
-    filterset_class = ListingFilter
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["title", "description", "location", "category"]
     ordering_fields = ["created_at", "price", "title"]
     ordering = ["-created_at"]
-    search_fields = ["title", "description", "location"]
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-
-        allowed_fields = {"created_at", "price", "title"}
-        ordering_param = self.request.query_params.get("ordering")
-
-        if ordering_param:
-            # any mistake if made at the end of the URL will be stripped
-            ordering_param = ordering_param.strip()
-            raw = ordering_param.lstrip("-")
-            if raw not in allowed_fields:
-                raise ValidationError({"ordering": ["Invalid ordering field."]})
-            queryset = queryset.order_by(ordering_param)
-        else:
-            queryset = queryset.order_by("-created_at")
-
-        return queryset
+    pagination_class = ListingPagination
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -122,6 +89,20 @@ class ListingViewSet(
             return [IsAuthenticated()]
         return super().get_permissions()
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+
+        q = self.request.GET.get("q")
+        if q:
+            qs = qs.filter(
+                Q(title__icontains=q) |
+                Q(description__icontains=q) |
+                Q(location__icontains=q) |
+                Q(category__icontains=q)
+            )
+        return qs
+
+
     def perform_create(self, serializer):
         """Automatically set the user when creating a listing"""
         serializer.save(user=self.request.user)
@@ -142,36 +123,10 @@ class ListingViewSet(
 
     @action(detail=False, methods=["get"], url_path="search")
     def search(self, request):
-        """
-        Search listings by keyword across title/description/location/category.
-
-        Usage:
-          GET /api/v1/listings/search/?q=desk
-          GET /api/v1/listings/search/?q=lamp&ordering=price&page=2&page_size=12
-
-        """
-
-        q = (request.GET.get("q") or "").strip()
-
-        if not q:
-            return Response(
-                {"error": "Please enter a search query 'q'."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        base_qs = self.get_queryset()
-
-        qs = base_qs.filter(
-            Q(title__icontains=q)
-            | Q(description__icontains=q)
-            | Q(location__icontains=q)
-            | Q(category__icontains=q)
-        )
-
-        paginator = ListingPagination()
-        page = paginator.paginate_queryset(qs, self.request, view=self)
-        serializer = CompactListingSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        qs = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(qs)
+        ser = CompactListingSerializer(page or qs, many=True)
+        return self.get_paginated_response(ser.data) if page is not None else Response(ser.data)
 
     def perform_destroy(self, instance):
         """Delete listing and associated S3 images"""
@@ -194,25 +149,3 @@ class ListingViewSet(
 
         # Delete the listing (will cascade delete ListingImage records)
         instance.delete()
-
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="contact-seller")
-    def contact_seller(self, request, pk=None):
-        """
-        Start or fetch a direct chat between request.user and this listing's owner.
-        POST /api/v1/listings/{id}/contact-seller/
-        """
-        listing = self.get_object()
-        if listing.user_id == request.user.id:
-            return Response({"detail": "You are the owner of this listing."}, status=400)
-
-        dk = Conversation.make_direct_key(request.user.id, listing.user_id)
-        with transaction.atomic():
-            conv, _ = Conversation.objects.select_for_update().get_or_create(
-                direct_key=dk, defaults={"created_by": request.user}
-            )
-            have = set(ConversationParticipant.objects.filter(conversation=conv).values_list("user_id", flat=True))
-            need = {request.user.id, listing.user_id} - have
-            for uid in need:
-                ConversationParticipant.objects.get_or_create(conversation=conv, user_id=uid)
-
-        return Response({"conversation_id": str(conv.id)}, status=200)

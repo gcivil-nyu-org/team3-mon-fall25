@@ -25,6 +25,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 INSTALLED_APPS = [
     "apps.users",
     "apps.listings",
+    "apps.chat",
+    "channels",
     "rest_framework",
     "corsheaders",
     "django.contrib.admin",
@@ -63,6 +65,13 @@ TEMPLATES = [
         },
     },
 ]
+
+ASGI_APPLICATION = "core.asgi.application"
+
+# Dev in-memory channel layer (use Redis in prod)
+CHANNEL_LAYERS = {
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+}
 
 WSGI_APPLICATION = "core.wsgi.application"
 
