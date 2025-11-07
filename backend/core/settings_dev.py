@@ -9,6 +9,8 @@ STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesSto
 ALLOWED_HOSTS = [
     "nyu-marketplace-dev.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
     os.environ.get("nyu-marketplace-dev-test.elasticbeanstalk.com"),
+    ".elasticbeanstalk.com",  # allow any EB CNAME
+    ".elb.amazonaws.com",  # allow the ALB health checker hostname
     "localhost",
 ]
 

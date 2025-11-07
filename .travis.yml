@@ -61,7 +61,7 @@ language: shell
 os: linux
 dist: noble
 
-# specify the order for stages 
+# specify the order for stages
 stages:
   - name: test
   - name: deploy
@@ -69,7 +69,6 @@ stages:
 # Define the matrix of jobs to run
 jobs:
   include:
-    
     # -------------------------------------------------------------------------
     # STAGE 1: Test (CI)
     # These jobs run in parallel on every commit & PR.
@@ -78,12 +77,12 @@ jobs:
     # Job 1.1: Backend (Django) Tests
     - stage: test
       name: "Backend (Django) Tests"
-      
+
       language: python
       python: "3.11"
       services:
-        - mysql      # Start MySQL for testing, as required by settings.py
-      
+        - mysql # Start MySQL for testing, as required by settings.py
+
       env:
         # These are "dummy" (fake) secrets for the CI TEST environment.
         # The app needs them to run, but they don't point to real resources.
@@ -91,8 +90,8 @@ jobs:
         - DJANGO_SECRET_KEY=dummy-ci-key-for-travis
         - DB_ENGINE=django.db.backends.mysql
         - DB_NAME=test_db
-        - DB_USER=travis    # Travis CI default MySQL user
-        - DB_PASSWORD=""    # Travis CI default MySQL password
+        - DB_USER=travis # Travis CI default MySQL user
+        - DB_PASSWORD="" # Travis CI default MySQL password
         - DB_HOST=127.0.0.1
         - ALLOWED_HOSTS="localhost,127.0.0.1"
         - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
@@ -104,11 +103,11 @@ jobs:
         # Create the test database before running tests
         - mysql -e 'CREATE DATABASE test_db;'
         - mkdir 'backend/static'
-      
+
       install:
         - pip install uv
         - uv pip install -r backend/requirements.txt
-      
+
       script:
         # --- Run all backend quality checks ---
         - echo "Running backend linters..."
@@ -122,7 +121,7 @@ jobs:
         - cd backend
         - pytest -n auto --cov=. --cov-report=term --cov-report=lcov --cov-fail-under=85
         - cd ..
-      
+
       after_success:
         # Upload coverage to Coveralls with parallel flag (this job runs in parallel with frontend)
         - echo "Uploading backend coverage to Coveralls..."
@@ -131,22 +130,22 @@ jobs:
     # Job 1.2: Frontend (React) Tests
     - name: "Frontend (React) Tests"
       language: node_js
-      node_js: "20"     # Use a recent Node.js LTS version
+      node_js: "20" # Use a recent Node.js LTS version
 
       env:
         - COVERALLS_PARALLEL=true
       
       cache:
         directories:
-          - frontend/node_modules  # Cache dependencies for faster builds
-      
+          - frontend/node_modules # Cache dependencies for faster builds
+
       install:
         # Install all Node.js frontend dependencies
         - echo "Installing frontend dependencies..."
         - cd frontend
         - npm install
         - cd ..
-      
+
       script:
         # --- Run all frontend quality checks ---
         - echo "Running frontend lint..."
@@ -176,7 +175,7 @@ jobs:
       cache:
         directories:
           - frontend/node_modules
-      
+
       install:
         - echo "Installing frontend dependencies for build..."
         - cd frontend
@@ -203,7 +202,7 @@ jobs:
           fi
         - cd ..
         - echo "Frontend build complete."
-      
+
       # package the backend directory into a zip file to only deploy the backend code
       before_deploy:
         - echo "Creating deployment package from backend directory..."
@@ -211,7 +210,7 @@ jobs:
         - zip -r ../deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc"
         - cd ..
         - ls -lh deploy.zip
-      
+
       deploy:
         # Deploy to DEV
         - provider: elasticbeanstalk
@@ -229,7 +228,7 @@ jobs:
           on:
             branch: develop
             repo: gcivil-nyu-org/team3-mon-fall25
-        
+
         # Deploy to PROD
         - provider: elasticbeanstalk
           access_key_id: $AWS_ACCESS_KEY_ID

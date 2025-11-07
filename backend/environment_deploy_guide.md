@@ -168,22 +168,16 @@ This is how `settings_devtest.py` knows how to connect.
 1. Make sure you're on the branch you want to test (usually `develop`). Pull latest.
 2. Build frontend:
    ```bash
-   ./build_frontend.sh
+   ./build_frontend.sh dev
    ```
    This generates/updates `backend/frontend_build/`.
 
-3. Commit the built frontend (important: EB deploy bundles Git content):
-   ```bash
-   git add backend/frontend_build
-   git commit -m "build: frontend for dev-test deploy"
-   ```
-
-4. Tell EB CLI to target the dev-test environment:
+3. Tell EB CLI to target the dev-test environment:
    ```bash
    eb use nyu-marketplace-dev
    ```
 
-5. Deploy:
+4. Deploy:
    ```bash
    eb deploy
    ```
@@ -233,9 +227,7 @@ Prod MUST have:
 1. Checkout the release branch (usually `main`). Pull latest.
 2. Build frontend and commit it (same steps as dev-test):
    ```bash
-   ./build_frontend.sh
-   git add backend/frontend_build
-   git commit -m "build: frontend for prod release"
+   ./build_frontend.sh prod
    ```
 
 3. Point EB CLI at prod:
