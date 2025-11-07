@@ -9,7 +9,6 @@
     "build:dev": "vite build --mode dev-aws",
     "build:prod": "vite build --mode production",
     "upload-coverage": "coveralls < ./coverage/lcov.info",
-    "finalize-coverage": "coveralls --finish",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

@@ -171,6 +171,10 @@ jobs:
       name: "Finalize Coverage, Build & Deploy to AWS EB"
       language: node_js
       node_js: "20"
+
+      env:
+        - COVERALLS_ENDPOINT=https://coveralls.io
+        - COVERALLS_REPO_TOKEN=$COVERALLS_REPO_TOKEN
       
       cache:
         directories:
@@ -185,7 +189,7 @@ jobs:
       script:
         # Finalize Coveralls (runs on ALL branches)
         - echo "Notifying Coveralls that all parallel testing jobs are complete..."
-        - cd frontend && npm run finalize-coverage || echo "Coveralls finalize failed or not configured"
+        - cd frontend && curl -k $COVERALLS_ENDPOINT/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$BUILD_NUMBER&payload[status]=done" || echo "Coveralls finalize failed or not configured"
         # Build frontend (runs on ALL branches, but only needed for develop/main)
         - echo "Starting production build for frontend..."
         - cd frontend
