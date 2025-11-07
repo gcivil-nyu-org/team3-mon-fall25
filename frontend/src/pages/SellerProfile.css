@@ -1,0 +1,217 @@
+.seller-profile {
+  min-height: 100vh;
+  background: #F5F5F5;
+}
+
+.seller-profile__header {
+  background: #FFFFFF;
+  color: #333;
+  padding: 32px 24px;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.seller-profile__header-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 0;
+}
+
+.seller-profile__topbar {
+  background: #ffffff;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.seller-profile__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: background .15s;
+}
+.seller-profile__back:hover { background:#f3e8ff; color:#56018D; }
+
+.seller-profile__avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #F3E8FF;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #56018D;
+  flex-shrink: 0;
+}
+
+.seller-profile__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.seller-profile__name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #111;
+}
+
+.seller-profile__username {
+  font-size: 0.938rem;
+  margin: 0 0 4px 0;
+  color: #666;
+}
+
+.seller-profile__member-since {
+  font-size: 0.875rem;
+  margin: 0;
+  color: #777;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seller-profile__stats {
+  display: flex;
+  gap: 32px;
+  margin-left: auto;
+  margin-right: 24px;
+}
+
+.seller-profile__cta { 
+  margin-left: 0;
+}
+.seller-profile__msg {
+  background:#56018D;
+  color:#fff;
+  border:none;
+  display:inline-flex;
+  align-items:center;
+  gap:0.5rem;
+  padding:0.6rem 1rem;
+  font-size:0.85rem;
+  font-weight:600;
+  border-radius:8px;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,0.12);
+  transition:background .2s;
+}
+.seller-profile__msg:hover { background:#450174; }
+.seller-profile__msg .dot {
+  width:8px; height:8px; border-radius:50%; background:#fff; display:inline-block;
+}
+
+.seller-profile__stat {
+  background: transparent;
+  backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  text-align: center;
+  min-width: 80px;
+}
+
+.seller-profile__stat-icon {
+  display: none;
+}
+
+.seller-profile__stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #56018D;
+  margin-bottom: 4px;
+}
+
+.seller-profile__stat-label {
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.seller-profile__listings {
+  padding: 48px 24px;
+}
+
+.seller-profile__toolbar {
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  margin-bottom:1.25rem;
+  flex-wrap:wrap;
+}
+.seller-profile__toolbar .toolbar-select select {
+  background:#fff;
+  border:1px solid #D9D9D9;
+  border-radius:8px;
+  padding:0.55rem 0.75rem;
+  font-size:0.85rem;
+  font-weight:500;
+  color:#222;
+  cursor:pointer;
+}
+.seller-profile__toolbar .toolbar-count { font-size:0.85rem; font-weight:500; color:#555; }
+
+.seller-profile__section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 24px 0;
+}
+
+.seller-profile__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .seller-profile__header {
+    padding: 32px 16px;
+  }
+
+  .seller-profile__header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .seller-profile__avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+  }
+
+  .seller-profile__name {
+    font-size: 1.5rem;
+  }
+
+  .seller-profile__stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .seller-profile__listings {
+    padding: 32px 16px;
+  }
+
+  .seller-profile__grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}

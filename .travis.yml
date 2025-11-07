@@ -1,0 +1,230 @@
+# ( Commit to any branch OR create Pull Request )
+#                      |
+#                      v
+# +---------------------------------------------+
+# |             STAGE 1: Test                   |
+# |  (Runs for ALL commits & PRs)               |
+# |                                             |
+# |  (These 2 jobs run in PARALLEL)             |
+# |                                             |
+# |   +-------------------+  +------------------+
+# |   | Job 1.1:          |  | Job 1.2:         |
+# |   | Backend (Django)  |  | Frontend (React) |
+# |   | - check           |  | - Tests          |
+# |   | - collectstatic   |  | - Coverage       |
+# |   | - Tests           |  | - Build Check    |
+# |   | - Coverage (85%)  |  |                  |
+# |   | - Coveralls       |  |                  |
+# |   +-------------------+  +------------------+
+# |          |                      |           |
+# |          +---------+  +---------+           |
+# |                    |  |                     |
+# |                    v  v                     |
+# |              (Wait for BOTH)                |
+# |                    |                        |
+# |             [  Success?  ]                  |
+# |                    |                        |
+# +--------------------|------------------------+
+#                      |
+#                      v (Only if ALL test jobs pass)
+# +--------------------|---------------------+
+# |             STAGE 2: Deploy              |
+# | (Only runs on 'develop' or 'main' branch)|
+# |                                          |
+# |           +-------------------+          |
+# |           | Job 2:            |          |
+# |           | Build & Deploy to |          |
+# |           | AWS EB            |          |
+# |           | - Build Frontend  |          |
+# |           | - Package Backend |          |
+# |           | - Deploy:         |          |
+# |           |   * DEV (develop) |          |
+# |           |   * PROD (main)   |          |
+# |           +-------------------+          |
+# |                                          |
+# +------------------------------------------+
+#
+
+# -----------------------------------------------------------------------------
+# .travis.yml for NYU Marketplace (Monorepo CI/CD)
+#
+# This pipeline is structured in two stages:
+# 1. 'test':   Runs parallel jobs to validate backend and frontend code.
+#              This is triggered on ALL commits and Pull Requests.
+# 2. 'deploy': Runs jobs to build *and* deploy the application.
+#              This is triggered ONLY on successful merges to 'develop' or 'main'.
+# -----------------------------------------------------------------------------
+
+language: shell
+os: linux
+dist: noble
+
+# specify the order for stages 
+stages:
+  - name: test
+  - name: deploy
+
+# Define the matrix of jobs to run
+jobs:
+  include:
+    
+    # -------------------------------------------------------------------------
+    # STAGE 1: Test (CI)
+    # These jobs run in parallel on every commit & PR.
+    # -------------------------------------------------------------------------
+
+    # Job 1.1: Backend (Django) Tests
+    - stage: test
+      name: "Backend (Django) Tests"
+      
+      language: python
+      python: "3.11"
+      services:
+        - mysql      # Start MySQL for testing, as required by settings.py
+      
+      env:
+        # These are "dummy" (fake) secrets for the CI TEST environment.
+        # The app needs them to run, but they don't point to real resources.
+        - DJANGO_SETTINGS_MODULE=core.settings_dev
+        - DJANGO_SECRET_KEY=dummy-ci-key-for-travis
+        - DB_ENGINE=django.db.backends.mysql
+        - DB_NAME=test_db
+        - DB_USER=travis    # Travis CI default MySQL user
+        - DB_PASSWORD=""    # Travis CI default MySQL password
+        - DB_HOST=127.0.0.1
+        - ALLOWED_HOSTS="localhost,127.0.0.1"
+        - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+        - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+        - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
+
+      before_script:
+        # Create the test database before running tests
+        - mysql -e 'CREATE DATABASE test_db;'
+        - mkdir 'backend/static'
+      
+      install:
+        - pip install uv
+        - uv pip install -r backend/requirements.txt
+      
+      script:
+        # --- Run all backend quality checks ---
+        - echo "Running backend linters..."
+        - flake8 backend/
+        - black backend/ --check
+        - echo "Running Django manage.py check..."
+        - python backend/manage.py check
+        - echo "Running Django collectstatic (validation)..."
+        - python backend/manage.py collectstatic --noinput
+        - echo "Running backend tests with coverage..."
+        - cd backend
+        - coverage run -m pytest .
+        - echo "Generating coverage report..."
+        - coverage report --fail-under=85
+        - coverage html
+        - cd ..
+      
+      after_success:
+        # Upload coverage to Coveralls (optional - requires COVERALLS_REPO_TOKEN)
+        - echo "Uploading coverage to Coveralls..."
+        - cd backend && coveralls || echo "Coveralls upload failed or not configured"
+
+    # Job 1.2: Frontend (React) Tests
+    - name: "Frontend (React) Tests"
+      language: node_js
+      node_js: "20"     # Use a recent Node.js LTS version
+      
+      cache:
+        directories:
+          - frontend/node_modules  # Cache dependencies for faster builds
+      
+      install:
+        # Install all Node.js frontend dependencies
+        - echo "Installing frontend dependencies..."
+        - cd frontend
+        - npm install
+        - cd ..
+      
+      script:
+        # --- Run all frontend quality checks ---
+        - echo "Running frontend lint..."
+        - npm run lint --prefix frontend
+        - echo "Running frontend tests with coverage..."
+        - npm run test:coverage --prefix frontend
+        - echo "Validating frontend production build..."
+        - npm run build --prefix frontend # Just validates that the build succeeds
+
+    # -------------------------------------------------------------------------
+    # STAGE 2: Build & Deploy (CD)
+    # These jobs ONLY run if the 'test' stage passes AND the commit
+    # is on the 'develop' or 'main' branch of the main team repo.
+    # -------------------------------------------------------------------------
+    - name: "Build & Deploy to AWS EB"
+      stage: deploy
+      language: python
+      python: "3.11"
+      
+      cache:
+        directories:
+          - frontend/node_modules
+      
+      install:
+        - echo "Installing deploy tools..."
+        - pip install dpl
+        - echo "Installing Node.js..."
+        - nvm install 20
+        - nvm use 20
+        - echo "Installing frontend dependencies for build..."
+        - cd frontend
+        - npm install
+        - cd ..
+
+      script:
+        - echo "Starting production build for frontend..."
+        - cd frontend
+        - npm run build  # Vite builds directly into backend/frontend_build (see vite.config.js)
+        - cd ..
+        - echo "Frontend build complete."
+      
+      # package the backend directory into a zip file to only deploy the backend code
+      before_deploy:
+        - echo "Creating deployment package from backend directory..."
+        - cd backend
+        - zip -r ../deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc"
+        - cd ..
+        - ls -lh deploy.zip
+      
+      deploy:
+        # Deploy to DEV
+        - provider: elasticbeanstalk
+          access_key_id: $AWS_ACCESS_KEY_ID
+          secret_access_key: $AWS_SECRET_ACCESS_KEY
+          region: "us-east-1"
+          app: "nyu-marketplace"
+          env: "nyu-marketplace-dev"
+          bucket: "nyu-marketplace-dev-images"
+          edge: true
+          cleanup: false
+          zip_file: deploy.zip
+          on:
+            branch: develop
+            repo: gcivil-nyu-org/team3-mon-fall25
+        
+        # Deploy to PROD
+        - provider: elasticbeanstalk
+          access_key_id: $AWS_ACCESS_KEY_ID
+          secret_access_key: $AWS_SECRET_ACCESS_KEY
+          region: "us-east-1"
+          app: "nyu-marketplace"
+          env: "nyu-marketplace-env"
+          bucket: "nyu-marketplace-images"
+          edge: true
+          cleanup: false
+          zip_file: deploy.zip
+          on:
+            branch: main
+            repo: gcivil-nyu-org/team3-mon-fall25
+
+# -----------------------------------------------------------------------------
+# (Optional but Recommended) Disable email spam
+notifications:
+  email: false
