@@ -12,7 +12,7 @@ export default function Profile() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
@@ -40,13 +40,13 @@ export default function Profile() {
     navigate(-1);
   };
 
-  const handleEditProfile = () => {
-    setIsEditModalOpen(true);
-  };
+  // const handleEditProfile = () => {
+  //   setIsEditModalOpen(true);
+  // };
 
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-  };
+  // const handleCloseEditModal = () => {
+  //   setIsEditModalOpen(false);
+  // };
 
   const handleListingClick = (listingId) => {
     navigate(`/listing/${listingId}`);
