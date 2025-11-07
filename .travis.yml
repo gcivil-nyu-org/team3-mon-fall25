@@ -125,7 +125,7 @@ jobs:
       after_success:
         # Upload coverage to Coveralls with parallel flag (this job runs in parallel with frontend)
         - echo "Uploading backend coverage to Coveralls..."
-        - cd backend && COVERALLS_FLAG_NAME="Backend Tests" cat coverage.lcov | coveralls || echo "Coveralls upload failed or not configured"
+        - cd backend && cat coverage.lcov | COVERALLS_FLAG_NAME="Backend Tests" coveralls || echo "Coveralls upload failed or not configured"
 
     # Job 1.2: Frontend (React) Tests
     - name: "Frontend (React) Tests"
