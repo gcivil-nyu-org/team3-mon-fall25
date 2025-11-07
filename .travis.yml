@@ -183,9 +183,6 @@ jobs:
         - cd ..
 
       script:
-        # Finalize Coveralls (runs on ALL branches)
-        - echo "Notifying Coveralls that all parallel testing jobs are complete..."
-        - cd frontend && curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$TRAVIS_BUILD_NUMBER&payload[status]=done" || echo "Coveralls finalize failed or not configured"
         # Build frontend (runs on ALL branches, but only needed for develop/main)
         - echo "Starting production build for frontend..."
         - cd frontend
@@ -245,3 +242,6 @@ jobs:
           on:
             branch: main
             repo: gcivil-nyu-org/team3-mon-fall25
+
+notifications:
+  webhooks: https://coveralls.io/webhook
