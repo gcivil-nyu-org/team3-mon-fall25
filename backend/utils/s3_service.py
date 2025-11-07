@@ -145,5 +145,35 @@ class S3Service:
             raise ValueError("Invalid image file")
 
 
-# Singleton instance
-s3_service = S3Service()
+# Lazy singleton pattern for test compatibility
+_s3_service_instance = None
+
+
+def get_s3_service():
+    """
+    Get or create the S3Service singleton instance.
+    Uses lazy initialization to allow proper mocking in tests.
+    """
+    global _s3_service_instance
+    if _s3_service_instance is None:
+        _s3_service_instance = S3Service()
+    return _s3_service_instance
+
+
+def _reset_s3_service():
+    """
+    Reset the singleton instance. For testing purposes only.
+    """
+    global _s3_service_instance
+    _s3_service_instance = None
+
+
+# Backwards compatibility: expose as s3_service
+class _S3ServiceProxy:
+    """Proxy that delegates to the lazy singleton"""
+
+    def __getattr__(self, name):
+        return getattr(get_s3_service(), name)
+
+
+s3_service = _S3ServiceProxy()

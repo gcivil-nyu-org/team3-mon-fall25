@@ -119,10 +119,7 @@ jobs:
         - python backend/manage.py collectstatic --noinput
         - echo "Running backend tests with coverage..."
         - cd backend
-        - coverage run -m pytest -n auto .
-        - echo "Generating coverage report..."
-        - coverage report --fail-under=85
-        - coverage html
+        - pytest -n auto --cov=. --cov-report=term --cov-report=html --cov-fail-under=85
         - cd ..
       
       after_success:
