@@ -116,6 +116,8 @@ class ListingCreateSerializer(serializers.ModelSerializer):
                 logger.error(
                     f"Failed to upload image for listing "
                     f"{listing.listing_id}: {str(e)}"
+                    f"Failed to upload image for listing "
+                    f"{listing.listing_id}: {str(e)}"
                 )
                 # Optionally, you could delete the listing if no images were
                 # uploaded successfully
@@ -304,7 +306,8 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
                     logger.info(f"Added new image to listing {instance.listing_id}")
                 except Exception as e:
                     logger.error(
-                        f"Failed to upload image for listing {instance.listing_id}: {str(e)}"
+                        f"Failed to upload image for listing "
+                        f"{instance.listing_id}: {str(e)}"
                     )
                     raise serializers.ValidationError(
                         f"Failed to upload image: {str(e)}"

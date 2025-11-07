@@ -51,8 +51,10 @@ def spa_view(request):
 urlpatterns = [
     path("api/v1/", include("apps.users.urls")),
     path("api/v1/", include("apps.listings.urls")),
+    path("api/v1/", include("apps.users.urls")),
+    path("api/v1/", include("apps.listings.urls")),
     path("admin/", admin.site.urls),
-    path("health", health_ok),
+    path("", include("apps.common.urls")),  # Health check and other common endpoints
 ]
 
 # SPA fallback, excluding api/admin/static/media

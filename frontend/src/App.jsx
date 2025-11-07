@@ -13,8 +13,6 @@ export default function App() {
     navigate("/login");
   };
 
-  const purple = "#56018D";
-
   return (
     <div
   style={{

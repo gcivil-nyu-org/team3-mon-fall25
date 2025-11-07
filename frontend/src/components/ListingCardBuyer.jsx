@@ -3,7 +3,6 @@ import { FaBoxOpen } from "react-icons/fa";
 import "./ListingCardBuyer.css";
 
 export default function ListingCardBuyer({
-  id,
   title = "",
   price = 0,
   status = "active",

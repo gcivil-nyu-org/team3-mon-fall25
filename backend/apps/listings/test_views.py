@@ -170,7 +170,8 @@ class TestListingViewSet:
         Verify that creating a listing with more than 10 images fails.
         """
         client, user = authenticated_client
-        # Mocks are simple objects; no need for real image data for this validation test.
+        # Mocks are simple objects; no need for real image data
+        # for this validation test.
         images = ["image"] * 11
         with patch("utils.s3_service.s3_service.upload_image") as mock_upload:
             mock_upload.return_value = "http://example.com/mock-image.jpg"
@@ -226,7 +227,7 @@ class TestListingViewSet:
         listing = ListingFactory(user=user)
         image1 = ListingImageFactory(listing=listing, is_primary=True)
         image2 = ListingImageFactory(listing=listing)
-        _image3 = ListingImageFactory(listing=listing)  # noqa: F841
+        ListingImageFactory(listing=listing)  # image3
 
         # Create a proper mock image file using PIL
         from PIL import Image
@@ -319,14 +320,12 @@ class TestListingViewSet:
         """
         # 1. Listing with a primary image
         listing1 = ListingFactory()
-        _img1 = ListingImageFactory(  # noqa: F841
-            listing=listing1, is_primary=True, image_url="primary.jpg"
-        )
+        ListingImageFactory(listing=listing1, is_primary=True, image_url="primary.jpg")
         ListingImageFactory(listing=listing1, is_primary=False)
 
         # 2. Listing with no primary image, but other images
         listing2 = ListingFactory()
-        _img2 = ListingImageFactory(  # noqa: F841
+        ListingImageFactory(
             listing=listing2, is_primary=False, display_order=0, image_url="first.jpg"
         )
         ListingImageFactory(listing=listing2, is_primary=False, display_order=1)
@@ -390,7 +389,8 @@ class TestListingViewSet:
         # search action is paginated; expect count/results keys
         assert {"count", "results"}.issubset(set(r.data.keys()))
         titles = {row["title"] for row in r.data["results"]}
-        # Should include at least the first four created above (title/desc/location/category matches)
+        # Should include at least the first four created above
+        # (title/desc/location/category matches)
         assert "Vintage desk" in titles
         assert "Lamp" in titles
         assert "Couch" in titles

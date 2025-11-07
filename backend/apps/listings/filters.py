@@ -15,6 +15,11 @@ class ListingFilter(django_filters.FilterSet):
     location = django_filters.CharFilter(field_name="location", lookup_expr="icontains")
     category = django_filters.CharFilter(field_name="category", lookup_expr="iexact")
     posted_within = django_filters.NumberFilter(method="filter_posted_within")
+    min_price = django_filters.NumberFilter(method="filter_min_price")
+    max_price = django_filters.NumberFilter(method="filter_max_price")
+    location = django_filters.CharFilter(field_name="location", lookup_expr="icontains")
+    category = django_filters.CharFilter(field_name="category", lookup_expr="iexact")
+    posted_within = django_filters.NumberFilter(method="filter_posted_within")
 
     class Meta:
         model = Listing
@@ -51,10 +56,14 @@ class ListingFilter(django_filters.FilterSet):
 
         # Cross-field validation: min_price <= max_price
         min_raw = self.data.get("min_price") if hasattr(self, "data") else None
+        min_raw = self.data.get("min_price") if hasattr(self, "data") else None
         if min_raw not in (None, ""):
             try:
                 min_amount = Decimal(str(min_raw))
                 if min_amount > amount:
+                    raise ValidationError(
+                        {"price": ["min_price cannot be greater than max_price."]}
+                    )
                     raise ValidationError(
                         {"price": ["min_price cannot be greater than max_price."]}
                     )

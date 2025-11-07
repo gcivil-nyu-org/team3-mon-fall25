@@ -40,15 +40,6 @@ class OTPRateThrottle(SimpleRateThrottle):
         """
         from rest_framework.exceptions import Throttled
 
-        # Calculate wait time
-        available_at = None
-        if self.history:
-            available_at = self.history[-1] + self.duration
-
         raise Throttled(
-            detail=(
-                "Too many OTP requests. "
-                "Please wait before requesting another verification code."
-            ),
-            available_at=available_at,
+            detail="You can only request 5 OTP per hour.",
         )

@@ -1,51 +1,49 @@
 # ( Commit to any branch OR create Pull Request )
-#                 |
-#                 v
-# +------------------------------------------+
-# |             STAGE 1: Test                |
-# |  (Runs for ALL commits & PRs)            |
-# |                                          |
-# |  (These 2 jobs run in PARALLEL)          |
-# |                                          |
-# |   +-------------------+  +---------------+
-# |   | Job 1.1:          |  | Job 1.2:      |
-# |   | Backend (Django)  |  | Frontend      |
-# |   | Tests             |  | (React) Tests |
-# |   +-------------------+  +---------------+
-# |          |                      |        |
-# |          +---------+  +---------+        |
-# |                    |  |                  |
-# |                    v  v                  |
-# |              (Wait for BOTH)             |
-# |                    |                     |
-# |             [  Success?  ]               |
-# |                    |                     |
-# +--------------------|---------------------+
+#                      |
+#                      v
+# +---------------------------------------------+
+# |             STAGE 1: Test                   |
+# |  (Runs for ALL commits & PRs)               |
+# |                                             |
+# |  (These 2 jobs run in PARALLEL)             |
+# |                                             |
+# |   +-------------------+  +------------------+
+# |   | Job 1.1:          |  | Job 1.2:         |
+# |   | Backend (Django)  |  | Frontend (React) |
+# |   | - check           |  | - Tests          |
+# |   | - collectstatic   |  | - Coverage       |
+# |   | - Tests           |  | - Build Check    |
+# |   | - Coverage (85%)  |  |                  |
+# |   | - Coveralls       |  |                  |
+# |   +-------------------+  +------------------+
+# |          |                      |           |
+# |          +---------+  +---------+           |
+# |                    |  |                     |
+# |                    v  v                     |
+# |              (Wait for BOTH)                |
+# |                    |                        |
+# |             [  Success?  ]                  |
+# |                    |                        |
+# +--------------------|------------------------+
 #                      |
 #                      v (Only if ALL test jobs pass)
 # +--------------------|---------------------+
 # |             STAGE 2: Deploy              |
 # | (Only runs on 'develop' or 'main' branch)|
 # |                                          |
-# |   [ IF branch is 'develop' ]             |
-# |                |                         |
-# |                v                         |
-# |   +-------------------+                  |
-# |   | Job 2.1:          |                  |
-# |   | Build & Deploy    |                  |
-# |   | to DEV            |                  |
-# |   +-------------------+                  |
-# |                                          |
-# |   [ IF branch is 'main' ]                |
-# |                |                         |
-# |                v                         |
-# |   +-------------------+                  |
-# |   | Job 2.2:          |                  |
-# |   | Build & Deploy    |                  |
-# |   | to PROD           |                  |
-# |   +-------------------+                  |
+# |           +-------------------+          |
+# |           | Job 2:            |          |
+# |           | Build & Deploy to |          |
+# |           | AWS EB            |          |
+# |           | - Build Frontend  |          |
+# |           | - Package Backend |          |
+# |           | - Deploy:         |          |
+# |           |   * DEV (develop) |          |
+# |           |   * PROD (main)   |          |
+# |           +-------------------+          |
 # |                                          |
 # +------------------------------------------+
+#
 
 # -----------------------------------------------------------------------------
 # .travis.yml for NYU Marketplace (Monorepo CI/CD)
@@ -110,9 +108,9 @@ jobs:
       
       script:
         # --- Run all backend quality checks ---
-        #- echo "Running backend linters..."
-        #- flake8 backend/
-        #- black backend/ --check
+        - echo "Running backend linters..."
+        - flake8 backend/
+        - black backend/ --check
         - echo "Running Django manage.py check..."
         - python backend/manage.py check
         - echo "Running Django collectstatic (validation)..."
@@ -148,8 +146,8 @@ jobs:
       
       script:
         # --- Run all frontend quality checks ---
-        #- echo "Running frontend lint..."
-        #- npm run lint --prefix frontend
+        - echo "Running frontend lint..."
+        - npm run lint --prefix frontend
         - echo "Running frontend tests with coverage..."
         - npm run test:coverage --prefix frontend
         - echo "Validating frontend production build..."
@@ -209,8 +207,7 @@ jobs:
           zip_file: deploy.zip
           on:
             branch: develop
-            # TODO: Change to gcivil-nyu-org/team3-mon-fall25
-            repo: iridiumtao/NYU-Marketplace
+            repo: gcivil-nyu-org/team3-mon-fall25
         
         # Deploy to PROD
         - provider: elasticbeanstalk
