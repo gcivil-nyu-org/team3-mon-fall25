@@ -244,4 +244,4 @@ jobs:
             repo: gcivil-nyu-org/team3-mon-fall25
 
 notifications:
-  webhooks: https://coveralls.io/webhook
+  webhooks: https://coveralls.io/webhook?repo_token=${COVERALLS_REPO_TOKEN}
