@@ -48,4 +48,18 @@ describe('ListingCardBuyer', () => {
     expect(placeholder).toBeTruthy();
     expect(placeholder.style.display).not.toBe('none');
   });
+
+  it('accepts imageUrl as object and shows location badge', () => {
+    const onClick = vi.fn();
+    const imgObj = { url: 'http://example.com/obj.png' };
+    render(
+      <ListingCardBuyer id={4} title="Chair" price={15} status="active" imageUrl={imgObj} location="Dorm A" onClick={onClick} />
+    );
+
+    const img = screen.getByAltText('Chair');
+    expect(img).toBeInTheDocument();
+
+    // Location should be shown
+    expect(screen.getByText('Dorm A')).toBeInTheDocument();
+  });
 });
