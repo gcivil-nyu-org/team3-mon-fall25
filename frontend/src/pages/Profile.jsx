@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getMyListings } from "../api/listings.js";
 import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen } from "react-icons/fa";
-// import EditProfile from "./EditProfile";
+import EditProfile from "./EditProfile";
 import "./Profile.css";
 
 export default function Profile() {
@@ -12,7 +12,7 @@ export default function Profile() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
@@ -40,13 +40,13 @@ export default function Profile() {
     navigate(-1);
   };
 
-  // const handleEditProfile = () => {
-  //   setIsEditModalOpen(true);
-  // };
+  const handleEditProfile = () => {
+    setIsEditModalOpen(true);
+  };
 
-  // const handleCloseEditModal = () => {
-  //   setIsEditModalOpen(false);
-  // };
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+  };
 
   const handleListingClick = (listingId) => {
     navigate(`/listing/${listingId}`);
@@ -75,10 +75,10 @@ export default function Profile() {
 
       {/* Profile Card */}
       <div className="profile-card">
-        {/* <button className="edit-profile-button" onClick={handleEditProfile}>
+        <button className="edit-profile-button" onClick={handleEditProfile}>
           <FaEdit />
           <span>Edit Profile</span>
-        </button> */}
+        </button>
 
         <div className="profile-header">
           {/* Profile Picture - Left Side */}
@@ -215,9 +215,9 @@ export default function Profile() {
       </div>
 
       {/* Edit Profile Modal */}
-      {/* {isEditModalOpen && (
+      {isEditModalOpen && (
         <EditProfile onClose={handleCloseEditModal} />
-      )} */}
+      )}
     </div>
   );
 }

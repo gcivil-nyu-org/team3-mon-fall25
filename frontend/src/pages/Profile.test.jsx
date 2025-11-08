@@ -72,7 +72,7 @@ describe('Profile', () => {
 
             expect(screen.getByText('@current_user')).toBeInTheDocument();
             expect(screen.getByText(/NYU student selling items/)).toBeInTheDocument();
-            // expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+            expect(screen.getByText('Edit Profile')).toBeInTheDocument();
         });
 
         it('displays back button', () => {
@@ -190,38 +190,38 @@ describe('Profile', () => {
             expect(mockNavigate).toHaveBeenCalledWith(-1);
         });
 
-        // it('opens edit profile modal when Edit Profile button is clicked', async () => {
-        //     const user = userEvent.setup();
-        //     renderWithRouter(<Profile />);
+        it('opens edit profile modal when Edit Profile button is clicked', async () => {
+            const user = userEvent.setup();
+            renderWithRouter(<Profile />);
 
-        //     await waitFor(() => {
-        //         expect(screen.getByText('Edit Profile')).toBeInTheDocument();
-        //     });
+            await waitFor(() => {
+                expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+            });
 
-        //     const editButton = screen.getByText('Edit Profile').closest('button');
-        //     await user.click(editButton);
+            const editButton = screen.getByText('Edit Profile').closest('button');
+            await user.click(editButton);
 
-        //     expect(screen.getByText('Update your profile information')).toBeInTheDocument();
-        // });
+            expect(screen.getByText(/Update your profile information/)).toBeInTheDocument();
+        });
 
-        // it('closes edit profile modal when close is triggered', async () => {
-        //     const user = userEvent.setup();
-        //     renderWithRouter(<Profile />);
+        it('closes edit profile modal when close is triggered', async () => {
+            const user = userEvent.setup();
+            renderWithRouter(<Profile />);
 
-        //     await waitFor(() => {
-        //         expect(screen.getByText('Edit Profile')).toBeInTheDocument();
-        //     });
+            await waitFor(() => {
+                expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+            });
 
-        //     const editButton = screen.getByText('Edit Profile').closest('button');
-        //     await user.click(editButton);
+            const editButton = screen.getByText('Edit Profile').closest('button');
+            await user.click(editButton);
 
-        //     const cancelButton = screen.getByText('Cancel').closest('button');
-        //     await user.click(cancelButton);
+            const cancelButton = screen.getByText('Cancel').closest('button');
+            await user.click(cancelButton);
 
-        //     await waitFor(() => {
-        //         expect(screen.queryByText('Update your profile information')).not.toBeInTheDocument();
-        //     });
-        // });
+            await waitFor(() => {
+                expect(screen.queryByText('Update your profile information')).not.toBeInTheDocument();
+            });
+        });
 
         it('navigates to listing detail when listing card is clicked', async () => {
             const user = userEvent.setup();
