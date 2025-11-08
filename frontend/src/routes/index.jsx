@@ -11,6 +11,7 @@ import MyListings from "../pages/MyListings";
 import ListingDetail from "../pages/ListingDetail";
 import EditListing from "../pages/EditListing";
 import Login from "../pages/Login";
+import SellerProfile from "../pages/SellerProfile";
 
 export default function AppRouter() {
   return (
@@ -35,6 +36,7 @@ export default function AppRouter() {
               <Route path="/listing/:id/edit" element={<EditListing />} />
               <Route path="/create-listing" element={<CreateListing />} />
               <Route path="/my-listings" element={<MyListings />} />
+              <Route path="/seller/:username" element={<SellerProfile />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

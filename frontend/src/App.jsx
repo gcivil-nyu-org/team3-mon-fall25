@@ -43,7 +43,7 @@ export default function App() {
           backdropFilter: "blur(5px)"
         }}
       />
-      <span className="nav__brandText">Buy & Sell on Campus</span>
+      <span className="nav__brandText">Your Campus, Your Market!</span>
     </div>
 
     {/* Links (right) */}

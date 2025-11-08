@@ -1,0 +1,111 @@
+.seller-card {
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  padding: 20px;
+  background: white;
+}
+
+.seller-card__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 16px;
+}
+
+.seller-card__profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.seller-card__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.seller-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.seller-card__avatar-fallback {
+  width: 100%;
+  height: 100%;
+  background: #56018D;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.seller-card__info {
+  flex: 1;
+}
+
+.seller-card__name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 4px;
+}
+
+.seller-card__member-since {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: #666666;
+}
+
+.seller-card__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.seller-card__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.seller-card__stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #666666;
+}
+
+.seller-card__stat-icon {
+  width: 16px;
+  height: 16px;
+  color: #56018D;
+  flex-shrink: 0;
+}
+
+.seller-card__button {
+  width: 100%;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #56018D;
+  border-radius: 8px;
+  color: #56018D;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.seller-card__button:hover {
+  background: #56018D;
+  background: rgba(86, 1, 141, 0.05);
+}
+

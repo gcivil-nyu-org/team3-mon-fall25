@@ -27,22 +27,24 @@
 # +--------------------|------------------------+
 #                      |
 #                      v (Only if ALL test jobs pass)
-# +--------------------|---------------------+
-# |             STAGE 2: Deploy              |
-# | (Only runs on 'develop' or 'main' branch)|
-# |                                          |
-# |           +-------------------+          |
-# |           | Job 2:            |          |
-# |           | Build & Deploy to |          |
-# |           | AWS EB            |          |
-# |           | - Build Frontend  |          |
-# |           | - Package Backend |          |
-# |           | - Deploy:         |          |
-# |           |   * DEV (develop) |          |
-# |           |   * PROD (main)   |          |
-# |           +-------------------+          |
-# |                                          |
-# +------------------------------------------+
+# +--------------------|------------------------+
+# |             STAGE 2: Deploy                 |
+# |                                             |
+# |           +----------------------+          |
+# |           | Job 2:               |          |
+# |           | Finalize Coverage &  |          |
+# |           | Deploy to AWS EB     |          |
+# |           | - Merge parallel     |          |
+# |           |   coverage           |          |
+# |           |   (all branches)     |          |
+# |           | - Build Frontend     |          |
+# |           |   (all branches)     |          |
+# |           | - Package & Deploy:  |          |
+# |           |   * DEV (develop)    |          |
+# |           |   * PROD (main)      |          |
+# |           +----------------------+          |
+# |                                             |
+# +---------------------------------------------+
 #
 
 # -----------------------------------------------------------------------------
@@ -51,8 +53,8 @@
 # This pipeline is structured in two stages:
 # 1. 'test':   Runs parallel jobs to validate backend and frontend code.
 #              This is triggered on ALL commits and Pull Requests.
-# 2. 'deploy': Runs jobs to build *and* deploy the application.
-#              This is triggered ONLY on successful merges to 'develop' or 'main'.
+# 2. 'deploy': Runs jobs to build *and* deploy the application
+#              on successful merges to 'develop' or 'main'.
 # -----------------------------------------------------------------------------
 
 language: shell
@@ -95,6 +97,7 @@ jobs:
         - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
         - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
         - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
+        # - COVERALLS_PARALLEL=true
 
       before_script:
         # Create the test database before running tests
@@ -116,22 +119,22 @@ jobs:
         - python backend/manage.py collectstatic --noinput
         - echo "Running backend tests with coverage..."
         - cd backend
-        - coverage run -m pytest .
-        - echo "Generating coverage report..."
-        - coverage report --fail-under=85
-        - coverage html
+        - pytest -n auto --cov=. --cov-report=term --cov-report=lcov --cov-fail-under=85
         - cd ..
 
       after_success:
-        # Upload coverage to Coveralls (optional - requires COVERALLS_REPO_TOKEN)
-        - echo "Uploading coverage to Coveralls..."
-        - cd backend && coveralls || echo "Coveralls upload failed or not configured"
+        # Upload coverage to Coveralls with parallel flag (this job runs in parallel with frontend)
+        - echo "Uploading backend coverage to Coveralls..."
+        - cd backend && cat coverage.lcov | COVERALLS_FLAG_NAME="Backend Tests" coveralls || echo "Coveralls upload failed or not configured"
 
     # Job 1.2: Frontend (React) Tests
     - name: "Frontend (React) Tests"
       language: node_js
       node_js: "20" # Use a recent Node.js LTS version
 
+      #env:
+        #- COVERALLS_PARALLEL=true
+      
       cache:
         directories:
           - frontend/node_modules # Cache dependencies for faster builds
@@ -150,36 +153,82 @@ jobs:
         - echo "Running frontend tests with coverage..."
         - npm run test:coverage --prefix frontend
         - echo "Validating frontend production build..."
-        - npm run build --prefix frontend # Just validates that the build succeeds
+        - npm run build:dev --prefix frontend # Just validates that the build succeeds
+      
+      after_success:
+        # Upload coverage to Coveralls with parallel flag (this job runs in parallel with backend)
+        - cd frontend && COVERALLS_FLAG_NAME="Frontend Tests" npm run upload-coverage || echo "Coveralls upload failed or not configured"
 
-    # -------------------------------------------------------------------------
-    # STAGE 2: Build & Deploy (CD)
-    # These jobs ONLY run if the 'test' stage passes AND the commit
-    # is on the 'develop' or 'main' branch of the main team repo.
-    # -------------------------------------------------------------------------
-    - name: "Build & Deploy to AWS EB"
-      stage: deploy
+    # Job 1.3: Backend Compatibility Tests for Python 3.13
+    - name: "Backend Compatibility Tests"
       language: python
-      python: "3.11"
+      python: "3.13"
+      services:
+        - mysql # Start MySQL for testing, as required by settings.py
 
+      env:
+        # These are "dummy" (fake) secrets for the CI TEST environment.
+        # The app needs them to run, but they don't point to real resources.
+        - DJANGO_SETTINGS_MODULE=core.settings_dev
+        - DJANGO_SECRET_KEY=dummy-ci-key-for-travis
+        - DB_ENGINE=django.db.backends.mysql
+        - DB_NAME=test_db
+        - DB_USER=travis # Travis CI default MySQL user
+        - DB_PASSWORD="" # Travis CI default MySQL password
+        - DB_HOST=127.0.0.1
+        - ALLOWED_HOSTS="localhost,127.0.0.1"
+        - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+        - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+        - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
+        # - COVERALLS_PARALLEL=true
+
+      before_script:
+        # Create the test database before running tests
+        - mysql -e 'CREATE DATABASE test_db;'
+        - mkdir 'backend/static'
+
+      install:
+        - pip install uv
+        - uv pip install -r backend/requirements.txt
+
+      script:
+        # --- Run all backend quality checks ---
+        - python backend/manage.py check
+        - echo "Running Django collectstatic (validation)..."
+        - python backend/manage.py collectstatic --noinput
+
+    # -------------------------------------------------------------------------
+    # STAGE 2: Deploy (CD)
+    # This job ONLY runs if the 'test' stage passes.
+    # - Finalize Coveralls runs on ALL branches (to complete coverage merge)
+    # - Build & Deploy to AWS runs ONLY on 'develop' or 'main' branch of the main team repo.
+    # -------------------------------------------------------------------------
+    
+    # Job 2: Finalize Coverage, Build & Deploy
+    - stage: deploy
+      name: "Finalize Coverage, Build & Deploy to AWS EB"
+      language: node_js
+      node_js: "20"
+      
       cache:
         directories:
           - frontend/node_modules
 
       install:
-        - echo "Installing deploy tools..."
-        - pip install dpl
-        - echo "Installing Node.js..."
-        - nvm install 20
-        - nvm use 20
         - echo "Installing frontend dependencies for build..."
         - cd frontend
         - npm install
         - cd ..
 
       script:
-        - echo "Starting production build for frontend..."
+        # Build frontend (runs on ALL branches, but only needed for develop/main)
+
+        # Finalize Coveralls (runs on ALL branches)
+        - echo "Notifying Coveralls that all parallel testing jobs are complete..."
         - cd frontend
+        - curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$TRAVIS_BUILD_ID&payload[status]=done" || echo "Coveralls finalize failed or not configured"
+
+        - echo "Starting production build for frontend..."
         - |
           if [[ "$TRAVIS_BRANCH" == "develop" ]]; then
             echo "Building for DEV environment..."
@@ -188,8 +237,8 @@ jobs:
             echo "Building for PROD environment..."
             npm run build:prod
           else
-            echo "Unknown branch for deployment: $TRAVIS_BRANCH"
-            exit 1
+            echo "Non-deployable branch: $TRAVIS_BRANCH"
+            exit 0
           fi
         - cd ..
         - echo "Frontend build complete."
@@ -212,8 +261,10 @@ jobs:
           env: "nyu-marketplace-dev"
           bucket: "nyu-marketplace-dev-images"
           edge: true
-          cleanup: false
           zip_file: deploy.zip
+          label: "dev-build-$TRAVIS_BUILD_NUMBER-$TRAVIS_COMMIT"
+          wait_until_deployed: true
+          wait_until_deployed_timeout: 900
           on:
             branch: develop
             repo: gcivil-nyu-org/team3-mon-fall25
@@ -227,13 +278,13 @@ jobs:
           env: "nyu-marketplace-env"
           bucket: "nyu-marketplace-images"
           edge: true
-          cleanup: false
           zip_file: deploy.zip
+          label: "prod-build-$TRAVIS_BUILD_NUMBER-$TRAVIS_COMMIT"
+          wait_until_deployed: true
+          wait_until_deployed_timeout: 900
           on:
             branch: main
             repo: gcivil-nyu-org/team3-mon-fall25
 
-# -----------------------------------------------------------------------------
-# (Optional but Recommended) Disable email spam
-notifications:
-  email: false
+#notifications:
+#  webhooks: https://coveralls.io/webhook?repo_token=${COVERALLS_REPO_TOKEN}
