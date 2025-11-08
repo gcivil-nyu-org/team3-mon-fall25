@@ -159,6 +159,44 @@ jobs:
         # Upload coverage to Coveralls with parallel flag (this job runs in parallel with backend)
         - cd frontend && COVERALLS_FLAG_NAME="Frontend Tests" npm run upload-coverage || echo "Coveralls upload failed or not configured"
 
+    # Job 1.3: Backend Compatibility Tests for Python 3.13
+    - name: "Backend Compatibility Tests"
+      language: python
+      python: "3.13"
+      services:
+        - mysql # Start MySQL for testing, as required by settings.py
+
+      env:
+        # These are "dummy" (fake) secrets for the CI TEST environment.
+        # The app needs them to run, but they don't point to real resources.
+        - DJANGO_SETTINGS_MODULE=core.settings_dev
+        - DJANGO_SECRET_KEY=dummy-ci-key-for-travis
+        - DB_ENGINE=django.db.backends.mysql
+        - DB_NAME=test_db
+        - DB_USER=travis # Travis CI default MySQL user
+        - DB_PASSWORD="" # Travis CI default MySQL password
+        - DB_HOST=127.0.0.1
+        - ALLOWED_HOSTS="localhost,127.0.0.1"
+        - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+        - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+        - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
+        # - COVERALLS_PARALLEL=true
+
+      before_script:
+        # Create the test database before running tests
+        - mysql -e 'CREATE DATABASE test_db;'
+        - mkdir 'backend/static'
+
+      install:
+        - pip install uv
+        - uv pip install -r backend/requirements.txt
+
+      script:
+        # --- Run all backend quality checks ---
+        - python backend/manage.py check
+        - echo "Running Django collectstatic (validation)..."
+        - python backend/manage.py collectstatic --noinput
+
     # -------------------------------------------------------------------------
     # STAGE 2: Deploy (CD)
     # This job ONLY runs if the 'test' stage passes.
