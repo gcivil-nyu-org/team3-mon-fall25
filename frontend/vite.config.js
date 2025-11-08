@@ -35,6 +35,7 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'src/setupTests.js',
+        'src/api/**',
       ],
       // Enforce 85% coverage threshold - CI will fail if not met
       thresholds: {

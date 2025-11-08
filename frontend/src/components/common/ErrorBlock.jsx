@@ -1,3 +1,5 @@
+import React from "react";
+
 export default function ErrorBlock({ message = "Error", onRetry }) {
   return (
     <div style={{ textAlign: "center", padding: "64px 0" }}>
