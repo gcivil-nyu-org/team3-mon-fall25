@@ -1,0 +1,151 @@
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-avatar {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+.profile-avatar:hover .avatar-circle {
+  transform: scale(1.05);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-info-section {
+  padding: 16px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0;
+}
+
+.menu-items {
+  padding: 8px;
+}
+
+.menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+  font-size: 14px;
+  color: #111827;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: #f3f4f6;
+}
+
+.menu-icon {
+  width: 18px;
+  height: 18px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.menu-item.logout {
+  color: #dc2626;
+}
+
+.menu-item.logout .menu-icon {
+  color: #dc2626;
+}
+
+.menu-item.logout:hover {
+  background: #fee2e2;
+}

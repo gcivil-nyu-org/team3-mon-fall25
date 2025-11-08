@@ -66,6 +66,10 @@ stages:
   - name: test
   - name: deploy
 
+env:
+  global:
+    - COVERALLS_REPO_TOKEN=$COVERALLS_REPO_TOKEN
+
 # Define the matrix of jobs to run
 jobs:
   include:
@@ -97,7 +101,6 @@ jobs:
         - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
         - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
         - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
-        # - COVERALLS_PARALLEL=true
 
       before_script:
         # Create the test database before running tests
@@ -107,6 +110,7 @@ jobs:
       install:
         - pip install uv
         - uv pip install -r backend/requirements.txt
+        - curl -L https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
 
       script:
         # --- Run all backend quality checks ---
@@ -119,22 +123,23 @@ jobs:
         - python backend/manage.py collectstatic --noinput
         - echo "Running backend tests with coverage..."
         - cd backend
-        - pytest -n auto --cov=. --cov-report=term --cov-report=lcov --cov-fail-under=85
+        - coverage run -m pytest .
+        - coverage report --fail-under=85
+        # parallel pytest with coverage
+        #- pytest -n auto --cov=. --cov-report=term --cov-report=lcov --cov-fail-under=85
         - cd ..
 
       after_success:
         # Upload coverage to Coveralls with parallel flag (this job runs in parallel with frontend)
         - echo "Uploading backend coverage to Coveralls..."
-        - cd backend && cat coverage.lcov | COVERALLS_FLAG_NAME="Backend Tests" coveralls || echo "Coveralls upload failed or not configured"
+        # Note: This command is expected to fail for Pull Requests from forks due to security restrictions on secrets.
+        - cd backend && coveralls report --repo-token=$COVERALLS_REPO_TOKEN --job-flag "Backend Tests" --parallel --build-number $TRAVIS_BUILD_NUMBER || echo "Coveralls upload failed or not configured (expected for fork PRs)"
 
     # Job 1.2: Frontend (React) Tests
     - name: "Frontend (React) Tests"
       language: node_js
       node_js: "20" # Use a recent Node.js LTS version
 
-      #env:
-        #- COVERALLS_PARALLEL=true
-      
       cache:
         directories:
           - frontend/node_modules # Cache dependencies for faster builds
@@ -145,6 +150,7 @@ jobs:
         - cd frontend
         - npm install
         - cd ..
+        - curl -L https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
 
       script:
         # --- Run all frontend quality checks ---
@@ -157,7 +163,8 @@ jobs:
       
       after_success:
         # Upload coverage to Coveralls with parallel flag (this job runs in parallel with backend)
-        - cd frontend && COVERALLS_FLAG_NAME="Frontend Tests" npm run upload-coverage || echo "Coveralls upload failed or not configured"
+        # Note: This command is expected to fail for Pull Requests from forks due to security restrictions on secrets.
+        - cd frontend && coveralls report --repo-token=$COVERALLS_REPO_TOKEN --job-flag "Frontend Tests" --parallel --build-number $TRAVIS_BUILD_NUMBER || echo "Coveralls upload failed or not configured (expected for fork PRs)"
 
     # Job 1.3: Backend Compatibility Tests for Python 3.13
     - name: "Backend Compatibility Tests"
@@ -180,7 +187,6 @@ jobs:
         - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
         - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
         - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
-        # - COVERALLS_PARALLEL=true
 
       before_script:
         # Create the test database before running tests
@@ -219,16 +225,15 @@ jobs:
         - cd frontend
         - npm install
         - cd ..
+        - curl -L https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
 
       script:
+        # Finalize parallel Coveralls build
+        # Note: This command is expected to fail for Pull Requests from forks due to security restrictions on secrets.
+        - coveralls done --repo-token=$COVERALLS_REPO_TOKEN --build-number $TRAVIS_BUILD_NUMBER || echo "Coveralls finalize failed (expected for fork PRs)"
         # Build frontend (runs on ALL branches, but only needed for develop/main)
-
-        # Finalize Coveralls (runs on ALL branches)
-        - echo "Notifying Coveralls that all parallel testing jobs are complete..."
-        - cd frontend
-        - curl -k https://coveralls.io/webhook?repo_token=$COVERALLS_REPO_TOKEN -d "payload[build_num]=$TRAVIS_BUILD_ID&payload[status]=done" || echo "Coveralls finalize failed or not configured"
-
         - echo "Starting production build for frontend..."
+        - cd frontend
         - |
           if [[ "$TRAVIS_BRANCH" == "develop" ]]; then
             echo "Building for DEV environment..."
@@ -285,6 +290,3 @@ jobs:
           on:
             branch: main
             repo: gcivil-nyu-org/team3-mon-fall25
-
-#notifications:
-#  webhooks: https://coveralls.io/webhook?repo_token=${COVERALLS_REPO_TOKEN}
