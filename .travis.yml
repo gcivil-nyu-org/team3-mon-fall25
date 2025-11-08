@@ -108,6 +108,7 @@ jobs:
       install:
         - pip install uv
         - uv pip install -r backend/requirements.txt
+        - curl -L https://coveralls.io/coveralls-linux.tar.gz | sudo tar -xz -C /usr/local/bin
 
       script:
         # --- Run all backend quality checks ---
