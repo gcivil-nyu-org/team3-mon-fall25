@@ -37,6 +37,62 @@
 
 ## Backend — Django
 
+### Dependency Management with UV
+
+We use [UV](https://github.com/astral-sh/uv) for fast, reliable Python package management. UV is compatible with both Python 3.11 and 3.13.
+
+**Note:** We use `requirements.txt` for dependency management instead of `pyproject.toml` because AWS Elastic Beanstalk (our deployment platform) expects and automatically installs dependencies from `requirements.txt`.
+
+#### Installing UV
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with pip
+pip install uv
+```
+
+#### Setting Up Virtual Environment
+
+```bash
+cd backend
+
+# Create virtual environment (Python 3.13 for production compatibility)
+uv venv --python 3.11 .venv311
+
+# Or use Python 3.13
+uv venv --python 3.13 .venv
+
+# Activate the environment
+source .venv311/bin/activate  # or .venv/bin/activate
+```
+
+#### Installing Dependencies
+
+```bash
+# Install all dependencies from requirements.txt
+uv pip install -r requirements.txt
+```
+
+#### Updating Dependencies
+
+To update all packages to their latest compatible versions:
+
+```bash
+cd backend
+
+# Compile latest versions (maintains Python 3.11/3.13 compatibility)
+uv pip compile requirements.in --upgrade -o requirements.txt
+
+# Then install the updated requirements
+uv pip install -r requirements.txt
+```
+
+The `requirements.in` file contains high-level dependencies with flexible version constraints. UV resolves these to specific versions in `requirements.txt` that work across Python 3.11 and 3.13.
+
+### Running Django
+
 ```bash
 cd backend
 python manage.py migrate
