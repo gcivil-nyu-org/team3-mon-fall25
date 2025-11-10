@@ -1,0 +1,131 @@
+.contact-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.contact-modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.contact-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.contact-modal__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.contact-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666666;
+  transition: color 0.2s;
+}
+
+.contact-modal__close:hover {
+  color: #333333;
+}
+
+.contact-modal__content {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.contact-modal__description {
+  color: #666666;
+  margin-bottom: 20px;
+  font-size: 0.9375rem;
+}
+
+.contact-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-modal__label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #333333;
+}
+
+.contact-modal__textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  resize: none;
+  min-height: 120px;
+}
+
+.contact-modal__textarea:focus {
+  outline: none;
+  border-color: #56018D;
+  box-shadow: 0 0 0 3px rgba(86, 1, 141, 0.1);
+}
+
+.contact-modal__footer {
+  display: flex;
+  gap: 12px;
+  padding: 24px;
+  border-top: 1px solid #E5E5E5;
+}
+
+.contact-modal__button {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.contact-modal__button--cancel {
+  background: white;
+  border: 1px solid #E5E5E5;
+  color: #333333;
+}
+
+.contact-modal__button--cancel:hover {
+  background: #F5F5F5;
+}
+
+.contact-modal__button--send {
+  background: #56018D;
+  color: white;
+}
+
+.contact-modal__button--send:hover {
+  background: #4a0175;
+}
+

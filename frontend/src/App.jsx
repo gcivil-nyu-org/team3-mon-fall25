@@ -1,17 +1,12 @@
 import React from "react";
-import { Outlet, Link, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, Link, NavLink } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import ProfileDropdown from "./components/ProfileDropdown";
 import "./App.css";
 import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
 export default function App() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const { user } = useAuth();
 
   return (
     <div
@@ -43,7 +38,7 @@ export default function App() {
           backdropFilter: "blur(5px)"
         }}
       />
-      <span className="nav__brandText">Buy & Sell on Campus</span>
+      <span className="nav__brandText">Your Campus, Your Market!</span>
     </div>
 
     {/* Links (right) */}
@@ -52,9 +47,8 @@ export default function App() {
       <NavLink to="/browse" className="nav__link">Browse</NavLink>
       <NavLink to="/create-listing" className="nav__link">Create Listing</NavLink>
       <NavLink to="/my-listings" className="nav__link">My Listings</NavLink>
-      <span className="nav__user">{user?.email || user?.netid || ""}</span>
       {user ? (
-        <button className="nav__btn" onClick={handleLogout}>Logout</button>
+        <ProfileDropdown />
       ) : (
         <Link className="nav__btn nav__btn--invert" to="/login">Login</Link>
       )}

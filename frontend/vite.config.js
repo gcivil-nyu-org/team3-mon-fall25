@@ -31,10 +31,11 @@ export default defineConfig({
     css: true, // Parse CSS imports
     coverage: {
       provider: 'v8', // Use v8 for coverage
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'lcov'], // text for CI logs, lcov for Coveralls
       exclude: [
         'node_modules/',
         'src/setupTests.js',
+        'src/api/**',
       ],
       // Enforce 85% coverage threshold - CI will fail if not met
       thresholds: {

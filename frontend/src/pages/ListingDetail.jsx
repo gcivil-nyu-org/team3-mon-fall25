@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaBoxOpen, FaDollarSign, FaEdit, FaCheckCircle, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import { getListing, patchListing, deleteListingAPI } from "@/api/listings";
+import {
+  FaBoxOpen,
+  FaChevronLeft,
+  FaChevronRight,
+  FaMapMarkerAlt,
+  FaCalendar,
+  FaCommentDots,
+  FaTimes,
+  FaArrowLeft,
+} from "react-icons/fa";
+import { getListing, getListings } from "@/api/listings";
+import SellerCard from "../components/SellerCard";
+import ContactSellerModal from "../components/ContactSellerModal";
 import "./ListingDetail.css";
 
 export default function ListingDetail() {
@@ -10,9 +21,14 @@ export default function ListingDetail() {
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [sellerStats, setSellerStats] = useState({
+    activeListings: 0,
+    soldItems: 0,
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -20,7 +36,10 @@ export default function ListingDetail() {
       try {
         setLoading(true);
         const data = await getListing(id);
-        if (mounted) setListing(data);
+        if (mounted) {
+          setListing(data);
+          setCurrentImageIndex(0); // Reset image index when listing changes
+        }
       } catch (e) {
         console.error(e);
         if (mounted) setError("Failed to load listing.");
@@ -33,211 +52,504 @@ export default function ListingDetail() {
     };
   }, [id]);
 
-  const onMarkSold = async (e) => {
-    e.stopPropagation();
-    if (!listing || listing.status === "sold") return;
+  // Prepare images array (use listing images or empty array)
+  const images = listing?.images && listing.images.length > 0 
+    ? listing.images 
+    : [];
+  const imagesLength = images.length;
 
-    try {
-      setSaving(true);
-      // Only send status field for PATCH update
-      const updated = await patchListing(listing.listing_id, { status: "sold" });
-      setListing(updated); // backend returns fresh record
-      window.alert("Listing marked as sold.");
-    } catch (e) {
-      console.error(e);
-      window.alert("Failed to mark as sold.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Keyboard navigation for lightbox - must be before early returns
+  useEffect(() => {
+    if (!lightboxOpen || imagesLength === 0) return;
 
-  const handlePrevImage = () => {
-    if (!listing?.images || listing.images.length === 0) return;
-    setCurrentImageIndex((prev) => (prev === 0 ? listing.images.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = () => {
-    if (!listing?.images || listing.images.length === 0) return;
-    setCurrentImageIndex((prev) => (prev === listing.images.length - 1 ? 0 : prev + 1));
-  };
-
-  const handleDelete = async (e) => {
-    e.stopPropagation();
-
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this listing? This action cannot be undone."
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setSaving(true);
-      const success = await deleteListingAPI(listing.listing_id);
-
-      if (success) {
-        // Redirect to My Listings page after successful deletion
-        navigate("/my-listings");
-      } else {
-        window.alert("Failed to delete listing. Please try again.");
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setLightboxOpen(false);
+      } else if (e.key === "ArrowLeft") {
+        setCurrentImageIndex((prev) => (prev - 1 + imagesLength) % imagesLength);
+      } else if (e.key === "ArrowRight") {
+        setCurrentImageIndex((prev) => (prev + 1) % imagesLength);
       }
-    } catch (err) {
-      console.error("Failed to delete listing:", err);
-      window.alert("Failed to delete listing. Please try again.");
-    } finally {
-      setSaving(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxOpen, imagesLength]);
+
+  // Fetch seller stats (active listings and sold items count) - must be before early returns
+  useEffect(() => {
+    if (!listing?.user_netid && !listing?.user_email) return;
+
+    let mounted = true;
+    (async () => {
+      try {
+        const sellerUsername = listing.user_netid || listing.user_email?.split("@")[0];
+        if (!sellerUsername) return;
+
+        // Fetch all listings to count seller's listings
+        // Note: API only returns active listings, so we'll include the current listing
+        // if it's sold/inactive to get accurate counts
+        const allListings = [];
+        let page = 1;
+        let hasMore = true;
+
+        while (hasMore) {
+          try {
+            const response = await getListings({ page, page_size: 100 });
+            console.log(`Fetched page ${page}:`, {
+              responseType: Array.isArray(response) ? 'array' : typeof response,
+              response: response,
+              resultsCount: Array.isArray(response) ? response.length : (response?.results?.length || 0),
+              hasNext: Array.isArray(response) ? false : !!response?.next,
+              totalCount: Array.isArray(response) ? response.length : response?.count,
+              listingIds: Array.isArray(response) 
+                ? response.map(r => r.listing_id) 
+                : (response?.results?.map(r => r.listing_id) || [])
+            });
+            
+            // Handle both array and object responses (like BrowseListings does)
+            let pageResults = [];
+            let hasNextPage = false;
+            
+            if (Array.isArray(response)) {
+              pageResults = response;
+              hasNextPage = false; // Arrays don't have pagination
+            } else if (response && typeof response === "object" && "results" in response) {
+              pageResults = response.results || [];
+              hasNextPage = !!response.next;
+            }
+            
+            if (pageResults.length > 0) {
+              allListings.push(...pageResults);
+              hasMore = hasNextPage;
+              page++;
+            } else {
+              hasMore = false;
+            }
+          } catch (err) {
+            console.error(`Failed to fetch page ${page}:`, err);
+            console.error("Error details:", err.response?.data || err.message);
+            hasMore = false;
+          }
+        }
+
+        console.log(`Total listings fetched from all pages: ${allListings.length}`);
+        console.log(`All listing IDs:`, allListings.map(l => l.listing_id));
+
+        // Fetch details for all listings to get user info
+        const listingPromises = allListings.map((l) =>
+          getListing(l.listing_id).catch((err) => {
+            console.error(`Failed to fetch listing ${l.listing_id}:`, err);
+            return null;
+          })
+        );
+        const listingDetails = await Promise.all(listingPromises);
+
+        console.log(`Fetched details for ${listingDetails.filter(Boolean).length} listings`);
+        console.log(`Looking for seller: ${sellerUsername}`);
+        console.log(`Current listing user_netid: ${listing.user_netid}, user_email: ${listing.user_email}`);
+
+        // Filter listings by seller
+        const sellerListings = listingDetails
+          .filter(Boolean)
+          .filter((detail) => {
+            if (!detail.user_netid && !detail.user_email) {
+              console.log(`Listing ${detail.listing_id} has no user info`);
+              return false;
+            }
+            
+            const detailNetid = detail.user_netid?.toLowerCase();
+            const detailEmail = detail.user_email?.split("@")[0]?.toLowerCase();
+            const sellerUsernameLower = sellerUsername.toLowerCase();
+            
+            const netidMatch = detailNetid === sellerUsernameLower;
+            const emailMatch = detailEmail === sellerUsernameLower;
+            
+            if (netidMatch || emailMatch) {
+              console.log(`Listing ${detail.listing_id} matches seller:`, {
+                detailNetid,
+                detailEmail,
+                sellerUsernameLower,
+                netidMatch,
+                emailMatch
+              });
+            }
+            
+            return netidMatch || emailMatch;
+          });
+
+        // Include current listing if it's not already in the list (for sold/inactive listings)
+        const currentListingId = listing.listing_id;
+        const currentListingIncluded = sellerListings.some(l => l.listing_id === currentListingId);
+        if (!currentListingIncluded && listing) {
+          sellerListings.push(listing);
+        }
+
+        if (mounted) {
+          const activeCount = sellerListings.filter((l) => l.status === "active").length;
+          const soldCount = sellerListings.filter((l) => l.status === "sold").length;
+          
+          console.log("Seller stats calculated:", {
+            sellerUsername,
+            totalListings: sellerListings.length,
+            activeCount,
+            soldCount,
+            listingStatuses: sellerListings.map(l => ({ id: l.listing_id, status: l.status }))
+          });
+          
+          setSellerStats({
+            activeListings: activeCount,
+            soldItems: soldCount,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch seller stats:", e);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  // Depend on the listing object reference so this effect runs when the
+  // listing is updated. This satisfies the exhaustive-deps rule while
+  // preserving current behavior (we only run when listing changes).
+  }, [listing]);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffDays === 0) return "Posted today";
+    if (diffDays === 1) return "Posted yesterday";
+    if (diffDays < 7) return `Posted ${diffDays} days ago`;
+    if (diffDays < 30) return `Posted ${Math.floor(diffDays / 7)} weeks ago`;
+    return `Posted on ${date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })}`;
+  };
+
+
+  const handleViewProfile = () => {
+    const sellerUsername = listing?.user_netid || listing?.user_email?.split("@")[0];
+    console.log("Navigating to seller profile:", {
+      sellerUsername,
+      user_netid: listing?.user_netid,
+      user_email: listing?.user_email,
+      listing_id: listing?.listing_id
+    });
+    if (sellerUsername) {
+      // Pass the current listing in state so we can include it in the profile
+      navigate(`/seller/${sellerUsername}`, { 
+        state: { currentListing: listing } 
+      });
     }
   };
 
   if (loading) {
-    return <div className="listing-detail-page"><div className="listing-detail-card">Loading…</div></div>;
-  }
-  if (error || !listing) {
-    return <div className="listing-detail-page"><div className="listing-detail-card">{error || "Not found"}</div></div>;
+    return (
+      <div className="listing-detail-page">
+        <div className="listing-detail-loading">Loading…</div>
+      </div>
+    );
   }
 
-  // API returns: listing_id, price (string), status ("active"/"sold"/"inactive"), etc.
-  const priceDisplay = typeof listing.price === "string" ? listing.price : String(listing.price);
+  if (error || !listing) {
+    return (
+      <div className="listing-detail-page">
+        <div className="listing-detail-error">{error || "Not found"}</div>
+      </div>
+    );
+  }
+
+  const hasImages = imagesLength > 0;
+
+  // Image navigation functions - use images array length
+  const nextImage = () => {
+    if (imagesLength === 0) return;
+    setCurrentImageIndex((prev) => (prev + 1) % imagesLength);
+  };
+
+  const prevImage = () => {
+    if (imagesLength === 0) return;
+    setCurrentImageIndex((prev) => (prev - 1 + imagesLength) % imagesLength);
+  };
+  const priceDisplay =
+    typeof listing.price === "string"
+      ? listing.price
+      : parseFloat(listing.price).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
   const statusClass = (listing.status || "").toLowerCase();
-  const images = listing.images || [];
-  const hasImages = images.length > 0;
+
+  const sellerData = {
+    username: listing.user_netid || listing.user_email?.split("@")[0] || "Seller",
+    memberSince: listing.created_at || new Date().toISOString(),
+    activeListings: sellerStats.activeListings,
+    soldItems: sellerStats.soldItems,
+    avatarUrl: null,
+  };
 
   return (
     <div className="listing-detail-page">
-      <div className="listing-detail-card">
-        {/* Image Carousel */}
-        <div className="image-carousel" style={{
-          position: "relative",
-          width: "100%",
-          height: 400,
-          background: "#F5F5F5",
-          borderRadius: 12,
-          overflow: "hidden",
-          marginBottom: 24,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
-          {hasImages ? (
-            <>
-              <img
-                src={images[currentImageIndex].image_url}
-                alt={`${listing.title} - Image ${currentImageIndex + 1}`}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain"
-                }}
-              />
-              {images.length > 1 && (
-                <>
-                  <button
-                    onClick={handlePrevImage}
-                    style={{
-                      position: "absolute",
-                      left: 16,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "rgba(255, 255, 255, 0.9)",
-                      border: "none",
-                      borderRadius: "50%",
-                      width: 44,
-                      height: 44,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseOver={(e) => e.target.style.background = "rgba(255, 255, 255, 1)"}
-                    onMouseOut={(e) => e.target.style.background = "rgba(255, 255, 255, 0.9)"}
-                  >
-                    <FaChevronLeft size={20} color="#111" />
-                  </button>
-                  <button
-                    onClick={handleNextImage}
-                    style={{
-                      position: "absolute",
-                      right: 16,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      background: "rgba(255, 255, 255, 0.9)",
-                      border: "none",
-                      borderRadius: "50%",
-                      width: 44,
-                      height: 44,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseOver={(e) => e.target.style.background = "rgba(255, 255, 255, 1)"}
-                    onMouseOut={(e) => e.target.style.background = "rgba(255, 255, 255, 0.9)"}
-                  >
-                    <FaChevronRight size={20} color="#111" />
-                  </button>
-                  <div style={{
-                    position: "absolute",
-                    bottom: 16,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "rgba(0, 0, 0, 0.6)",
-                    color: "#fff",
-                    padding: "6px 14px",
-                    borderRadius: 16,
-                    fontSize: 13,
-                    fontWeight: 500
-                  }}>
-                    {currentImageIndex + 1} / {images.length}
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <FaBoxOpen size={80} color="#5A2D82" />
-          )}
-        </div>
-
-        <h1 className="listing-title">{listing.title}</h1>
-
-        <p className="listing-price">
-          <FaDollarSign /> {priceDisplay}
-        </p>
-
-        <p className={`listing-status ${statusClass}`}>
-          <FaCheckCircle /> {listing.status}
-        </p>
-
-        <p className="listing-description">{listing.description}</p>
-
-        <div className="listing-actions">
+      {/* Back Button Header */}
+      <div className="listing-detail-header">
+        <div className="listing-detail-container">
           <button
-            className="btn edit"
-            onClick={() => navigate(`/listing/${listing.listing_id}/edit`)}
+            className="listing-detail-back-button"
+            onClick={() => navigate(-1)}
           >
-            <FaEdit /> Edit Listing
-          </button>
-
-          <button
-            className="btn sold"
-            disabled={listing.status === "sold" || saving}
-            onClick={onMarkSold}
-            title={listing.status === "sold" ? "Already sold" : "Mark as Sold"}
-          >
-            <FaCheckCircle /> {saving ? "Updating..." : listing.status === "sold" ? "Sold" : "Mark as Sold"}
-          </button>
-
-          <button
-            className="btn delete"
-            onClick={handleDelete}
-            disabled={saving}
-          >
-            <FaTrash /> {saving ? "Deleting..." : "Delete"}
+            <FaArrowLeft className="listing-detail-back-icon" />
+            Back to Listings
           </button>
         </div>
       </div>
+
+      {/* Main Content - Two Column Layout */}
+      <div className="listing-detail-container listing-detail-main">
+        <div className="listing-detail-grid">
+          {/* Left Column - Image Gallery (60%) */}
+          <div className="listing-detail-gallery">
+            {/* Main Image with Navigation */}
+            <div className="listing-detail-main-image-wrapper">
+              <div
+                className="listing-detail-main-image"
+                onClick={() => hasImages && setLightboxOpen(true)}
+                style={{ cursor: hasImages ? "pointer" : "default" }}
+              >
+                {hasImages ? (
+                  <>
+                    <img
+                      src={images[currentImageIndex].image_url}
+                      alt={`${listing.title} - Image ${currentImageIndex + 1}`}
+                      loading="lazy"
+                    />
+                    {/* Image Counter Badge */}
+                    {images.length > 1 && (
+                      <div className="listing-detail-image-counter">
+                        {currentImageIndex + 1} / {images.length}
+                      </div>
+                    )}
+                    {/* Navigation Arrows */}
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          className="listing-detail-nav-button listing-detail-nav-button--left"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            prevImage();
+                          }}
+                          aria-label="Previous image"
+                        >
+                          <FaChevronLeft />
+                        </button>
+                        <button
+                          className="listing-detail-nav-button listing-detail-nav-button--right"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            nextImage();
+                          }}
+                          aria-label="Next image"
+                        >
+                          <FaChevronRight />
+                        </button>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="listing-detail-placeholder">
+                    <FaBoxOpen size={80} color="#56018D" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Thumbnail Strip */}
+            {images.length > 1 && (
+              <div className="listing-detail-thumbnails">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    className={`listing-detail-thumbnail ${
+                      currentImageIndex === idx
+                        ? "listing-detail-thumbnail--active"
+                        : ""
+                    }`}
+                    onClick={() => setCurrentImageIndex(idx)}
+                  >
+                    <img
+                      src={img.image_url}
+                      alt={`${listing.title} thumbnail ${idx + 1}`}
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Details Sidebar (40%) */}
+          <div className="listing-detail-sidebar">
+            <div className="listing-detail-details">
+              {/* Title */}
+              <h1 className="listing-detail-title">{listing.title}</h1>
+
+              {/* Price */}
+              <div className="listing-detail-price">${priceDisplay}</div>
+
+              {/* Status and Category Badges */}
+              <div className="listing-detail-badges">
+                <span
+                  className={`listing-detail-badge listing-detail-badge--status listing-detail-badge--${statusClass}`}
+                >
+                  {listing.status}
+                </span>
+                <span className="listing-detail-badge listing-detail-badge--category">
+                  {listing.category}
+                </span>
+              </div>
+
+              <div className="listing-detail-separator"></div>
+
+              {/* Location */}
+              <div className="listing-detail-meta">
+                <FaMapMarkerAlt className="listing-detail-meta-icon" />
+                <span>{listing.location || "Not specified"}</span>
+              </div>
+
+              {/* Posted Date */}
+              <div className="listing-detail-meta">
+                <FaCalendar className="listing-detail-meta-icon" />
+                <span>{formatDate(listing.created_at)}</span>
+              </div>
+
+              <div className="listing-detail-separator"></div>
+
+              {/* Description Section */}
+              <div className="listing-detail-description-section">
+                <h3 className="listing-detail-description-title">Description</h3>
+                <p className="listing-detail-description-text">
+                  {listing.description ||
+                    "No description provided."}
+                </p>
+              </div>
+
+              <div className="listing-detail-separator"></div>
+
+              {/* Seller Information Card */}
+              <SellerCard
+                username={sellerData.username}
+                memberSince={sellerData.memberSince}
+                activeListings={sellerData.activeListings}
+                soldItems={sellerData.soldItems}
+                avatarUrl={sellerData.avatarUrl}
+                onViewProfile={handleViewProfile}
+              />
+
+              <div className="listing-detail-separator"></div>
+
+              {/* Action Buttons */}
+              <div className="listing-detail-actions">
+                <button
+                  className="listing-detail-contact-button"
+                  onClick={() => setContactModalOpen(true)}
+                  disabled={listing.status === "sold"}
+                >
+                  <FaCommentDots className="listing-detail-contact-icon" />
+                  Contact Seller
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Seller Modal */}
+      <ContactSellerModal
+        open={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
+        listingTitle={listing.title}
+      />
+
+      {/* Lightbox Modal - Fullscreen View */}
+      {lightboxOpen && hasImages && (
+        <div
+          className="listing-detail-lightbox"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            className="listing-detail-lightbox-close"
+            onClick={() => setLightboxOpen(false)}
+            aria-label="Close lightbox"
+          >
+            <FaTimes />
+          </button>
+          <div
+            className="listing-detail-lightbox-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={images[currentImageIndex].image_url}
+              alt={listing.title}
+            />
+            {/* Lightbox Navigation Arrows */}
+            {images.length > 1 && (
+              <>
+                <button
+                  className="listing-detail-lightbox-nav listing-detail-lightbox-nav--left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                  aria-label="Previous image"
+                >
+                  <FaChevronLeft />
+                </button>
+                <button
+                  className="listing-detail-lightbox-nav listing-detail-lightbox-nav--right"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                  aria-label="Next image"
+                >
+                  <FaChevronRight />
+                </button>
+                {/* Lightbox Image Counter */}
+                <div className="listing-detail-lightbox-counter">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Sticky Footer */}
+      <div className="listing-detail-mobile-footer">
+        <div className="listing-detail-mobile-footer-content">
+          <div className="listing-detail-mobile-price">
+            <p className="listing-detail-mobile-price-label">Price</p>
+            <p className="listing-detail-mobile-price-value">
+              ${priceDisplay}
+            </p>
+          </div>
+          <button
+            className="listing-detail-mobile-contact-button"
+            onClick={() => setContactModalOpen(true)}
+            disabled={listing.status === "sold"}
+          >
+            <FaCommentDots />
+            Contact
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile spacing for sticky footer */}
+      <div className="listing-detail-mobile-spacer"></div>
     </div>
   );
 }

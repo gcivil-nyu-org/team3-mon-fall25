@@ -11,6 +11,7 @@ export default function ListingGrid({ items }) {
         const id = item.listing_id || item.id;
         const imageUrl =
           item?.primary_image?.url ||
+          item?.images?.[0]?.image_url ||
           item?.images?.[0]?.url ||
           item?.primary_image ||
           item?.images?.[0] ||
