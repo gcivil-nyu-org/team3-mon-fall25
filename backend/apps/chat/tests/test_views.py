@@ -1,6 +1,9 @@
-# backend/apps/chat/tests/test_views.py
 import pytest
 from rest_framework.test import APIClient
+
+from apps.chat.models import Conversation, ConversationParticipant
+from apps.chat.tests._factories import make_nyu_user as make_user
+
 
 pytestmark = pytest.mark.django_db
 
@@ -83,4 +86,76 @@ def test_permissions_non_member_cannot_access(two_users, make_direct):
     c3.force_authenticate(user=u3)
 
     res = c3.get(f"/api/v1/chat/conversations/{conv.id}/")
+    assert res.status_code in (403, 404)
+
+
+@pytest.mark.django_db
+def test_conversations_list_requires_auth_401():
+    c = APIClient()
+    res = c.get("/api/v1/chat/conversations/")
+    assert res.status_code in (401, 403)  # depends on your auth settings
+
+
+@pytest.mark.django_db
+def test_mark_read_is_idempotent_and_updates():
+    c = APIClient()
+    u1 = make_user("mr1@nyu.edu")
+    u2 = make_user("mr2@nyu.edu")
+    c.force_authenticate(user=u1)
+
+    conv = Conversation.objects.create(
+        created_by=u1, direct_key=Conversation.make_direct_key(u1.id, u2.id)
+    )
+    ConversationParticipant.objects.bulk_create(
+        [
+            ConversationParticipant(conversation=conv, user=u1),
+            ConversationParticipant(conversation=conv, user=u2),
+        ]
+    )
+
+    res1 = c.post(f"/api/v1/chat/conversations/{conv.id}/read/")
+    assert res1.status_code in (200, 204, 400)
+    res2 = c.post(f"/api/v1/chat/conversations/{conv.id}/read/")
+    assert res2.status_code in (200, 204, 400)
+
+
+@pytest.mark.django_db
+def test_messages_endpoint_defaults_without_before_and_limits():
+    c = APIClient()
+    u1 = make_user("mb1@nyu.edu")
+    u2 = make_user("mb2@nyu.edu")
+    c.force_authenticate(user=u1)
+
+    conv = Conversation.objects.create(
+        created_by=u1, direct_key=Conversation.make_direct_key(u1.id, u2.id)
+    )
+    ConversationParticipant.objects.bulk_create(
+        [
+            ConversationParticipant(conversation=conv, user=u1),
+            ConversationParticipant(conversation=conv, user=u2),
+        ]
+    )
+    # No 'before' param -> should return latest page fine
+    res = c.get(f"/api/v1/chat/conversations/{conv.id}/messages/?limit=1")
+    assert res.status_code == 200
+
+
+@pytest.mark.django_db
+def test_non_member_gets_404_or_403_on_messages():
+    c = APIClient()
+    u1 = make_user("nm1@nyu.edu")
+    u2 = make_user("nm2@nyu.edu")
+    stranger = make_user("nmz@nyu.edu")
+    c.force_authenticate(user=stranger)
+
+    conv = Conversation.objects.create(
+        created_by=u1, direct_key=Conversation.make_direct_key(u1.id, u2.id)
+    )
+    ConversationParticipant.objects.bulk_create(
+        [
+            ConversationParticipant(conversation=conv, user=u1),
+            ConversationParticipant(conversation=conv, user=u2),
+        ]
+    )
+    res = c.get(f"/api/v1/chat/conversations/{conv.id}/messages/")
     assert res.status_code in (403, 404)

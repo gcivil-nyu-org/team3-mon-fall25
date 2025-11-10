@@ -1,10 +1,11 @@
 import json
-import pytest
-from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
-from apps.chat.models import Conversation, ConversationParticipant
+import pytest
 from asgiref.sync import sync_to_async
+from channels.testing import WebsocketCommunicator
 from apps.chat.consumers import ChatConsumer
+from apps.chat.models import Conversation, ConversationParticipant
+from apps.chat.tests._factories import make_nyu_user
 
 
 pytestmark = pytest.mark.asyncio
@@ -65,3 +66,55 @@ async def test_ws_echo_basic(settings):
 
     await comm1.disconnect()
     await comm2.disconnect()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+async def test_ws_disconnect_is_clean():
+    u1 = await sync_to_async(make_nyu_user)("disc1@nyu.edu")
+    u2 = await sync_to_async(make_nyu_user)("disc2@nyu.edu")
+    direct_key = Conversation.make_direct_key(u1.id, u2.id)
+    conv = await sync_to_async(Conversation.objects.create)(
+        created_by=u1, direct_key=direct_key
+    )
+    await sync_to_async(ConversationParticipant.objects.bulk_create)(
+        [
+            ConversationParticipant(conversation=conv, user=u1),
+            ConversationParticipant(conversation=conv, user=u2),
+        ]
+    )
+
+    comm = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/")
+    comm.scope["url_route"] = {"kwargs": {"conversation_id": str(conv.id)}}
+    comm.scope["user"] = u1
+    connected, _ = await comm.connect()
+    assert connected
+    await comm.disconnect()  # just exercise disconnect branch
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+async def test_ws_ignores_unknown_event_type():
+    u1 = await sync_to_async(make_nyu_user)("evt1@nyu.edu")
+    u2 = await sync_to_async(make_nyu_user)("evt2@nyu.edu")
+    direct_key = Conversation.make_direct_key(u1.id, u2.id)
+    conv = await sync_to_async(Conversation.objects.create)(
+        created_by=u1, direct_key=direct_key
+    )
+    await sync_to_async(ConversationParticipant.objects.bulk_create)(
+        [
+            ConversationParticipant(conversation=conv, user=u1),
+            ConversationParticipant(conversation=conv, user=u2),
+        ]
+    )
+
+    comm = WebsocketCommunicator(ChatConsumer.as_asgi(), "/ws/chat/")
+    comm.scope["url_route"] = {"kwargs": {"conversation_id": str(conv.id)}}
+    comm.scope["user"] = u1
+    connected, _ = await comm.connect()
+    assert connected
+
+    # Send a type your consumer doesn't handle; should not crash
+    await comm.send_json_to({"type": "unknown.event", "text": "noop"})
+    # no assertion on receive; pass if no exception
+    await comm.disconnect()

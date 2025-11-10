@@ -1,8 +1,8 @@
-# backend/apps/chat/tests/test_models.py
 import pytest
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from apps.chat.models import Conversation, ConversationParticipant, Message
+from apps.chat.models import ConversationParticipant, Message
+from apps.chat.models import Conversation
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
@@ -45,3 +45,11 @@ def test_last_message_at_updates_on_message():
     )
     conv.refresh_from_db()
     assert conv.last_message_at is not None
+
+
+def test_make_direct_key_is_symmetric_and_stable_small_ids():
+    k1 = Conversation.make_direct_key(1, 2)
+    k2 = Conversation.make_direct_key(2, 1)
+    assert k1 == k2
+    # stable string form (covers conversion branch)
+    assert isinstance(k1, str) and ":" in k1
