@@ -133,7 +133,9 @@ export default function Chat() {
             const { results: latest } = await getMessages(activeId, { limit: 50 });
             setMessages(latest);
           }
-        } catch {}
+        } catch (e){
+          console.log(e);
+        }
       }, 5000);
     }
     return () => {

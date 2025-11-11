@@ -68,8 +68,8 @@ async def test_ws_echo_basic(settings):
     await comm2.disconnect()
 
 
-@pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.asyncio
 async def test_ws_disconnect_is_clean():
     u1 = await sync_to_async(make_nyu_user)("disc1@nyu.edu")
     u2 = await sync_to_async(make_nyu_user)("disc2@nyu.edu")

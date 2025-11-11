@@ -47,7 +47,9 @@ export default function useChatSocket({
           const data = JSON.parse(evt.data);
           if (data.type === "message.new") onMessage && onMessage(data.message);
           if (data.type === "read.broadcast") onRead && onRead(data);
-        } catch {}
+        } catch (e){
+          console.log(e);
+        }
       };
 
       ws.onclose = () => {
@@ -67,7 +69,9 @@ export default function useChatSocket({
       closed = true;
       try {
         wsRef.current?.close();
-      } catch {}
+      } catch (e){
+          console.log(e);
+        }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);

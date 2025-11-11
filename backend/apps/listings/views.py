@@ -1,8 +1,6 @@
 import logging
 
 from django.db import transaction
-
-from apps.chat.models import Conversation, ConversationParticipant
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, pagination, status, viewsets
@@ -16,8 +14,10 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly,
 )
 from rest_framework.response import Response
+
 from utils.s3_service import s3_service
 
+from apps.chat.models import Conversation, ConversationParticipant
 from .filters import ListingFilter
 from .models import Listing
 from .serializers import (
@@ -49,9 +49,6 @@ class ListingPagination(pagination.PageNumberPagination):
     page_size = 12
     page_size_query_param = "page_size"
     max_page_size = 60
-
-
-# Create your views here.
 
 
 class ListingViewSet(
@@ -149,24 +146,30 @@ class ListingViewSet(
           GET /api/v1/listings/search/?q=desk
           GET /api/v1/listings/search/?q=lamp&ordering=price&page=2&page_size=12
 
+        Contract for tests:
+          - If the query param key `q` is MISSING -> 400 with {"detail": "..."}.
+          - If `q` exists but is EMPTY (`?q=`) -> 200 with results (no text filter), honoring ordering.
         """
-
-        q = (request.GET.get("q") or "").strip()
-
-        if not q:
+        # 400 only if the *key* is missing; empty string is allowed
+        if "q" not in request.query_params:
             return Response(
-                {"error": "Please enter a search query 'q'."},
+                {"detail": "Missing 'q' query parameter. Use ?q=..."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        q = request.query_params.get("q", "")
         base_qs = self.get_queryset()
 
-        qs = base_qs.filter(
-            Q(title__icontains=q)
-            | Q(description__icontains=q)
-            | Q(location__icontains=q)
-            | Q(category__icontains=q)
-        )
+        # Only apply text filtering if q is non-empty; empty q returns all active listings (still ordered)
+        if q != "":
+            qs = base_qs.filter(
+                Q(title__icontains=q)
+                | Q(description__icontains=q)
+                | Q(location__icontains=q)
+                | Q(category__icontains=q)
+            )
+        else:
+            qs = base_qs
 
         paginator = ListingPagination()
         page = paginator.paginate_queryset(qs, self.request, view=self)
