@@ -13,6 +13,8 @@ import EditListing from "../pages/EditListing";
 import Login from "../pages/Login";
 import Profile from "../pages/Profile";
 import SellerProfile from "../pages/SellerProfile";
+import ProfileGate from "../components/ProfileGate";
+import CreateProfile from "../pages/CreateProfile";
 
 export default function AppRouter() {
   return (
@@ -31,7 +33,12 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Home />} />
+            {/* Onboarding: has logged in but not finished Profile */}
+            <Route path="onboarding/create-profile" element={<CreateProfile />} />
+
+            {/* All other pages can be visited after "Creating Profile" */}
+            <Route element={<ProfileGate />}>
+              <Route index element={<Home />} />
               <Route path="/browse" element={<BrowseListings />} />
               <Route path="/listing/:id" element={<ListingDetail />} />
               <Route path="/listing/:id/edit" element={<EditListing />} />
@@ -39,6 +46,7 @@ export default function AppRouter() {
               <Route path="/my-listings" element={<MyListings />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/seller/:username" element={<SellerProfile />} />
+            </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
