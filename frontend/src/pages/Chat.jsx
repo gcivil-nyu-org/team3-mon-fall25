@@ -1,4 +1,3 @@
-// frontend/src/pages/Chat.jsx
 import { useEffect, useRef, useState } from "react";
 import {
   listConversations,
