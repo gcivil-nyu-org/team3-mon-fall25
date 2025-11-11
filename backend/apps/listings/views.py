@@ -148,7 +148,7 @@ class ListingViewSet(
 
         Contract for tests:
           - If the query param key `q` is MISSING -> 400 with {"detail": "..."}.
-          - If `q` exists but is EMPTY (`?q=`) -> 200 with results (no text filter), honoring ordering.
+          - If `q` exists but is EMPTY (`?q=`) -> 200 with results (no text filter)
         """
         # 400 only if the *key* is missing; empty string is allowed
         if "q" not in request.query_params:
@@ -160,7 +160,6 @@ class ListingViewSet(
         q = request.query_params.get("q", "")
         base_qs = self.get_queryset()
 
-        # Only apply text filtering if q is non-empty; empty q returns all active listings (still ordered)
         if q != "":
             qs = base_qs.filter(
                 Q(title__icontains=q)

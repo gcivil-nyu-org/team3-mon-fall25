@@ -1,6 +1,4 @@
-# core/test_channels_jwt.py
 import pytest
-from urllib.parse import parse_qs
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
@@ -30,9 +28,11 @@ websocket_urlpatterns = [
 ]
 
 # Build the ASGI application with our JWT middleware
-application = ProtocolTypeRouter({
-    "websocket": JWTAuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
-})
+application = ProtocolTypeRouter(
+    {
+        "websocket": JWTAuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
+    }
+)
 
 
 @pytest.mark.asyncio

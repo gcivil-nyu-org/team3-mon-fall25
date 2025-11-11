@@ -41,6 +41,7 @@ def test_is_conversation_member_permission_allows_member(two_users, make_direct)
     req.user = u1
     assert perm.has_object_permission(req, None, conv) is True
 
+
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_ws_disconnect_is_clean():

@@ -1,3 +1,11 @@
+.chat { display: flex; min-height: calc(100vh - 64px); }
+.chat__sidebar { width: 320px; border-right: 1px solid #e5e7eb; }
+.chat__list { overflow: auto; }
+.chat__panel { flex: 1; display: flex; flex-direction: column; }
+.chat__messages { flex: 1; overflow: auto; padding: 12px; }
+.chat__input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e5e7eb; }
+.chat__input input { flex: 1; }
+
 .chat-layout { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 60px); gap: 1px; background: #e5e7eb; }
 .chat-sidebar { background: #fff; display: flex; flex-direction: column; }
 .chat-sidebar-header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #eee; }

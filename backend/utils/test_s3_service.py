@@ -1,7 +1,5 @@
-from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
-from utils.s3_service import S3Service, _reset_s3_service
 from unittest.mock import MagicMock, patch
 from utils.s3_service import (
     S3Service,
@@ -9,7 +7,6 @@ from utils.s3_service import (
     _reset_s3_service,
     s3_service as s3_service_proxy,
 )
-from rest_framework.settings import api_settings as drf_settings  # optional
 
 
 @pytest.fixture
@@ -218,6 +215,7 @@ def test_extract_key_from_url_exception_handling(mock_settings, s3_service):
     result = s3_service._extract_key_from_url("http://different-bucket.com/image.jpg")
     assert result is None
 
+
 @patch("utils.s3_service.boto3.client")
 @patch("utils.s3_service.settings")
 def test_s3service_init_uses_settings(mock_settings, mock_boto_client):
@@ -255,7 +253,7 @@ def test_validate_image_happy_path_calls_verify_and_seek(mock_image_open, s3_ser
     mock_image_open.return_value = mock_img
 
     f = MagicMock()
-    f.name = "nice.PNG"   # mixed case
+    f.name = "nice.PNG"  # mixed case
     f.size = 4096
     # ensure seek exists and we can assert it
     s3_service._validate_image(f)
@@ -269,7 +267,9 @@ def test_validate_image_happy_path_calls_verify_and_seek(mock_image_open, s3_ser
 @patch("utils.s3_service.uuid.uuid4", return_value="abcd-1234")
 @patch("utils.s3_service.Image.open")
 @patch("utils.s3_service.settings")
-def test_upload_image_custom_folder_and_uuid(mock_settings, mock_image_open, _mock_uuid, s3_service):
+def test_upload_image_custom_folder_and_uuid(
+    mock_settings, mock_image_open, _mock_uuid, s3_service
+):
     mock_settings.AWS_S3_REGION_NAME = "eu-central-1"
 
     f = MagicMock()
