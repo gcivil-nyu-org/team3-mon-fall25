@@ -164,12 +164,14 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             from .models import Watchlist
+
             return Watchlist.objects.filter(user=request.user, listing=obj).exists()
         return False
 
     def get_save_count(self, obj):
         """Get total number of users who saved this listing"""
         from .models import Watchlist
+
         return Watchlist.objects.filter(listing=obj).count()
 
 

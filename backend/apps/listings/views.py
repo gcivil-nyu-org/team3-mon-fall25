@@ -10,7 +10,6 @@ from rest_framework.permissions import (
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from django.http import HttpRequest
 from django.core.exceptions import RequestDataTooBig
 from .models import Listing
 from .serializers import (
@@ -125,24 +124,34 @@ class ListingViewSet(
         try:
             return super().create(request, *args, **kwargs)
         except RequestDataTooBig:
-            logger.error(
-                f"Request data too large for user {request.user.user_id if request.user.is_authenticated else 'anonymous'}"
+            user_id = (
+                request.user.user_id if request.user.is_authenticated else "anonymous"
             )
+            logger.error(f"Request data too large for user {user_id}")
             return Response(
                 {
-                    "detail": "Uploaded file(s) are too large. Maximum size per image is 10MB."
+                    "detail": (
+                        "Uploaded file(s) are too large. "
+                        "Maximum size per image is 10MB."
+                    )
                 },
                 status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             )
         except Exception as e:
             # Check if it's a 413 error from nginx or Django
             if "413" in str(e) or "Request Entity Too Large" in str(e):
-                logger.error(
-                    f"413 error for user {request.user.user_id if request.user.is_authenticated else 'anonymous'}: {str(e)}"
+                user_id = (
+                    request.user.user_id
+                    if request.user.is_authenticated
+                    else "anonymous"
                 )
+                logger.error(f"413 error for user {user_id}: {str(e)}")
                 return Response(
                     {
-                        "detail": "Uploaded file(s) are too large. Maximum size per image is 10MB."
+                        "detail": (
+                            "Uploaded file(s) are too large. "
+                            "Maximum size per image is 10MB."
+                        )
                     },
                     status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 )
@@ -153,24 +162,34 @@ class ListingViewSet(
         try:
             return super().update(request, *args, **kwargs)
         except RequestDataTooBig:
-            logger.error(
-                f"Request data too large for user {request.user.user_id if request.user.is_authenticated else 'anonymous'}"
+            user_id = (
+                request.user.user_id if request.user.is_authenticated else "anonymous"
             )
+            logger.error(f"Request data too large for user {user_id}")
             return Response(
                 {
-                    "detail": "Uploaded file(s) are too large. Maximum size per image is 10MB."
+                    "detail": (
+                        "Uploaded file(s) are too large. "
+                        "Maximum size per image is 10MB."
+                    )
                 },
                 status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             )
         except Exception as e:
             # Check if it's a 413 error from nginx or Django
             if "413" in str(e) or "Request Entity Too Large" in str(e):
-                logger.error(
-                    f"413 error for user {request.user.user_id if request.user.is_authenticated else 'anonymous'}: {str(e)}"
+                user_id = (
+                    request.user.user_id
+                    if request.user.is_authenticated
+                    else "anonymous"
                 )
+                logger.error(f"413 error for user {user_id}: {str(e)}")
                 return Response(
                     {
-                        "detail": "Uploaded file(s) are too large. Maximum size per image is 10MB."
+                        "detail": (
+                            "Uploaded file(s) are too large. "
+                            "Maximum size per image is 10MB."
+                        )
                     },
                     status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 )
@@ -201,6 +220,7 @@ class ListingViewSet(
         GET /api/v1/listings/:id/is_saved/
         """
         from .models import Watchlist
+
         listing = self.get_object()
         is_saved = Watchlist.objects.filter(user=request.user, listing=listing).exists()
         return Response({"is_saved": is_saved}, status=status.HTTP_200_OK)

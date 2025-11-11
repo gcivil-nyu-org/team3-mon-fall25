@@ -1,17 +1,14 @@
 """
 Tests for 413 Request Entity Too Large error handling (Issue #196)
 """
+
 import pytest
 from rest_framework.test import APIClient
 from rest_framework import status
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from django.core.exceptions import RequestDataTooBig
-from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
-import io
 
 from tests.factories.factories import UserFactory, ListingFactory
-from apps.listings.models import Listing
 
 
 @pytest.fixture
@@ -29,28 +26,20 @@ def authenticated_client():
     return client, user
 
 
-@pytest.fixture
-def large_image_file():
-    """Create a mock large image file (>10MB)"""
-    # Create a large image file (simulate >10MB)
-    mock_file = io.BytesIO(b"x" * (11 * 1024 * 1024))  # 11MB
-    mock_file.name = "large_image.jpg"
-    mock_file.content_type = "image/jpeg"
-    return mock_file
-
-
 @pytest.mark.django_db
 class Test413ErrorHandling:
     """Test 413 Request Entity Too Large error handling"""
 
-    def test_create_listing_with_request_data_too_big_exception(self, authenticated_client):
+    def test_create_listing_with_request_data_too_big_exception(
+        self, authenticated_client
+    ):
         """Test that RequestDataTooBig exception is caught and returns 413"""
         client, user = authenticated_client
-        
+
         # Patch the perform_create to raise the exception during actual processing
         with patch("apps.listings.views.ListingViewSet.perform_create") as mock_perform:
             mock_perform.side_effect = RequestDataTooBig("Request data too large")
-            
+
             response = client.post(
                 "/api/v1/listings/",
                 {
@@ -61,26 +50,28 @@ class Test413ErrorHandling:
                 },
                 format="json",
             )
-            
+
             assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
             assert "too large" in response.data["detail"].lower()
             assert "10MB" in response.data["detail"]
 
-    def test_update_listing_with_request_data_too_big_exception(self, authenticated_client):
+    def test_update_listing_with_request_data_too_big_exception(
+        self, authenticated_client
+    ):
         """Test that RequestDataTooBig exception in update is caught and returns 413"""
         client, user = authenticated_client
         listing = ListingFactory(user=user)
-        
+
         # Patch the perform_update to raise the exception during actual processing
         with patch("apps.listings.views.ListingViewSet.perform_update") as mock_perform:
             mock_perform.side_effect = RequestDataTooBig("Request data too large")
-            
+
             response = client.patch(
                 f"/api/v1/listings/{listing.listing_id}/",
                 {"title": "Updated Title"},
                 format="json",
             )
-            
+
             assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
             assert "too large" in response.data["detail"].lower()
             assert "10MB" in response.data["detail"]
@@ -88,11 +79,11 @@ class Test413ErrorHandling:
     def test_create_listing_with_413_in_exception_message(self, authenticated_client):
         """Test that exceptions with '413' in message are caught"""
         client, user = authenticated_client
-        
+
         # Patch the perform_create to raise the exception during actual processing
         with patch("apps.listings.views.ListingViewSet.perform_create") as mock_perform:
             mock_perform.side_effect = Exception("413 Request Entity Too Large")
-            
+
             response = client.post(
                 "/api/v1/listings/",
                 {
@@ -103,7 +94,7 @@ class Test413ErrorHandling:
                 },
                 format="json",
             )
-            
+
             assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
             assert "too large" in response.data["detail"].lower()
 
@@ -111,28 +102,30 @@ class Test413ErrorHandling:
         """Test that exceptions with '413' in message in update are caught"""
         client, user = authenticated_client
         listing = ListingFactory(user=user)
-        
+
         # Patch the perform_update to raise the exception during actual processing
         with patch("apps.listings.views.ListingViewSet.perform_update") as mock_perform:
             mock_perform.side_effect = Exception("413 Request Entity Too Large")
-            
+
             response = client.patch(
                 f"/api/v1/listings/{listing.listing_id}/",
                 {"title": "Updated Title"},
                 format="json",
             )
-            
+
             assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
             assert "too large" in response.data["detail"].lower()
 
-    def test_create_listing_with_request_entity_too_large_in_message(self, authenticated_client):
+    def test_create_listing_with_request_entity_too_large_in_message(
+        self, authenticated_client
+    ):
         """Test that exceptions with 'Request Entity Too Large' in message are caught"""
         client, user = authenticated_client
-        
+
         # Patch the perform_create to raise the exception during actual processing
         with patch("apps.listings.views.ListingViewSet.perform_create") as mock_perform:
             mock_perform.side_effect = Exception("Request Entity Too Large error")
-            
+
             response = client.post(
                 "/api/v1/listings/",
                 {
@@ -143,18 +136,18 @@ class Test413ErrorHandling:
                 },
                 format="json",
             )
-            
+
             assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
             assert "too large" in response.data["detail"].lower()
 
     def test_other_exceptions_are_not_caught(self, authenticated_client):
         """Test that other exceptions are not caught and re-raised"""
         client, user = authenticated_client
-        
+
         # Patch the perform_create to raise a different exception
         with patch("apps.listings.views.ListingViewSet.perform_create") as mock_perform:
             mock_perform.side_effect = ValueError("Some other error")
-            
+
             # The exception will be raised by the test client, not caught by our handler
             # because it's not a 413-related exception
             with pytest.raises(ValueError, match="Some other error"):
@@ -168,4 +161,3 @@ class Test413ErrorHandling:
                     },
                     format="json",
                 )
-

@@ -67,6 +67,7 @@ class ListingImage(models.Model):
 
 class Watchlist(models.Model):
     """Model to track listings saved by users"""
+
     watchlist_id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
         "users.User",

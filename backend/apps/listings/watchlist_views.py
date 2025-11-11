@@ -14,6 +14,7 @@ class WatchlistViewSet(viewsets.ViewSet):
     """
     ViewSet for managing user watchlist
     """
+
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
@@ -25,7 +26,9 @@ class WatchlistViewSet(viewsets.ViewSet):
             "listing"
         )
         listings = [item.listing for item in watchlist_items]
-        serializer = CompactListingSerializer(listings, many=True, context={"request": request})
+        serializer = CompactListingSerializer(
+            listings, many=True, context={"request": request}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request):
@@ -68,9 +71,7 @@ class WatchlistViewSet(viewsets.ViewSet):
         Remove listing from watchlist
         DELETE /api/v1/watchlist/:pk/
         """
-        watchlist_item = get_object_or_404(
-            Watchlist, user=request.user, listing_id=pk
-        )
+        watchlist_item = get_object_or_404(Watchlist, user=request.user, listing_id=pk)
         watchlist_item.delete()
         return Response(
             {"message": "Listing removed from watchlist"},
@@ -82,10 +83,8 @@ class WatchlistViewSet(viewsets.ViewSet):
         """
         Check if listing is saved by current user
         GET /api/v1/watchlist/:pk/is_saved/
-        Note: This endpoint is not used - the is_saved check is done via ListingDetailSerializer
+        Note: This endpoint is not used - the is_saved check is done via
+        ListingDetailSerializer
         """
-        is_saved = Watchlist.objects.filter(
-            user=request.user, listing_id=pk
-        ).exists()
+        is_saved = Watchlist.objects.filter(user=request.user, listing_id=pk).exists()
         return Response({"is_saved": is_saved}, status=status.HTTP_200_OK)
-
