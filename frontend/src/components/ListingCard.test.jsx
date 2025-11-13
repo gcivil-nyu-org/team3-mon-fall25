@@ -115,6 +115,31 @@ describe('ListingCard', () => {
         });
     });
 
+    describe('Image Handling', () => {
+        it('renders image when imageUrl is provided', () => {
+            render(<ListingCard {...mockProps} imageUrl="https://example.com/image.jpg" />);
+
+            const img = screen.getByAltText('Test Laptop');
+            expect(img).toBeInTheDocument();
+            expect(img).toHaveAttribute('src', 'https://example.com/image.jpg');
+        });
+
+        it('renders placeholder icon when imageUrl is not provided', () => {
+            const { container } = render(<ListingCard {...mockProps} imageUrl={null} />);
+
+            // Check that the placeholder icon is rendered (FaBoxOpen)
+            const placeholder = container.querySelector('.image-placeholder svg');
+            expect(placeholder).toBeInTheDocument();
+        });
+
+        it('renders placeholder icon when imageUrl is empty string', () => {
+            const { container } = render(<ListingCard {...mockProps} imageUrl="" />);
+
+            const placeholder = container.querySelector('.image-placeholder svg');
+            expect(placeholder).toBeInTheDocument();
+        });
+    });
+
     describe('Edge Cases', () => {
         it('handles missing or empty title gracefully', () => {
             render(<ListingCard {...mockProps} title="" />);
