@@ -462,7 +462,8 @@ def _clear_cache_between_tests():
     cache.clear()
     yield
     cache.clear()
-    
+
+
 @pytest.mark.django_db
 class TestListingViewSetTracking:
     def test_retrieve_does_not_increment_without_flags(self, api_client):
@@ -619,7 +620,7 @@ class TestViewerCacheKey:
 
     def test_cache_key_anonymous_with_session_prefers_session(self):
         """
-        Anonymous with session -> prefer session-based key (stable & different from IP/UA).
+        Anonymous with session - prefer session-based key(stable & different from IP/UA)
         """
         factory = APIRequestFactory()
         view = ListingViewSet()
