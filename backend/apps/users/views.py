@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -5,7 +7,26 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import UserAuthSerializer, UserDetailSerializer
+from .models_otp import OTPAttempt
+from .otp_service import (
+    generate_otp,
+    store_otp,
+    send_otp_email,
+    verify_otp,
+    log_otp_action,
+    get_client_ip,
+    get_user_agent,
+    delete_otp,
+)
+from .serializers import (
+    UserAuthSerializer,
+    UserDetailSerializer,
+    OTPVerificationSerializer,
+    SendOTPSerializer,
+)
+from .throttles import OTPRateThrottle
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

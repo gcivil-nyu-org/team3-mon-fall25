@@ -590,7 +590,7 @@ describe('ListingDetail - Core Functionality', () => {
       renderListingDetail();
 
       await waitFor(() => {
-        expect(screen.getByText('Not found')).toBeInTheDocument();
+        expect(screen.getByText('Failed to load listing.')).toBeInTheDocument();
       });
     });
   });
