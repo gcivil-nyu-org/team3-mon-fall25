@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
-  timeout: 8000,
+  timeout: 60000, // 60 seconds for file uploads
 });
 
 // Request interceptor - add JWT token to all requests
@@ -33,7 +33,13 @@ apiClient.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    console.error('API Error:', error);
+    // Handle 413 errors specifically
+    if (error.response?.status === 413) {
+      console.error('API Error (413): File(s) are too large', error);
+      // Error message will be handled by the calling component
+    } else {
+      console.error('API Error:', error);
+    }
     return Promise.reject(error);
   }
 );

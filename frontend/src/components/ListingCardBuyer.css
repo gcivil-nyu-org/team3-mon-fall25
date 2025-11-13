@@ -14,7 +14,6 @@
   border-radius: 16px;
   overflow: hidden;
   padding: 0;
-  cursor: pointer;
   box-shadow: 0 1px 0 rgba(17,24,39,0.03);
   transition: box-shadow .15s, transform .15s;
 }
@@ -22,6 +21,15 @@
 .buyer-card:hover {
   box-shadow: 0 8px 24px rgba(17,24,39,0.08);
   transform: translateY(-2px);
+}
+
+.buyer-card__button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
 }
 
 .buyer-card__imgWrap {

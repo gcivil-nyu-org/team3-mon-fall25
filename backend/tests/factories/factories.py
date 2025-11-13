@@ -1,8 +1,7 @@
 import factory
-from faker import Faker
-
-from apps.users.models import User
 from apps.listings.models import Listing, ListingImage
+from apps.users.models import User
+from faker import Faker
 
 fake = Faker()
 

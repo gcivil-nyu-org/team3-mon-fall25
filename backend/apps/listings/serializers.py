@@ -1,9 +1,10 @@
-from rest_framework import serializers
-from django.db import models
-from apps.listings.models import Listing, ListingImage
-from utils.s3_service import s3_service
-import logging
 import json
+import logging
+
+from apps.listings.models import Listing, ListingImage
+from django.db import models
+from rest_framework import serializers
+from utils.s3_service import s3_service
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,8 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_netid = serializers.CharField(source="user.netid", read_only=True)
+    is_saved = serializers.SerializerMethodField()
+    save_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -146,6 +149,8 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "images",
             "user_email",
             "user_netid",
+            "is_saved",
+            "save_count",
         ]
         read_only_fields = [
             "listing_id",
@@ -153,7 +158,24 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "updated_at",
             "user_email",
             "user_netid",
+            "is_saved",
+            "save_count",
         ]
+
+    def get_is_saved(self, obj):
+        """Check if current user has saved this listing"""
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            from .models import Watchlist
+
+            return Watchlist.objects.filter(user=request.user, listing=obj).exists()
+        return False
+
+    def get_save_count(self, obj):
+        """Get total number of users who saved this listing"""
+        from .models import Watchlist
+
+        return Watchlist.objects.filter(listing=obj).count()
 
 
 # Update listing— PUT / PATCH

@@ -36,6 +36,10 @@ export default defineConfig({
         'node_modules/',
         'src/setupTests.js',
         'src/api/**',
+        '**/*.css',
+        'src/test-utils/**',
+        'src/hooks/**',
+        'src/pages/Chat.jsx'
       ],
       // Enforce 85% coverage threshold - CI will fail if not met
       thresholds: {

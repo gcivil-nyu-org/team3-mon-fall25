@@ -21,4 +21,6 @@ exclude =
     frontend_build,
     node_modules
 
+per-file-ignores =
+  backend/apps/chat/urls.py:E501
 

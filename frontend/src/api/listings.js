@@ -26,6 +26,7 @@ export async function updateListing(id, formData) {
         headers: {
             "Content-Type": "multipart/form-data",
         },
+        timeout: 60000, // 60 seconds for file uploads
     });
     return data;
 }
@@ -40,6 +41,7 @@ export async function createListing(formData) {
         headers: {
             "Content-Type": "multipart/form-data",
         },
+        timeout: 60000, // 60 seconds for file uploads
     });
     return data;
 }

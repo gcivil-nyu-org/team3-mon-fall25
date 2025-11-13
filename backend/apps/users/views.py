@@ -1,30 +1,11 @@
-from rest_framework import viewsets, status
+from django.contrib.auth import get_user_model
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import get_user_model
-from .serializers import (
-    UserAuthSerializer,
-    UserDetailSerializer,
-    OTPVerificationSerializer,
-    SendOTPSerializer,
-)
-from .otp_service import (
-    generate_otp,
-    send_otp_email,
-    verify_otp,
-    store_otp,
-    delete_otp,
-    log_otp_action,
-    get_client_ip,
-    get_user_agent,
-)
-from .throttles import OTPRateThrottle
-from .models_otp import OTPAttempt
-import logging
 
-logger = logging.getLogger(__name__)
+from .serializers import UserAuthSerializer, UserDetailSerializer
 
 User = get_user_model()
 

@@ -4,11 +4,11 @@ Common views for the NYU Marketplace application.
 This module contains shared views such as health checks.
 """
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from django.db import connection
 from django.db.utils import OperationalError
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class HealthCheckView(APIView):

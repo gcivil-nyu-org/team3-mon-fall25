@@ -1,7 +1,12 @@
 import pytest
-from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
-from utils.s3_service import S3Service, _reset_s3_service
+from unittest.mock import MagicMock, patch
+from utils.s3_service import (
+    S3Service,
+    get_s3_service,
+    _reset_s3_service,
+    s3_service as s3_service_proxy,
+)
 
 
 @pytest.fixture
@@ -208,3 +213,100 @@ def test_extract_key_from_url_exception_handling(mock_settings, s3_service):
     # Test with non-matching URL
     result = s3_service._extract_key_from_url("http://different-bucket.com/image.jpg")
     assert result is None
+
+
+@patch("utils.s3_service.boto3.client")
+@patch("utils.s3_service.settings")
+def test_s3service_init_uses_settings(mock_settings, mock_boto_client):
+    mock_settings.AWS_ACCESS_KEY_ID = "AKIA_TEST"
+    mock_settings.AWS_SECRET_ACCESS_KEY = "SECRET_TEST"
+    mock_settings.AWS_S3_REGION_NAME = "us-east-2"
+    mock_settings.AWS_STORAGE_BUCKET_NAME = "init-bucket"
+
+    svc = S3Service()
+
+    mock_boto_client.assert_called_once_with(
+        "s3",
+        aws_access_key_id="AKIA_TEST",
+        aws_secret_access_key="SECRET_TEST",
+        region_name="us-east-2",
+    )
+    assert svc.bucket_name == "init-bucket"
+
+
+# --- EXTRA COVERAGE: _extract_key_from_url success path ---
+@patch("utils.s3_service.settings")
+def test_extract_key_from_url_success(mock_settings):
+    mock_settings.AWS_S3_REGION_NAME = "us-west-1"
+    svc = S3Service()
+    svc.bucket_name = "my-bucket"  # avoid depending on real settings
+
+    url = "https://my-bucket.s3.us-west-1.amazonaws.com/listings/42/abc.jpg"
+    assert svc._extract_key_from_url(url) == "listings/42/abc.jpg"
+
+
+# --- EXTRA COVERAGE: _validate_image happy path (verify + seek reset) ---
+@patch("utils.s3_service.Image.open")
+def test_validate_image_happy_path_calls_verify_and_seek(mock_image_open, s3_service):
+    mock_img = MagicMock()
+    mock_image_open.return_value = mock_img
+
+    f = MagicMock()
+    f.name = "nice.PNG"  # mixed case
+    f.size = 4096
+    # ensure seek exists and we can assert it
+    s3_service._validate_image(f)
+
+    mock_image_open.assert_called_once_with(f)
+    mock_img.verify.assert_called_once()
+    f.seek.assert_called_once_with(0)
+
+
+# --- EXTRA COVERAGE: upload_image with custom folder & deterministic filename ---
+@patch("utils.s3_service.uuid.uuid4", return_value="abcd-1234")
+@patch("utils.s3_service.Image.open")
+@patch("utils.s3_service.settings")
+def test_upload_image_custom_folder_and_uuid(
+    mock_settings, mock_image_open, _mock_uuid, s3_service
+):
+    mock_settings.AWS_S3_REGION_NAME = "eu-central-1"
+
+    f = MagicMock()
+    f.name = "photo.jpg"
+    f.size = 2048
+    f.content_type = "image/jpeg"
+
+    url = s3_service.upload_image(f, resource_id=7, folder_name="avatars")
+
+    # key should be exactly predictable now
+    expected_key = "avatars/7/abcd-1234.jpg"
+    args, kwargs = s3_service.s3_client.upload_fileobj.call_args
+    assert args[2] == expected_key
+
+    # URL reflects region & key
+    assert url == (
+        f"https://{s3_service.bucket_name}.s3.eu-central-1.amazonaws.com/{expected_key}"
+    )
+
+
+# --- EXTRA COVERAGE: singleton + proxy behavior ---
+@patch("utils.s3_service.boto3.client")
+@patch("utils.s3_service.settings")
+def test_get_s3_service_singleton_and_proxy(mock_settings, mock_boto_client):
+    mock_settings.AWS_ACCESS_KEY_ID = "X"
+    mock_settings.AWS_SECRET_ACCESS_KEY = "Y"
+    mock_settings.AWS_S3_REGION_NAME = "us-east-1"
+    mock_settings.AWS_STORAGE_BUCKET_NAME = "singleton-bucket"
+
+    _reset_s3_service()
+    first = get_s3_service()
+    second = get_s3_service()
+    assert first is second  # same instance
+
+    # proxy should delegate .bucket_name to singleton
+    assert s3_service_proxy.bucket_name == "singleton-bucket"
+
+    # reset should swap the instance
+    _reset_s3_service()
+    third = get_s3_service()
+    assert third is not first

@@ -1,12 +1,12 @@
-import pytest
-from rest_framework.test import APIClient
-from rest_framework import serializers, status
-from unittest.mock import patch
-import json
 import io
+import json
+from unittest.mock import patch
 
-from tests.factories.factories import UserFactory, ListingFactory, ListingImageFactory
+import pytest
 from apps.listings.models import Listing
+from rest_framework import serializers, status
+from rest_framework.test import APIClient
+from tests.factories.factories import ListingFactory, ListingImageFactory, UserFactory
 
 
 @pytest.fixture
@@ -358,7 +358,7 @@ class TestListingViewSet:
     # Tests for /api/v1/listings/search/?q=...
     # -------------------------------
 
-    @pytest.mark.skip(reason="Skipping failing test for CI/CD")
+    # @pytest.mark.skip(reason="Skipping failing test for CI/CD")
     def test_search_requires_q_param(self, api_client):
         resp = api_client.get("/api/v1/listings/search/")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -413,7 +413,7 @@ class TestListingViewSet:
         assert "Desk mat" not in titles
         assert "Desk riser" not in titles
 
-    @pytest.mark.skip(reason="Skipping failing test for CI/CD")
+    # @pytest.mark.skip(reason="Skipping failing test for CI/CD")
     def test_search_respects_ordering(self, api_client):
         ListingFactory(title="A", price=30)
         ListingFactory(title="B", price=10)

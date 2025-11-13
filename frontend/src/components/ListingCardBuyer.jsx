@@ -9,6 +9,8 @@ export default function ListingCardBuyer({
   imageUrl,        // can be string URL OR { url: "..." } OR undefined
   location,
   onClick,
+  onRemove,
+  onViewDetails,
 }) {
   const isSold = String(status || "").toLowerCase() === "sold";
 
@@ -20,8 +22,50 @@ export default function ListingCardBuyer({
   // Get the actual URL if available
   const actualImageUrl = typeof imageUrl === "string" ? imageUrl : imageUrl?.url;
 
+  const handleCardClick = () => {
+    if (onViewDetails) {
+      onViewDetails();
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleRemoveClick = (e) => {
+    e.stopPropagation();
+    if (onRemove) {
+      onRemove();
+    }
+  };
+
   return (
-    <button className="buyer-card" onClick={onClick} aria-label={`Open ${title}`}>
+    <div className="buyer-card" style={{ position: "relative" }}>
+      {onRemove && (
+        <button
+          onClick={handleRemoveClick}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            zIndex: 10,
+            background: "#fff",
+            border: "1px solid #E5E7EB",
+            borderRadius: "50%",
+            width: 32,
+            height: 32,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: 14,
+            color: "#dc2626",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          title="Remove from watchlist"
+        >
+          ×
+        </button>
+      )}
+      <button className="buyer-card__button" onClick={handleCardClick} aria-label={`Open ${title}`} style={{ width: "100%", border: "none", background: "transparent", padding: 0, cursor: "pointer" }}>
       <div className="buyer-card__imgWrap">
         {hasValidImage ? (
           <img
@@ -68,6 +112,7 @@ export default function ListingCardBuyer({
           {location ? <span className="buyer-card__loc">{location}</span> : null}
         </div>
       </div>
-    </button>
+      </button>
+    </div>
   );
 }

@@ -3,3 +3,4 @@
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.settings_local" # will be override by via environment variable
 python_files = "tests.py test_*.py *_tests.py"
+asyncio_mode="auto"
