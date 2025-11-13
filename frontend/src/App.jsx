@@ -2,6 +2,8 @@ import React from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import ProfileDropdown from "./components/ProfileDropdown";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
@@ -63,6 +65,19 @@ export default function App() {
   <Outlet />
 </div>
 
+      {/* Toast notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

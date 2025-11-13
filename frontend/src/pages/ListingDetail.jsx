@@ -9,8 +9,10 @@ import {
   FaCommentDots,
   FaTimes,
   FaArrowLeft,
+  FaShareAlt,
   FaHeart,
 } from "react-icons/fa";
+import { toast } from "react-toastify";
 import { getListing, getListings } from "@/api/listings";
 import { addToWatchlist, removeFromWatchlist } from "../api/watchlist";
 import { useAuth } from "../contexts/AuthContext";
@@ -45,7 +47,7 @@ export default function ListingDetail() {
         if (mounted) {
           setListing(data);
           setCurrentImageIndex(0); // Reset image index when listing changes
-          setIsSaved(data.is_saved || false);
+          setIsSaved(data?.is_saved || false);
         }
       } catch (e) {
         console.error(e);
@@ -249,8 +251,69 @@ export default function ListingDetail() {
     });
     if (sellerUsername) {
       // Pass the current listing in state so we can include it in the profile
-      navigate(`/seller/${sellerUsername}`, { 
-        state: { currentListing: listing } 
+      navigate(`/seller/${sellerUsername}`, {
+        state: { currentListing: listing }
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    // Build the listing URL with optional tracking parameter
+    const listingUrl = `${window.location.origin}/listing/${id}?ref=share`;
+
+    // Try native share API for mobile first
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: listing.title,
+          text: `Check out this listing: ${listing.title}`,
+          url: listingUrl,
+        });
+        // Don't show toast for native share since it has its own UI
+        return;
+      } catch (error) {
+        // User cancelled or share failed, fall through to clipboard
+        if (error.name !== "AbortError") {
+          console.error("Share failed:", error);
+        }
+      }
+    }
+
+    // Fallback to clipboard API
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(listingUrl);
+        toast.success("Link copied to clipboard!", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = listingUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          toast.success("Link copied to clipboard!", {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        } catch {
+          toast.error("Failed to copy link. Please try again.", {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        }
+        document.body.removeChild(textArea);
+      }
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      toast.error("Failed to copy link. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
       });
     }
   };
@@ -426,8 +489,18 @@ export default function ListingDetail() {
           {/* Right Column - Details Sidebar (40%) */}
           <div className="listing-detail-sidebar">
             <div className="listing-detail-details">
-              {/* Title */}
-              <h1 className="listing-detail-title">{listing.title}</h1>
+              {/* Title with Share Button */}
+              <div className="listing-detail-title-container">
+                <h1 className="listing-detail-title">{listing.title}</h1>
+                <button
+                  className="listing-detail-share-button"
+                  onClick={handleShare}
+                  aria-label="Share listing"
+                  title="Share this listing"
+                >
+                  <FaShareAlt />
+                </button>
+              </div>
 
               {/* Price */}
               <div className="listing-detail-price">${priceDisplay}</div>
