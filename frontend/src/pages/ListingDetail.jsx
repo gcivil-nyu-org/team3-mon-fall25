@@ -47,7 +47,7 @@ export default function ListingDetail() {
         if (mounted) {
           setListing(data);
           setCurrentImageIndex(0); // Reset image index when listing changes
-          setIsSaved(data.is_saved || false);
+          setIsSaved(data?.is_saved || false);
         }
       } catch (e) {
         console.error(e);
