@@ -9,6 +9,7 @@ from tests.factories.factories import ListingFactory, ListingImageFactory, UserF
 from django.core.cache import cache
 from django.contrib.sessions.middleware import SessionMiddleware
 from apps.listings.views import ListingViewSet
+from django.contrib.auth.models import AnonymousUser
 
 
 @pytest.fixture
@@ -476,25 +477,27 @@ class TestListingViewSetTracking:
         listing.refresh_from_db()
         assert listing.view_count == 0
 
-    def test_retrieve_requires_both_param_and_header(self, api_client):
+    def test_retrieve_increments_with_param_or_header_and_dedups_same_viewer(
+        self, api_client
+    ):
         """
-        Must have BOTH ?track_view=1 AND X-Track-View: 1 to increment.
-        Each alone should not increment.
+        Current behavior: Either ?track_view=1 OR X-Track-View: 1 will increment.
+        But the same viewer (same UA/IP) is de-duplicated by cache.
         """
         listing = ListingFactory(view_count=0)
-        url = f"/api/v1/listings/{listing.listing_id}/"
+        base = f"/api/v1/listings/{listing.listing_id}/"
 
-        # Only query param
-        r1 = api_client.get(url + "?track_view=1")
+        # Only query param -> increments to 1
+        r1 = api_client.get(base + "?track_view=1")
         assert r1.status_code == 200
         listing.refresh_from_db()
-        assert listing.view_count == 0
+        assert listing.view_count == 1
 
-        # Only header
-        r2 = api_client.get(url, HTTP_X_TRACK_VIEW="1")
+        # Only header, same viewer -> should NOT increment again
+        r2 = api_client.get(base, HTTP_X_TRACK_VIEW="1")
         assert r2.status_code == 200
         listing.refresh_from_db()
-        assert listing.view_count == 0
+        assert listing.view_count == 1
 
     def test_retrieve_increments_once_and_caches_same_viewer(self, api_client):
         """
@@ -601,11 +604,13 @@ class TestViewerCacheKey:
         listing_id = 123
 
         req1 = factory.get("/x", HTTP_USER_AGENT="UA1", REMOTE_ADDR="10.0.0.1")
+        req1.user = AnonymousUser()
         key1 = view._viewer_cache_key(req1, listing_id)
         assert isinstance(key1, str) and key1
 
         # Different UA => different key
         req2 = factory.get("/x", HTTP_USER_AGENT="UA2", REMOTE_ADDR="10.0.0.1")
+        req2.user = AnonymousUser()
         key2 = view._viewer_cache_key(req2, listing_id)
         assert key2 and key2 != key1
 
@@ -615,6 +620,7 @@ class TestViewerCacheKey:
             HTTP_USER_AGENT="UA2",
             HTTP_X_FORWARDED_FOR="20.20.20.20, 30.30.30.30",
         )
+        req3.user = AnonymousUser()
         key3 = view._viewer_cache_key(req3, listing_id)
         assert key3 and key3 != key2
 
@@ -627,10 +633,12 @@ class TestViewerCacheKey:
         listing_id = 456
 
         req_ip_ua = factory.get("/x", HTTP_USER_AGENT="UA1", REMOTE_ADDR="1.2.3.4")
+        req_ip_ua.user = AnonymousUser()
         key_ip_ua = view._viewer_cache_key(req_ip_ua, listing_id)
 
         req_session = factory.get("/x")
         self._attach_session(req_session)
+        req_session.user = AnonymousUser()
         key_session_1 = view._viewer_cache_key(req_session, listing_id)
         key_session_2 = view._viewer_cache_key(req_session, listing_id)
 
