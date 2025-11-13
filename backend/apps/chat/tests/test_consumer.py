@@ -1,14 +1,9 @@
 import pytest
-from apps.chat.models import Conversation, ConversationParticipant
 from channels.testing import WebsocketCommunicator
-from django.contrib.auth import get_user_model
 from asgiref.sync import sync_to_async
-from apps.chat.consumers import ChatConsumer
 import json
 
 pytestmark = pytest.mark.asyncio
-
-User = get_user_model()
 
 
 @pytest.fixture(autouse=True)
@@ -17,11 +12,20 @@ def _patch_uuid_json(monkeypatch):
         # serialize UUIDs, datetimes, etc. by stringifying unknown types
         return json.dumps(content, default=str)
 
+    # Import ChatConsumer lazily to avoid importing Django models at collection
+    from apps.chat.consumers import ChatConsumer
+
     monkeypatch.setattr(ChatConsumer, "encode_json", staticmethod(_encode_async))
 
 
 @pytest.mark.django_db(transaction=True)
 async def test_ws_connect_and_broadcast_message(settings):
+    from django.contrib.auth import get_user_model
+    from apps.chat.models import Conversation, ConversationParticipant
+    from apps.chat.consumers import ChatConsumer
+
+    User = get_user_model()
+
     u1 = await sync_to_async(User.objects.create_user)(
         email="u1@nyu.edu", password="p", netid="u1"
     )

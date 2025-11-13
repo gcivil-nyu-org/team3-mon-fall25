@@ -1,8 +1,9 @@
 import pytest
 from django.test import RequestFactory
 from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import AccessToken
-from apps.chat.models import Conversation, ConversationParticipant
+
+# Import chat models lazily inside fixtures to avoid importing Django models
+# at module import time (which fails before Django settings/apps are configured).
 
 
 @pytest.fixture
@@ -37,6 +38,9 @@ def make_direct(two_users, db):
     """
 
     def _make():
+        # Import models here so Django apps are initialized by pytest-django
+        from apps.chat.models import Conversation, ConversationParticipant
+
         u1, u2 = two_users
         dk = Conversation.make_direct_key(u1.id, u2.id)
         conv, _ = Conversation.objects.get_or_create(
@@ -51,7 +55,12 @@ def make_direct(two_users, db):
 
 @pytest.fixture
 def jwt_access_token_for():
+
     def _mk(user):
+        # Import lazily to avoid importing Django models at module import time
+        # (which can cause errors before Django settings/apps are configured).
+        from rest_framework_simplejwt.tokens import AccessToken
+
         return str(AccessToken.for_user(user))
 
     return _mk

@@ -544,6 +544,7 @@ export default function ListingDetail() {
         open={contactModalOpen}
         onClose={() => setContactModalOpen(false)}
         listingTitle={listing.title}
+        listingId={listing.listing_id}
       />
 
       {/* Lightbox Modal - Fullscreen View */}
@@ -625,3 +626,4 @@ export default function ListingDetail() {
     </div>
   );
 }
+

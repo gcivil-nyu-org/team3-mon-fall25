@@ -1,12 +1,21 @@
-import React from "react";
-import { Outlet, Link, NavLink } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Outlet, Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import ProfileDropdown from "./components/ProfileDropdown";
+import { FaComments } from "react-icons/fa";
 import "./App.css";
 import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
 export default function App() {
   const { user } = useAuth();
+  const location = useLocation();
+
+  // Track previous path for chat background
+  useEffect(() => {
+    if (location.pathname !== '/chat' && !location.pathname.startsWith('/chat/')) {
+      sessionStorage.setItem('previousPath', location.pathname);
+    }
+  }, [location.pathname]);
 
   return (
     <div
@@ -48,6 +57,12 @@ export default function App() {
       <NavLink to="/create-listing" className="nav__link">Create Listing</NavLink>
       <NavLink to="/my-listings" className="nav__link">My Listings</NavLink>
       {user && <NavLink to="/watchlist" className="nav__link">Saved</NavLink>}
+      {user && (
+        <NavLink to="/chat" className="nav__link" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <FaComments style={{ fontSize: "16px" }} />
+          Messages
+        </NavLink>
+      )}
       {user ? (
         <ProfileDropdown />
       ) : (

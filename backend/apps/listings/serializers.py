@@ -129,6 +129,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_netid = serializers.CharField(source="user.netid", read_only=True)
+    user_id = serializers.CharField(source="user.user_id", read_only=True)
     is_saved = serializers.SerializerMethodField()
     save_count = serializers.SerializerMethodField()
 
@@ -147,6 +148,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "images",
             "user_email",
             "user_netid",
+            "user_id",
             "is_saved",
             "save_count",
         ]
@@ -397,4 +399,6 @@ class CompactListingSerializer(serializers.ModelSerializer):
             return first_img.image_url
 
         # No images for this listing
+        return None
+
         return None

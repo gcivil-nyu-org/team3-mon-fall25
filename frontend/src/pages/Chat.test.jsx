@@ -1,7 +1,32 @@
 // src/pages/Chat.test.jsx
 import React from "react";
 import { render, screen, act, fireEvent, within, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Mock useAuth
+vi.mock("../contexts/AuthContext", () => ({
+  useAuth: vi.fn(() => ({ user: { email: "test@nyu.edu" } })),
+}));
+
+// Mock react-router-dom hooks
+const mockNavigate = vi.fn();
+const mockLocation = { pathname: "/chat", search: "", hash: "", state: null };
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => mockLocation,
+    useParams: () => ({}),
+  };
+});
+
+// Mock API calls
+vi.mock("../api/listings", () => ({
+  getListing: vi.fn(async () => ({ listing_id: "1", title: "Test", price: 100 })),
+  getListings: vi.fn(async () => ({ results: [] })),
+}));
 
 // ---- Hoist-safe mocks ----
 vi.mock("../api/auth", () => {
@@ -74,7 +99,11 @@ describe("Chat page", () => {
 
   it("shows empty prompt when no conversation is returned", async () => {
     chatApi.listConversations.mockResolvedValueOnce([]);
-    render(<Chat />);
+    render(
+      <MemoryRouter>
+        <Chat />
+      </MemoryRouter>
+    );
 
     // Wait for effects to settle
     await waitFor(() => {
@@ -98,7 +127,11 @@ describe("Chat page", () => {
       next_before: null,
     });
 
-    render(<Chat />);
+    render(
+      <MemoryRouter>
+        <Chat />
+      </MemoryRouter>
+    );
 
     // Wait for the first message to render
     await waitFor(() => expect(screen.getByText(/welcome/i)).toBeInTheDocument());
@@ -120,7 +153,11 @@ it("renders inbound WS message and sends read when it’s from other user", asyn
     chatApi.getMessages.mockResolvedValueOnce({ results: [], next_before: null });
     chatApi.markRead.mockResolvedValueOnce(undefined); // ensure Promise
 
-    render(<Chat />);
+    render(
+      <MemoryRouter>
+        <Chat />
+      </MemoryRouter>
+    );
     await act(async () => {
       await flush();
     });
@@ -148,7 +185,11 @@ it("renders inbound WS message and sends read when it’s from other user", asyn
       created_at: t,
     });
 
-    render(<Chat />);
+    render(
+      <MemoryRouter>
+        <Chat />
+      </MemoryRouter>
+    );
     await waitFor(() => {
       // just ensure effects ran and input is on screen
       expect(screen.getByPlaceholderText(/type a message/i)).toBeInTheDocument();
@@ -182,7 +223,11 @@ it("renders inbound WS message and sends read when it’s from other user", asyn
         next_before: null,
       });
 
-    render(<Chat />);
+    render(
+      <MemoryRouter>
+        <Chat />
+      </MemoryRouter>
+    );
 
     const btn = await screen.findByRole("button", { name: /load older/i });
     expect(btn).toBeEnabled();

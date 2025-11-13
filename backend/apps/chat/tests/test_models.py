@@ -1,14 +1,15 @@
 import pytest
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-from apps.chat.models import ConversationParticipant, Message
-from apps.chat.models import Conversation
 
 pytestmark = pytest.mark.django_db
-User = get_user_model()
 
 
 def test_direct_key_symmetric_and_unique():
+    from django.contrib.auth import get_user_model
+    from apps.chat.models import Conversation
+
+    User = get_user_model()
+
     u1 = User.objects.create_user(email="a@nyu.edu", password="p", netid="a")
     u2 = User.objects.create_user(email="b@nyu.edu", password="p", netid="b")
 
@@ -29,6 +30,11 @@ def test_direct_key_symmetric_and_unique():
 
 
 def test_last_message_at_updates_on_message():
+    from django.contrib.auth import get_user_model
+    from apps.chat.models import Conversation, ConversationParticipant, Message
+
+    User = get_user_model()
+
     u1 = User.objects.create_user(email="a@nyu.edu", password="p", netid="a")
     u2 = User.objects.create_user(email="b@nyu.edu", password="p", netid="b")
     conv, _ = Conversation.objects.get_or_create(
@@ -48,6 +54,8 @@ def test_last_message_at_updates_on_message():
 
 
 def test_make_direct_key_is_symmetric_and_stable_small_ids():
+    from apps.chat.models import Conversation
+
     k1 = Conversation.make_direct_key(1, 2)
     k2 = Conversation.make_direct_key(2, 1)
     assert k1 == k2

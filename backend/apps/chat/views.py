@@ -174,7 +174,8 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
                         created_at__gt=part.last_read_message.created_at,
                     ).count()
 
-            item = ConversationListSerializer(c).data
+            serializer = ConversationListSerializer(c, context={"request": request})
+            item = serializer.data
             item["last_message"] = (
                 None
                 if not lm
