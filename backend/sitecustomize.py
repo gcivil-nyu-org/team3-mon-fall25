@@ -14,8 +14,9 @@ behave like CI. If you prefer a different approach, we can remove this later.
 import os
 
 if "DJANGO_SETTINGS_MODULE" not in os.environ:
-    # Use the CI settings by default to match pytest.ini's intention
-    os.environ["DJANGO_SETTINGS_MODULE"] = "core.settings_ci"
+    # Use the local settings by default for tests
+    # Note: PR #208 moved CI test configuration to settings_local.py
+    os.environ["DJANGO_SETTINGS_MODULE"] = "core.settings_local"
 
 try:
     # Delay import until after env var is set

@@ -9,8 +9,9 @@ import os
 
 import pytest
 
-# Ensure the CI settings are used when running tests locally
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings_ci")
+# Ensure the local settings are used when running tests locally
+# Note: PR #208 moved CI test configuration to settings_local.py
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings_local")
 
 try:
     import django

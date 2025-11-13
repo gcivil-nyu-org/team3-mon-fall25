@@ -30,6 +30,8 @@ ENV/
 .coverage
 .coverage.*
 coverage/
+coverage*.txt
+test-output.txt
 .pytest_cache/
 htmlcov/
 
