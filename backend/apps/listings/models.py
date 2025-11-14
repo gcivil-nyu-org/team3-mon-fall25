@@ -24,6 +24,7 @@ class Listing(models.Model):
     location = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    view_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "listings"

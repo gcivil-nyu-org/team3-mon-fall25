@@ -21,7 +21,7 @@ staticfiles/
 
 # Virtual Environments
 .env
-.venv
+.venv*
 env/
 venv/
 ENV/
@@ -31,6 +31,8 @@ eb-virt/
 .coverage
 .coverage.*
 coverage/
+coverage*.txt
+test-output.txt
 .pytest_cache/
 htmlcov/
 

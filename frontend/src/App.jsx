@@ -1,7 +1,10 @@
-import React from "react";
-import { Outlet, Link, NavLink } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Outlet, Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import { useChat } from "./contexts/ChatContext";
 import ProfileDropdown from "./components/ProfileDropdown";
+import GlobalChatWindow from "./components/GlobalChatWindow";
+import { FaComments } from "react-icons/fa";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
@@ -9,6 +12,15 @@ import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
 export default function App() {
   const { user } = useAuth();
+  const { openChat } = useChat();
+  const location = useLocation();
+
+  // Track previous path for chat background
+  useEffect(() => {
+    if (location.pathname !== '/chat' && !location.pathname.startsWith('/chat/')) {
+      sessionStorage.setItem('previousPath', location.pathname);
+    }
+  }, [location.pathname]);
 
   return (
     <div
@@ -22,7 +34,7 @@ export default function App() {
   }}
 >
       {/* Global Navbar */}
-      <nav style={{ backgroundColor: "#56018D" }}>
+      <nav>
   <div className="container nav">
     {/* Brand (left) */}
     <div className="nav__brand">
@@ -50,6 +62,30 @@ export default function App() {
       <NavLink to="/create-listing" className="nav__link">Create Listing</NavLink>
       <NavLink to="/my-listings" className="nav__link">My Listings</NavLink>
       {user && <NavLink to="/watchlist" className="nav__link">Saved</NavLink>}
+      {user && (
+        <button
+          onClick={() => {
+            openChat();
+            // Don't navigate - just open the chat window
+            // Full-page mode will navigate to /chat when needed
+          }}
+          className="nav__link"
+          style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "6px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "6px 0",
+            color: "inherit",
+            font: "inherit",
+          }}
+        >
+          <FaComments style={{ fontSize: "16px" }} />
+          Messages
+        </button>
+      )}
       {user ? (
         <ProfileDropdown />
       ) : (
@@ -61,9 +97,12 @@ export default function App() {
 
 
       {/* Page content */}
-<div style={{ flex: 1 /* no flex centering here */ }}>
+<div style={{ flex: 1, paddingTop: '64px' /* Account for fixed header */ }}>
   <Outlet />
 </div>
+
+      {/* Global Chat Window - persists across all routes */}
+      <GlobalChatWindow />
 
       {/* Toast notifications */}
       <ToastContainer

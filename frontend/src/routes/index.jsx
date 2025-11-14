@@ -2,6 +2,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "../contexts/AuthContext";
+import { ChatProvider } from "../contexts/ChatContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Home from "../pages/Home";
 import BrowseListings from "../pages/BrowseListings";
@@ -22,8 +23,9 @@ import Watchlist from "../pages/Watchlist";
 export default function AppRouter() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ChatProvider>
+        <BrowserRouter>
+          <Routes>
           {/* Public route - Login page */}
           <Route path="/login" element={<Login />} />
 
@@ -51,6 +53,7 @@ export default function AppRouter() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ChatProvider>
     </AuthProvider>
   );
 }

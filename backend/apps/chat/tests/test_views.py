@@ -1,9 +1,6 @@
 import pytest
 from rest_framework.test import APIClient
 
-from apps.chat.models import Conversation, ConversationParticipant
-from apps.chat.tests._factories import make_nyu_user as make_user
-
 
 pytestmark = pytest.mark.django_db
 
@@ -99,6 +96,9 @@ def test_conversations_list_requires_auth_401():
 @pytest.mark.django_db
 def test_mark_read_is_idempotent_and_updates():
     c = APIClient()
+    from apps.chat.tests._factories import make_nyu_user as make_user
+    from apps.chat.models import Conversation, ConversationParticipant
+
     u1 = make_user("mr1@nyu.edu")
     u2 = make_user("mr2@nyu.edu")
     c.force_authenticate(user=u1)
@@ -122,6 +122,9 @@ def test_mark_read_is_idempotent_and_updates():
 @pytest.mark.django_db
 def test_messages_endpoint_defaults_without_before_and_limits():
     c = APIClient()
+    from apps.chat.tests._factories import make_nyu_user as make_user
+    from apps.chat.models import Conversation, ConversationParticipant
+
     u1 = make_user("mb1@nyu.edu")
     u2 = make_user("mb2@nyu.edu")
     c.force_authenticate(user=u1)
@@ -143,11 +146,13 @@ def test_messages_endpoint_defaults_without_before_and_limits():
 @pytest.mark.django_db
 def test_non_member_gets_404_or_403_on_messages():
     c = APIClient()
+    from apps.chat.tests._factories import make_nyu_user as make_user
+    from apps.chat.models import Conversation, ConversationParticipant
+
     u1 = make_user("nm1@nyu.edu")
     u2 = make_user("nm2@nyu.edu")
     stranger = make_user("nmz@nyu.edu")
     c.force_authenticate(user=stranger)
-
     conv = Conversation.objects.create(
         created_by=u1, direct_key=Conversation.make_direct_key(u1.id, u2.id)
     )

@@ -39,7 +39,7 @@ export async function markRead(conversationId, messageId) {
 
 export async function contactSeller(listingId) {
   const { data } = await apiClient.post(
-    `/v1/listings/${listingId}/contact-seller/`
+    `/listings/${listingId}/contact-seller/`
   );
   return data; // { conversation_id }
 }

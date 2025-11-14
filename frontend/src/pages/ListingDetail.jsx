@@ -39,11 +39,18 @@ export default function ListingDetail() {
   });
 
   useEffect(() => {
+    // Don't try to load if there's no ID (e.g., when rendered in background on chat page)
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const data = await getListing(id);
+        setError(""); // Clear any previous errors
+        const data = await getListing(id, { trackView: true });
         if (mounted) {
           setListing(data);
           setCurrentImageIndex(0); // Reset image index when listing changes
@@ -343,6 +350,11 @@ export default function ListingDetail() {
     }
   };
 
+  // Don't render anything if there's no ID (component is just rendered in background on chat page)
+  if (!id) {
+    return null;
+  }
+  
   if (loading) {
     return (
       <div className="listing-detail-page">
@@ -350,7 +362,7 @@ export default function ListingDetail() {
       </div>
     );
   }
-
+  
   if (error || !listing) {
     return (
       <div className="listing-detail-page">
@@ -617,6 +629,7 @@ export default function ListingDetail() {
         open={contactModalOpen}
         onClose={() => setContactModalOpen(false)}
         listingTitle={listing.title}
+        listingId={listing.listing_id}
       />
 
       {/* Lightbox Modal - Fullscreen View */}
@@ -698,3 +711,4 @@ export default function ListingDetail() {
     </div>
   );
 }
+
