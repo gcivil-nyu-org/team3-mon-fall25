@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ListingCard from "../components/ListingCard";
 import { getMyListings, patchListing, deleteListingAPI } from "../api/listings.js";
+import SEO from "../components/SEO";
 
 export default function MyListings() {
   const navigate = useNavigate();
@@ -180,52 +181,60 @@ export default function MyListings() {
   }
 
   return (
-    <div className="my-listings-page" style={{ padding: "60px 24px" }}>
-      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32 }}>My Listings</h1>
+    <>
+      <SEO
+        title="My Listings - NYU Marketplace"
+        description="Manage, edit, and track your posted items."
+        canonical="http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com/my-listings"
+      />
 
-        {listings.length === 0 ? (
-          <div style={{
-            textAlign: "center",
-            padding: "60px 24px",
-            background: "#fff",
-            borderRadius: 16,
-            border: "1px solid #E5E7EB",
-          }}>
-            <p style={{ fontSize: 18, color: "#6b7280", marginBottom: 20 }}>
-              You haven't created any listings yet.
-            </p>
-            <button
-              onClick={() => navigate("/create-listing")}
-              style={{
-                padding: "12px 24px",
-                background: "#56018D",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 16,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Create Your First Listing
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {listings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                {...listing}
-                onMarkSold={() => markAsSold(listing.id)}
-                onEdit={() => editListing(listing.id)}
-                onDelete={() => deleteListing(listing.id)}
-                onViewDetails={() => viewDetails(listing.id)}
-              />
-            ))}
-          </div>
-        )}
+      <div className="my-listings-page" style={{ padding: "60px 24px" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+          <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32 }}>My Listings</h1>
+
+          {listings.length === 0 ? (
+            <div style={{
+              textAlign: "center",
+              padding: "60px 24px",
+              background: "#fff",
+              borderRadius: 16,
+              border: "1px solid #E5E7EB",
+            }}>
+              <p style={{ fontSize: 18, color: "#6b7280", marginBottom: 20 }}>
+                You haven't created any listings yet.
+              </p>
+              <button
+                onClick={() => navigate("/create-listing")}
+                style={{
+                  padding: "12px 24px",
+                  background: "#56018D",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Create Your First Listing
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {listings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  {...listing}
+                  onMarkSold={() => markAsSold(listing.id)}
+                  onEdit={() => editListing(listing.id)}
+                  onDelete={() => deleteListing(listing.id)}
+                  onViewDetails={() => viewDetails(listing.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

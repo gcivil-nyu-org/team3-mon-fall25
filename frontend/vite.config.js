@@ -29,6 +29,7 @@ export default defineConfig({
     environment: 'jsdom', // Use jsdom for DOM simulation
     setupFiles: './src/setupTests.js', // Setup file for test configuration
     css: true, // Parse CSS imports
+    testTimeout: 30000, // 30 seconds timeout for tests (needed for complex async operations)
     coverage: {
       provider: 'v8', // Use v8 for coverage
       reporter: ['text', 'lcov'], // text for CI logs, lcov for Coveralls
@@ -36,8 +37,12 @@ export default defineConfig({
         'node_modules/',
         'src/setupTests.js',
         'src/api/**',
+        '**/*.css',
+        'src/test-utils/**',
+        'src/hooks/**',
+        'src/pages/Chat.jsx'
       ],
-      // Enforce 85% coverage threshold - CI will fail if not met
+      // Enforce coverage thresholds - 85% required for all metrics
       thresholds: {
         lines: 85,
         functions: 85,

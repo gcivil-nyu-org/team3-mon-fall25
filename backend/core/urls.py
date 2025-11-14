@@ -15,12 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.contrib import admin
-from django.urls import path, include, re_path
-from django.conf import settings
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 import os
+
+from django.conf import settings
+from django.contrib import admin
+from django.http import HttpResponse
+from django.urls import include, path, re_path
+from django.views.decorators.csrf import csrf_exempt
 
 # # SPA index.html（No CSRF). To avoid CSRF middleware's intercept
 # spa_view = method_decorator(csrf_exempt, name="dispatch")(
@@ -44,6 +45,7 @@ def spa_view(request):
 
 
 urlpatterns = [
+    path("api/v1/", include("apps.chat.urls")),
     path("api/v1/", include("apps.users.urls")),
     path("api/v1/", include("apps.listings.urls")),
     path("admin/", admin.site.urls),

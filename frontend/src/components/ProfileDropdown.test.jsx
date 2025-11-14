@@ -264,5 +264,35 @@ describe('ProfileDropdown', () => {
             expect(avatar).toBeInTheDocument();
             expect(screen.getByText('U')).toBeInTheDocument();
         });
+
+        it('displays netid when email is not available', async () => {
+            const user = userEvent.setup();
+            useAuth.mockReturnValue({
+                user: { netid: 'testuser123' },
+                logout: mockLogout,
+            });
+            renderWithRouter(<ProfileDropdown />);
+
+            const avatar = screen.getByRole('button');
+            await user.click(avatar);
+
+            // Should show netid in email field
+            expect(screen.getByText('testuser123')).toBeInTheDocument();
+        });
+
+        it('displays default email when neither email nor netid is available', async () => {
+            const user = userEvent.setup();
+            useAuth.mockReturnValue({
+                user: {},
+                logout: mockLogout,
+            });
+            renderWithRouter(<ProfileDropdown />);
+
+            const avatar = screen.getByRole('button');
+            await user.click(avatar);
+
+            // Should show default email
+            expect(screen.getByText('user@nyu.edu')).toBeInTheDocument();
+        });
     });
 });

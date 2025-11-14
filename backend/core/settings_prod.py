@@ -1,5 +1,6 @@
-from .settings_base import *  # noqa: F403, F401
 import os
+
+from .settings_base import *  # noqa: F403, F401
 
 DEBUG = False
 
@@ -7,18 +8,26 @@ DEBUG = False
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
 ALLOWED_HOSTS = [
+    "nyumarketplace.me",
+    "www.nyumarketplace.me",
     "nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
     ".elasticbeanstalk.com",  # allow any EB CNAME
     ".elb.amazonaws.com",  # allow the ALB health checker hostname
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    "https://nyumarketplace.me",
+    "https://www.nyumarketplace.me",
     "http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
+    "https://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://nyumarketplace.me",
+    "https://www.nyumarketplace.me",
     "http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
+    "https://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
 ]
 
 DATABASES = {

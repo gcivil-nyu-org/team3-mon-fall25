@@ -2,6 +2,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "../contexts/AuthContext";
+import { ChatProvider } from "../contexts/ChatContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Home from "../pages/Home";
 import BrowseListings from "../pages/BrowseListings";
@@ -11,14 +12,20 @@ import MyListings from "../pages/MyListings";
 import ListingDetail from "../pages/ListingDetail";
 import EditListing from "../pages/EditListing";
 import Login from "../pages/Login";
+import Chat from "../pages/Chat.jsx";
+// …
+
+
 import Profile from "../pages/Profile";
 import SellerProfile from "../pages/SellerProfile";
+import Watchlist from "../pages/Watchlist";
 
 export default function AppRouter() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ChatProvider>
+        <BrowserRouter>
+          <Routes>
           {/* Public route - Login page */}
           <Route path="/login" element={<Login />} />
 
@@ -37,12 +44,16 @@ export default function AppRouter() {
               <Route path="/listing/:id/edit" element={<EditListing />} />
               <Route path="/create-listing" element={<CreateListing />} />
               <Route path="/my-listings" element={<MyListings />} />
+              <Route path="/watchlist" element={<Watchlist />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/chat/:conversationId" element={<Chat />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/seller/:username" element={<SellerProfile />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ChatProvider>
     </AuthProvider>
   );
 }

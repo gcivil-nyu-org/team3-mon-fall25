@@ -4,12 +4,13 @@ Unit tests for common app functionality.
 Tests the health check endpoint used by AWS Elastic Beanstalk Load Balancer.
 """
 
+from unittest.mock import MagicMock, patch
+
+from django.db.utils import OperationalError
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
 from rest_framework import status
-from unittest.mock import patch, MagicMock
-from django.db.utils import OperationalError
+from rest_framework.test import APIClient
 
 
 class HealthCheckViewTests(TestCase):

@@ -1,8 +1,10 @@
 from rest_framework.routers import DefaultRouter
 from apps.listings.views import ListingViewSet
+from apps.listings.watchlist_views import WatchlistViewSet
 
 router = DefaultRouter()
 router.register("listings", ListingViewSet, basename="listings")
+router.register("watchlist", WatchlistViewSet, basename="watchlist")
 urlpatterns = router.urls
 
 """  # noqa

@@ -1,23 +1,20 @@
+import io
+import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from rest_framework.test import APIRequestFactory
-from rest_framework import serializers as drf_serializers
-from django.core.files.uploadedfile import SimpleUploadedFile
+from apps.listings.models import ListingImage
 from apps.listings.serializers import (
+    CompactListingSerializer,
     JSONSerializerField,
     ListingCreateSerializer,
     ListingUpdateSerializer,
-    CompactListingSerializer,
 )
-from apps.listings.models import ListingImage
-from tests.factories.factories import (
-    UserFactory,
-    ListingFactory,
-    ListingImageFactory,
-)
+from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
-import io
-import json
+from rest_framework import serializers as drf_serializers
+from rest_framework.test import APIRequestFactory
+from tests.factories.factories import ListingFactory, ListingImageFactory, UserFactory
 
 
 @pytest.mark.django_db

@@ -9,6 +9,7 @@ import Spinner from "../components/common/Spinner";
 import Empty from "../components/common/Empty";
 import ErrorBlock from "../components/common/ErrorBlock";
 import { getListings } from "../api/listings";
+import SEO from "../components/SEO";
 
 const PAGE_SIZE = 20; // should match backend pagination
 
@@ -184,6 +185,12 @@ export default function BrowseListings() {
 
   return (
     <>
+
+      <SEO
+        title="Browse Listings - NYU Marketplace"
+        description="Explore textbooks, furniture, electronics, and more from fellow NYU students."
+        canonical="http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com/browse"
+      />
       {/* Page Title Section */}
       <section style={{ background: "#F5F5F5", padding: "48px 24px" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", textAlign: "center" }}>

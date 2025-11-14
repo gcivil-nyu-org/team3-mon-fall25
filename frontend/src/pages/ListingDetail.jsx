@@ -9,8 +9,13 @@ import {
   FaCommentDots,
   FaTimes,
   FaArrowLeft,
+  FaShareAlt,
+  FaHeart,
 } from "react-icons/fa";
+import { toast } from "react-toastify";
 import { getListing, getListings } from "@/api/listings";
+import { addToWatchlist, removeFromWatchlist } from "../api/watchlist";
+import { useAuth } from "../contexts/AuthContext";
 import SellerCard from "../components/SellerCard";
 import ContactSellerModal from "../components/ContactSellerModal";
 import "./ListingDetail.css";
@@ -18,6 +23,7 @@ import "./ListingDetail.css";
 export default function ListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,20 +31,30 @@ export default function ListingDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [sellerStats, setSellerStats] = useState({
     activeListings: 0,
     soldItems: 0,
   });
 
   useEffect(() => {
+    // Don't try to load if there's no ID (e.g., when rendered in background on chat page)
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    
     let mounted = true;
     (async () => {
       try {
         setLoading(true);
-        const data = await getListing(id);
+        setError(""); // Clear any previous errors
+        const data = await getListing(id, { trackView: true });
         if (mounted) {
           setListing(data);
           setCurrentImageIndex(0); // Reset image index when listing changes
+          setIsSaved(data?.is_saved || false);
         }
       } catch (e) {
         console.error(e);
@@ -242,12 +258,103 @@ export default function ListingDetail() {
     });
     if (sellerUsername) {
       // Pass the current listing in state so we can include it in the profile
-      navigate(`/seller/${sellerUsername}`, { 
-        state: { currentListing: listing } 
+      navigate(`/seller/${sellerUsername}`, {
+        state: { currentListing: listing }
       });
     }
   };
 
+  const handleShare = async () => {
+    // Build the listing URL with optional tracking parameter
+    const listingUrl = `${window.location.origin}/listing/${id}?ref=share`;
+
+    // Try native share API for mobile first
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: listing.title,
+          text: `Check out this listing: ${listing.title}`,
+          url: listingUrl,
+        });
+        // Don't show toast for native share since it has its own UI
+        return;
+      } catch (error) {
+        // User cancelled or share failed, fall through to clipboard
+        if (error.name !== "AbortError") {
+          console.error("Share failed:", error);
+        }
+      }
+    }
+
+    // Fallback to clipboard API
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(listingUrl);
+        toast.success("Link copied to clipboard!", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = listingUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          toast.success("Link copied to clipboard!", {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        } catch {
+          toast.error("Failed to copy link. Please try again.", {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        }
+        document.body.removeChild(textArea);
+      }
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      toast.error("Failed to copy link. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleToggleSave = async () => {
+    if (!isAuthenticated()) {
+      navigate("/login");
+      return;
+    }
+
+    if (!listing) return;
+
+    setSaving(true);
+    try {
+      if (isSaved) {
+        await removeFromWatchlist(listing.listing_id);
+        setIsSaved(false);
+      } else {
+        await addToWatchlist(listing.listing_id);
+        setIsSaved(true);
+      }
+    } catch (err) {
+      console.error("Failed to toggle save:", err);
+      // Optionally show error message to user
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Don't render anything if there's no ID (component is just rendered in background on chat page)
+  if (!id) {
+    return null;
+  }
+  
   if (loading) {
     return (
       <div className="listing-detail-page">
@@ -255,7 +362,7 @@ export default function ListingDetail() {
       </div>
     );
   }
-
+  
   if (error || !listing) {
     return (
       <div className="listing-detail-page">
@@ -394,8 +501,18 @@ export default function ListingDetail() {
           {/* Right Column - Details Sidebar (40%) */}
           <div className="listing-detail-sidebar">
             <div className="listing-detail-details">
-              {/* Title */}
-              <h1 className="listing-detail-title">{listing.title}</h1>
+              {/* Title with Share Button */}
+              <div className="listing-detail-title-container">
+                <h1 className="listing-detail-title">{listing.title}</h1>
+                <button
+                  className="listing-detail-share-button"
+                  onClick={handleShare}
+                  aria-label="Share listing"
+                  title="Share this listing"
+                >
+                  <FaShareAlt />
+                </button>
+              </div>
 
               {/* Price */}
               <div className="listing-detail-price">${priceDisplay}</div>
@@ -454,6 +571,46 @@ export default function ListingDetail() {
               {/* Action Buttons */}
               <div className="listing-detail-actions">
                 <button
+                  className="listing-detail-save-button"
+                  onClick={handleToggleSave}
+                  disabled={saving}
+                  title={isSaved ? "Remove from watchlist" : "Save to watchlist"}
+                  style={{
+                    background: isSaved ? "#dc2626" : "#fff",
+                    color: isSaved ? "#fff" : "#56018D",
+                    border: `2px solid ${isSaved ? "#dc2626" : "#56018D"}`,
+                    padding: "12px 20px",
+                    borderRadius: 8,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    cursor: saving ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    justifyContent: "center",
+                    transition: "all 0.2s",
+                    opacity: saving ? 0.6 : 1,
+                  }}
+                  onMouseOver={(e) => {
+                    if (!saving) {
+                      e.target.style.transform = "scale(1.05)";
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.transform = "scale(1)";
+                  }}
+                >
+                  <FaHeart
+                    style={{
+                      fill: isSaved ? "#fff" : "transparent",
+                      stroke: isSaved ? "#fff" : "#56018D",
+                      strokeWidth: 2,
+                      transition: "all 0.2s",
+                    }}
+                  />
+                  {isSaved ? "Saved" : "Save"}
+                </button>
+                <button
                   className="listing-detail-contact-button"
                   onClick={() => setContactModalOpen(true)}
                   disabled={listing.status === "sold"}
@@ -472,6 +629,7 @@ export default function ListingDetail() {
         open={contactModalOpen}
         onClose={() => setContactModalOpen(false)}
         listingTitle={listing.title}
+        listingId={listing.listing_id}
       />
 
       {/* Lightbox Modal - Fullscreen View */}
@@ -553,3 +711,4 @@ export default function ListingDetail() {
     </div>
   );
 }
+

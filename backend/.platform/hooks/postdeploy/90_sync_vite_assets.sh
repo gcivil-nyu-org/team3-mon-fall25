@@ -38,8 +38,20 @@ else
   echo "[postdeploy][WARN] $BUILD_DIR/assets not found"
 fi
 
-if [ -f "$BUILD_DIR/vite.svg" ]; then
-  cp -f "$BUILD_DIR/vite.svg" "$STATIC_ROOT/vite.svg"
-fi
+# Favicon / app icons / manifest
+for f in \
+  favicon.ico \
+  favicon-16x16.png favicon-32x32.png favicon-48x48.png favicon-64x64.png \
+  favicon-128x128.png favicon-256x256.png \
+  apple-touch-icon.png \
+  android-chrome-192x192.png android-chrome-512x512.png \
+  manifest.webmanifest
+do
+  if [ -f "$BUILD_DIR/$f" ]; then
+    cp -f "$BUILD_DIR/$f" "$STATIC_ROOT/$f"
+  else
+    echo "[postdeploy][WARN] $BUILD_DIR/$f not found"
+  fi
+done
 
 echo "[postdeploy] Done."

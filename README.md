@@ -1,6 +1,10 @@
 # NYU Marketplace
-[![Build Status](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25.svg?token=Xq8zJLesUKp4bvxArT4z&branch=develop)](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25)
-[![Coverage Status](https://coveralls.io/repos/github/gcivil-nyu-org/team3-mon-fall25/badge.svg?branch=feature/%23118-text-search-integration)](https://coveralls.io/github/gcivil-nyu-org/team3-mon-fall25?branch=feature/%23118-text-search-integration)
+
+| Branch | Build Status | Coverage |
+|--------|--------------|----------|
+| `main` | [![Build Status](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25.svg?token=WDPk8NaA3e3AEm6N3wdc&branch=main)](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25) | [![Coverage Status](https://coveralls.io/repos/github/gcivil-nyu-org/team3-mon-fall25/badge.svg?branch=main)](https://coveralls.io/github/gcivil-nyu-org/team3-mon-fall25?branch=main) |
+| `develop` | [![Build Status](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25.svg?token=WDPk8NaA3e3AEm6N3wdc&branch=develop)](https://app.travis-ci.com/gcivil-nyu-org/team3-mon-fall25) | [![Coverage Status](https://coveralls.io/repos/github/gcivil-nyu-org/team3-mon-fall25/badge.svg?branch=develop)](https://coveralls.io/github/gcivil-nyu-org/team3-mon-fall25?branch=develop) |
+
 ```bash
 ├── backend/        # Django backend — APIs, business logic, database models, tests
 │   ├── api/        # REST API endpoints (Django REST Framework)

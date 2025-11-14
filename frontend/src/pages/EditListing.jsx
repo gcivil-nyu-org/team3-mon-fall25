@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getListing, updateListing } from "../api/listings";
+import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
 
 // Match these with the CreateListing component
 const CATEGORIES = ["Electronics", "Books", "Furniture", "Sports", "Clothing", "Other"];
@@ -57,15 +58,26 @@ const EditListing = () => {
 
   const handleNewImagesChange = (e) => {
     const files = Array.from(e.target.files);
+    setError("");
+    
     const totalImages = existingImages.length - removeImageIds.length + files.length;
 
     if (totalImages > 10) {
       setError(`Maximum 10 images allowed. You currently have ${existingImages.length - removeImageIds.length} images.`);
+      e.target.value = ""; // Clear the input
+      return;
+    }
+
+    // Validate file sizes
+    const validation = validateImageFiles(files);
+    if (!validation.valid) {
+      setError(validation.error);
+      e.target.value = ""; // Clear the input
+      setNewImages([]);
       return;
     }
 
     setNewImages(files);
-    setError("");
   };
 
   const toggleRemoveImage = (imageId) => {
@@ -106,6 +118,16 @@ const EditListing = () => {
       return;
     }
 
+    // Validate new images before submission
+    if (newImages.length > 0) {
+      const validation = validateImageFiles(newImages);
+      if (!validation.valid) {
+        setError(validation.error);
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       // Create FormData for multipart/form-data request
       const formData = new FormData();
@@ -131,12 +153,17 @@ const EditListing = () => {
       // Redirect to My Listings page
       navigate("/my-listings");
     } catch (err) {
-      const msg =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to update listing";
-      setError(String(msg));
+      // Handle 413 errors specifically
+      if (err.response?.status === 413) {
+        setError("File(s) are too large. Please reduce image size and try again.");
+      } else {
+        const msg =
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to update listing";
+        setError(String(msg));
+      }
       console.error("Update listing error:", err);
       setSaving(false);
     }
@@ -485,8 +512,48 @@ const EditListing = () => {
               }}
             />
             <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-              Up to 10 images total. {newImages.length > 0 && `${newImages.length} new selected`}
+              Up to 10 images total. Maximum 10MB per image, 100MB total.
+              {newImages.length > 0 && ` ${newImages.length} new selected`}
             </p>
+            {newImages.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                {newImages.map((file, index) => {
+                  const fileSize = formatFileSize(file.size);
+                  const isLarge = file.size > 8 * 1024 * 1024; // > 8MB
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        fontSize: 12,
+                        color: isLarge ? "#dc2626" : "#6b7280",
+                        marginTop: 4,
+                        padding: "4px 8px",
+                        background: isLarge ? "#fef2f2" : "#f9fafb",
+                        borderRadius: 4,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span>{file.name}</span>
+                      <span style={{ fontWeight: 600 }}>{fileSize}</span>
+                    </div>
+                  );
+                })}
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#6b7280",
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: "1px solid #e5e7eb",
+                    fontWeight: 600,
+                  }}
+                >
+                  Total: {formatFileSize(newImages.reduce((sum, file) => sum + file.size, 0))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}

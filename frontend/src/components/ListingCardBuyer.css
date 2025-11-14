@@ -14,7 +14,6 @@
   border-radius: 16px;
   overflow: hidden;
   padding: 0;
-  cursor: pointer;
   box-shadow: 0 1px 0 rgba(17,24,39,0.03);
   transition: box-shadow .15s, transform .15s;
 }
@@ -22,6 +21,15 @@
 .buyer-card:hover {
   box-shadow: 0 8px 24px rgba(17,24,39,0.08);
   transform: translateY(-2px);
+}
+
+.buyer-card__button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
 }
 
 .buyer-card__imgWrap {
@@ -98,3 +106,64 @@
 .buyer-card__badge.is-sold   { background: #F3F4F6; color: #6B7280; }
 
 .buyer-card__loc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- Extra info row (seller / posted / view_count) --- */
+.buyer-card__extra {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.buyer-card__extraLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.buyer-card__icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+.buyer-card__seller,
+.buyer-card__posted {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.buyer-card__views {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.buyer-card__seller {
+  cursor: default;
+}
+
+.buyer-card__seller:hover {
+  color: #374151;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .buyer-card__views {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .buyer-card__seller {
+    display: none;
+  }
+}
+

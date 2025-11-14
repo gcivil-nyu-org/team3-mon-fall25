@@ -1,10 +1,17 @@
 import { Link } from "react-router-dom";
 import logoImage from "../assets/images/nyu-marketplace-logo.png";
+import SEO from "../components/SEO";
 
 export default function Home(){
 
   return (
     <>
+      <SEO
+        title="NYU Marketplace - Buy & Sell on Campus"
+        description="Buy and sell with fellow NYU students. Find great deals on textbooks, furniture, electronics, and more."
+        canonical="http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com/"
+      />
+
       {/* Hero Section */}
       <section style={{ background: "#F5F5F5", padding: "100px 24px" }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", textAlign: "center" }}>

@@ -1,10 +1,11 @@
+from datetime import timedelta
+
 import pytest
-from tests.factories.factories import ListingFactory, ListingImageFactory
 from apps.listings.models import Listing, ListingImage
 from django.core.exceptions import ValidationError
-from rest_framework.test import APIClient
 from django.utils import timezone
-from datetime import timedelta
+from rest_framework.test import APIClient
+from tests.factories.factories import ListingFactory, ListingImageFactory
 
 
 @pytest.mark.django_db

@@ -1,7 +1,6 @@
 from .settings_base import *  # noqa: F403, F401
 from django.core.management.utils import get_random_secret_key
 
-
 DEBUG = True
 
 if not SECRET_KEY:  # noqa: F405

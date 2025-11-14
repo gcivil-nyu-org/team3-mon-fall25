@@ -1,6 +1,7 @@
 .profile-dropdown {
   position: relative;
   display: inline-block;
+  z-index: 1010; /* Higher than chat modal (1001) to appear above it */
 }
 
 .profile-avatar {
@@ -39,7 +40,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 1010; /* Higher than chat modal (1001) to appear above it */
   overflow: hidden;
   animation: fadeIn 0.2s ease;
 }

@@ -1,7 +1,7 @@
 import pytest
-from rest_framework.test import APIClient
-from rest_framework import status
 from apps.users.models import User
+from rest_framework import status
+from rest_framework.test import APIClient
 
 
 @pytest.fixture

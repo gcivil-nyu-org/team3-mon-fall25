@@ -267,6 +267,14 @@
   gap: 24px;
 }
 
+/* Title Container with Share Button */
+.listing-detail-title-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+
 /* Title */
 .listing-detail-title {
   font-size: 2rem;
@@ -274,11 +282,60 @@
   color: var(--text-dark);
   line-height: 1.2;
   margin: 0;
+  flex: 1;
 }
 
 @media (min-width: 640px) {
   .listing-detail-title {
     font-size: 2.25rem;
+  }
+}
+
+/* Share Button */
+.listing-detail-share-button {
+  background: var(--bg-white);
+  border: 2px solid var(--nyu-purple);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--nyu-purple);
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.listing-detail-share-button:hover {
+  background: var(--nyu-purple);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(86, 1, 141, 0.2);
+}
+
+.listing-detail-share-button:active {
+  transform: scale(0.95);
+}
+
+.listing-detail-share-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (min-width: 640px) {
+  .listing-detail-share-button {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+  }
+
+  .listing-detail-share-button svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
