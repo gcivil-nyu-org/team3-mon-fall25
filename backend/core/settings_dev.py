@@ -1,6 +1,10 @@
 import os
-
 from .settings_base import *  # noqa: F403, F401
+
+try:
+    from .settings_local import *  # noqa
+except ImportError:
+    pass
 
 DEBUG = True
 

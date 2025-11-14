@@ -2,9 +2,6 @@ import pytest
 from django.test import RequestFactory
 from django.contrib.auth import get_user_model
 
-# Import chat models lazily inside fixtures to avoid importing Django models
-# at module import time (which fails before Django settings/apps are configured).
-
 
 @pytest.fixture
 def rf():
