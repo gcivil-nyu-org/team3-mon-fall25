@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
 from .models import User
+from .models_otp import OTPAttempt, OTPAuditLog
 
 
 class UserCreationForm(forms.ModelForm):
@@ -48,8 +49,8 @@ class UserChangeForm(forms.ModelForm):
         label="Password",
         help_text=(
             "Raw passwords are not stored, so there is no way to see "
-            "this user's password, but you can change the password using "
-            'the "Change password" form.'
+            "this user's password, but you can change the password "
+            'using the "Change password" form.'
         ),
     )
 
@@ -110,7 +111,10 @@ class UserAdmin(BaseUserAdmin):
                 )
             },
         ),
-        ("Important dates", {"fields": ("last_login", "created_at", "updated_at")}),
+        (
+            "Important dates",
+            {"fields": ("last_login", "created_at", "updated_at")},
+        ),
     )
 
     add_fieldsets = (
@@ -133,3 +137,67 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
+
+
+@admin.register(OTPAttempt)
+class OTPAttemptAdmin(admin.ModelAdmin):
+    """Admin interface for OTP attempt tracking"""
+
+    list_display = (
+        "email",
+        "attempts_count",
+        "is_blocked",
+        "blocked_until",
+        "last_attempt_at",
+        "created_at",
+    )
+    list_filter = ("is_blocked", "created_at", "last_attempt_at")
+    search_fields = ("email",)
+    readonly_fields = ("created_at", "updated_at", "last_attempt_at")
+    ordering = ("-last_attempt_at",)
+
+    actions = ["unblock_accounts"]
+
+    def unblock_accounts(self, request, queryset):
+        """Admin action to unblock selected accounts"""
+        count = 0
+        for attempt in queryset:
+            attempt.reset_attempts()
+            count += 1
+        self.message_user(request, f"Successfully unblocked {count} account(s).")
+
+    unblock_accounts.short_description = "Unblock selected accounts"
+
+
+@admin.register(OTPAuditLog)
+class OTPAuditLogAdmin(admin.ModelAdmin):
+    """Admin interface for OTP audit logs"""
+
+    list_display = (
+        "email",
+        "action",
+        "success",
+        "ip_address",
+        "timestamp",
+    )
+    list_filter = ("action", "success", "timestamp")
+    search_fields = ("email", "ip_address")
+    readonly_fields = (
+        "email",
+        "action",
+        "ip_address",
+        "user_agent",
+        "timestamp",
+        "success",
+        "error_message",
+    )
+    ordering = ("-timestamp",)
+    date_hierarchy = "timestamp"
+
+    def has_add_permission(self, request):
+        """Disable manual creation of audit logs"""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Disable editing of audit logs"""
+        return False

@@ -25,6 +25,7 @@ staticfiles/
 env/
 venv/
 ENV/
+eb-virt/
 
 # Test & Coverage Artifacts
 .coverage

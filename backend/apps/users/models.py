@@ -5,6 +5,9 @@ from django.contrib.auth.models import (
 )
 from django.db import models
 
+# Import OTP models for admin registration
+from .models_otp import OTPAttempt, OTPAuditLog  # noqa: F401
+
 
 class UserManager(BaseUserManager):
     """Custom user manager for email-based authentication"""
@@ -46,6 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     netid = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -66,7 +70,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def id(self):
-        """Alias for user_id to maintain compatibility with JWT and Django internals"""
+        """
+        Alias for user_id to maintain compatibility with JWT and Django
+        internals
+        """
         return self.user_id
 
     @property

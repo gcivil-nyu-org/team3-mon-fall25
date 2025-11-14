@@ -13,6 +13,7 @@ exclude =
     .venv*,
     venv,
     env,
+    eb-virt,
     .eggs,
     *.egg,
     migrations,

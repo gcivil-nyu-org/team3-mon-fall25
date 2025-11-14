@@ -26,7 +26,7 @@ export default defineConfig({
   // Vitest configuration
   test: {
     globals: true, // Allows using describe, it, expect etc. globally
-    environment: 'jsdom', // Use jsdom for DOM simulation
+    environment: 'happy-dom', // Use happy-dom instead of jsdom to avoid ESM issues with parse5
     setupFiles: './src/setupTests.js', // Setup file for test configuration
     css: true, // Parse CSS imports
     testTimeout: 30000, // 30 seconds timeout for tests (needed for complex async operations)
