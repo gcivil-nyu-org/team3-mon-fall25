@@ -13,7 +13,7 @@ import ListingDetail from "../pages/ListingDetail";
 import EditListing from "../pages/EditListing";
 import Login from "../pages/Login";
 import Chat from "../pages/Chat.jsx";
-// …
+import VerifyEmail from "../pages/VerifyEmail";
 
 
 import Profile from "../pages/Profile";
@@ -28,6 +28,9 @@ export default function AppRouter() {
           <Routes>
           {/* Public route - Login page */}
           <Route path="/login" element={<Login />} />
+
+          {/* Public route - OTP verify page */}
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
           {/* Protected routes - require authentication */}
           <Route
