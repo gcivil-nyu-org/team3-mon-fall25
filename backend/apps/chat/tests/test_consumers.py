@@ -1,22 +1,22 @@
 import json
-from django.contrib.auth import get_user_model
 import pytest
 from asgiref.sync import sync_to_async
 from channels.testing import WebsocketCommunicator
-from apps.chat.consumers import ChatConsumer
-from apps.chat.models import Conversation, ConversationParticipant
-from apps.chat.tests._factories import make_nyu_user
+
+# Note: we import make_nyu_user lazily inside tests to avoid importing
+# Django models at collection time.
 
 
 pytestmark = pytest.mark.asyncio
-
-User = get_user_model()
 
 
 @pytest.fixture(autouse=True)
 def _patch_uuid_json(monkeypatch):
     async def _encode_async(content):
         return json.dumps(content, default=str)
+
+    # Import ChatConsumer lazily to avoid import-time model errors
+    from apps.chat.consumers import ChatConsumer
 
     monkeypatch.setattr(ChatConsumer, "encode_json", staticmethod(_encode_async))
 
@@ -30,6 +30,12 @@ async def test_ws_echo_basic(settings):
     and broadcasts on "chat.message" or similar. We only assert connection + send cycle.
     """
     # Create users + conversation
+    from django.contrib.auth import get_user_model
+    from apps.chat.models import Conversation, ConversationParticipant
+    from apps.chat.consumers import ChatConsumer
+
+    User = get_user_model()
+
     u1 = await sync_to_async(User.objects.create_user)(
         email="a@nyu.edu", password="pass", netid="a"
     )
@@ -71,6 +77,10 @@ async def test_ws_echo_basic(settings):
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_ws_disconnect_is_clean():
+    from apps.chat.models import Conversation, ConversationParticipant
+    from apps.chat.consumers import ChatConsumer
+    from apps.chat.tests._factories import make_nyu_user
+
     u1 = await sync_to_async(make_nyu_user)("disc1@nyu.edu")
     u2 = await sync_to_async(make_nyu_user)("disc2@nyu.edu")
     direct_key = Conversation.make_direct_key(u1.id, u2.id)
@@ -95,6 +105,10 @@ async def test_ws_disconnect_is_clean():
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_ws_ignores_unknown_event_type():
+    from apps.chat.models import Conversation, ConversationParticipant
+    from apps.chat.consumers import ChatConsumer
+    from apps.chat.tests._factories import make_nyu_user
+
     u1 = await sync_to_async(make_nyu_user)("evt1@nyu.edu")
     u2 = await sync_to_async(make_nyu_user)("evt2@nyu.edu")
     direct_key = Conversation.make_direct_key(u1.id, u2.id)

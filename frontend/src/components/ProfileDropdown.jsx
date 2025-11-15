@@ -19,15 +19,20 @@ export default function ProfileDropdown() {
     };
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+      // Use setTimeout to ensure the event listener is added after the current click event
+      const timeoutId = setTimeout(() => {
+        document.addEventListener("mousedown", handleClickOutside);
+      }, 0);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
   }, [isOpen]);
 
-  const handleToggle = () => {
+  const handleToggle = (e) => {
+    e.stopPropagation();
     setIsOpen(!isOpen);
   };
 

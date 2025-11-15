@@ -1,11 +1,6 @@
 import pytest
-from apps.chat.serializers import DirectCreateSerializer, MessageCreateSerializer
-from apps.chat.permissions import IsConversationMember
 from asgiref.sync import sync_to_async
 from channels.testing import WebsocketCommunicator
-from apps.chat.consumers import ChatConsumer
-from apps.chat.models import Conversation, ConversationParticipant
-from apps.chat.tests._factories import make_nyu_user
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -16,6 +11,8 @@ def test_direct_serializer_validates_peer_id(rf, two_users):
     u1, u2 = two_users
     req = rf.post("/api/v1/chat/conversations/direct/", {"peer_id": u2.id})
     req.user = u1
+    from apps.chat.serializers import DirectCreateSerializer
+
     ser = DirectCreateSerializer(data={"peer_id": str(u2.id)}, context={"request": req})
     assert ser.is_valid(), ser.errors
     assert ser.validated_data["peer_id"] == str(u2.id)
@@ -25,6 +22,8 @@ def test_message_create_serializer_strips_text(rf, two_users):
     u1, _ = two_users
     req = rf.post("/api/v1/chat/conversations/any/send/", {"text": "  hello  "})
     req.user = u1
+    from apps.chat.serializers import MessageCreateSerializer
+
     ser = MessageCreateSerializer(data={"text": "  hello  "}, context={"request": req})
     assert ser.is_valid(), ser.errors
     assert ser.validated_data["text"] == "hello"
@@ -32,6 +31,8 @@ def test_message_create_serializer_strips_text(rf, two_users):
 
 def test_is_conversation_member_permission_allows_member(two_users, make_direct):
     conv, u1, _ = make_direct()
+    from apps.chat.permissions import IsConversationMember
+
     perm = IsConversationMember()
 
     class DummyReq:
@@ -45,6 +46,10 @@ def test_is_conversation_member_permission_allows_member(two_users, make_direct)
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_ws_disconnect_is_clean():
+    from apps.chat.tests._factories import make_nyu_user
+    from apps.chat.models import Conversation, ConversationParticipant
+    from apps.chat.consumers import ChatConsumer
+
     u1 = await sync_to_async(make_nyu_user)("disc1@nyu.edu")
     u2 = await sync_to_async(make_nyu_user)("disc2@nyu.edu")
     direct_key = Conversation.make_direct_key(u1.id, u2.id)
@@ -69,6 +74,10 @@ async def test_ws_disconnect_is_clean():
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
 async def test_ws_ignores_unknown_event_type():
+    from apps.chat.tests._factories import make_nyu_user
+    from apps.chat.models import Conversation, ConversationParticipant
+    from apps.chat.consumers import ChatConsumer
+
     u1 = await sync_to_async(make_nyu_user)("evt1@nyu.edu")
     u2 = await sync_to_async(make_nyu_user)("evt2@nyu.edu")
     direct_key = Conversation.make_direct_key(u1.id, u2.id)
@@ -97,6 +106,8 @@ async def test_ws_ignores_unknown_event_type():
 @pytest.mark.django_db
 def test_direct_create_serializer_requires_auth():
     # no auth in context -> should fail and hit 'Authentication required' path
+    from apps.chat.serializers import DirectCreateSerializer
+
     ser = DirectCreateSerializer(data={"peer_id": "123"})
     assert not ser.is_valid()
     assert "non_field_errors" in ser.errors
@@ -105,10 +116,13 @@ def test_direct_create_serializer_requires_auth():
 @pytest.mark.django_db
 def test_direct_create_serializer_validates_peer_id_and_auth():
     rf = APIRequestFactory()
+    from apps.chat.tests._factories import make_nyu_user
+
     me = make_nyu_user("me@nyu.edu")
     peer = make_nyu_user("peer@nyu.edu")
     req = rf.post("/fake")
     force_authenticate(req, user=me)
+    from apps.chat.serializers import DirectCreateSerializer
 
     ser = DirectCreateSerializer(
         data={"peer_id": str(peer.id)},
@@ -123,9 +137,13 @@ def test_direct_create_serializer_validates_peer_id_and_auth():
 def test_message_create_serializer_strips_text_and_blocks_blank():
     # Stripping works
     rf = APIRequestFactory()
+    from apps.chat.tests._factories import make_nyu_user
+
     me = make_nyu_user("msg@nyu.edu")
     req = rf.post("/fake")
     force_authenticate(req, user=me)
+    from apps.chat.serializers import MessageCreateSerializer
+
     ser = MessageCreateSerializer(
         data={"text": "   hello  "},
         context={"request": Request(req)},

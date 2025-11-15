@@ -1,8 +1,12 @@
 import os
-
 from .settings_base import *  # noqa: F403, F401
 
-DEBUG = True
+try:
+    from .settings_local import *  # noqa
+except ImportError:
+    pass
+
+DEBUG = False
 
 # Avoid cache issues
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"

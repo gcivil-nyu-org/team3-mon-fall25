@@ -8,7 +8,8 @@ from rest_framework import status
 from unittest.mock import patch
 from django.core.exceptions import RequestDataTooBig
 
-from tests.factories.factories import UserFactory, ListingFactory
+# Import test factories lazily inside fixtures/tests to avoid importing
+# Django models at collection time
 
 
 @pytest.fixture
@@ -21,6 +22,8 @@ def api_client():
 def authenticated_client():
     """Pytest fixture for providing an authenticated API client."""
     client = APIClient()
+    from tests.factories.factories import UserFactory
+
     user = UserFactory()
     client.force_authenticate(user=user)
     return client, user
@@ -60,6 +63,8 @@ class Test413ErrorHandling:
     ):
         """Test that RequestDataTooBig exception in update is caught and returns 413"""
         client, user = authenticated_client
+        from tests.factories.factories import ListingFactory
+
         listing = ListingFactory(user=user)
 
         # Patch the perform_update to raise the exception during actual processing
@@ -101,6 +106,8 @@ class Test413ErrorHandling:
     def test_update_listing_with_413_in_exception_message(self, authenticated_client):
         """Test that exceptions with '413' in message in update are caught"""
         client, user = authenticated_client
+        from tests.factories.factories import ListingFactory
+
         listing = ListingFactory(user=user)
 
         # Patch the perform_update to raise the exception during actual processing

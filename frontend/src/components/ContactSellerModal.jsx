@@ -1,24 +1,54 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FaTimes } from "react-icons/fa";
+import { contactSeller } from "../api/chat";
+import { sendMessage } from "../api/chat";
 import "./ContactSellerModal.css";
 
 export default function ContactSellerModal({
   open,
   onClose,
   listingTitle,
+  listingId,
 }) {
   const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!message.trim()) {
       alert("Please enter a message");
       return;
     }
 
-    // TODO: Implement actual message sending
-    alert("Message sent! Check your Messages to continue the conversation.");
-    setMessage("");
-    onClose();
+    if (!listingId) {
+      alert("Listing ID is missing");
+      return;
+    }
+
+    setSending(true);
+    try {
+      // Step 1: Create or get the conversation
+      const { conversation_id } = await contactSeller(listingId);
+      
+      // Step 2: Store listing ID in localStorage for this conversation
+      const conversationListings = JSON.parse(localStorage.getItem('conversationListings') || '{}');
+      conversationListings[conversation_id] = listingId;
+      localStorage.setItem('conversationListings', JSON.stringify(conversationListings));
+      
+      // Step 3: Send the initial message
+      await sendMessage(conversation_id, message.trim());
+      
+      // Step 4: Navigate to chat page with the conversation
+      setMessage("");
+      onClose();
+      navigate(`/chat/${conversation_id}`);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      alert(error.response?.data?.detail || "Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   if (!open) return null;
@@ -67,12 +97,12 @@ export default function ContactSellerModal({
           <button
             className="contact-modal__button contact-modal__button--send"
             onClick={handleSend}
+            disabled={sending}
           >
-            Send Message
+            {sending ? "Sending..." : "Send Message"}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

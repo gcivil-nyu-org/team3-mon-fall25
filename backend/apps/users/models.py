@@ -42,7 +42,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     """Custom User model with email-based authentication"""
 
-    user_id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True, db_column="user_id")
     email = models.EmailField(unique=True, max_length=255)
     first_name = models.CharField(max_length=255, blank=True)
     last_name = models.CharField(max_length=255, blank=True)
@@ -69,14 +69,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
     @property
-    def id(self):
-        """
-        Alias for user_id to maintain compatibility with JWT and Django
-        internals
-        """
-        return self.user_id
-
-    @property
-    def pk(self):
-        """Override pk property to return user_id"""
-        return self.user_id
+    def user_id(self):
+        """Alias for id to maintain backward compatibility"""
+        return self.id

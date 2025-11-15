@@ -131,6 +131,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_netid = serializers.CharField(source="user.netid", read_only=True)
+    user_id = serializers.CharField(source="user.user_id", read_only=True)
     is_saved = serializers.SerializerMethodField()
     save_count = serializers.SerializerMethodField()
 
@@ -149,6 +150,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "images",
             "user_email",
             "user_netid",
+            "user_id",
             "is_saved",
             "save_count",
         ]
@@ -374,6 +376,11 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
 class CompactListingSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
 
+    # Expose seller username from user.netid (null-safe)
+    seller_username = serializers.CharField(
+        source="user.netid", read_only=True, allow_null=True
+    )
+
     class Meta:
         model = Listing
         fields = [
@@ -383,6 +390,9 @@ class CompactListingSerializer(serializers.ModelSerializer):
             "price",
             "status",
             "primary_image",
+            "seller_username",
+            "created_at",
+            "view_count",
         ]
 
     def get_primary_image(self, obj):
@@ -398,4 +408,6 @@ class CompactListingSerializer(serializers.ModelSerializer):
             return first_img.image_url
 
         # No images for this listing
+        return None
+
         return None

@@ -6,7 +6,7 @@ export default function ListingGrid({ items }) {
   const navigate = useNavigate();
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 20 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
       {items.map((item) => {
         const id = item.listing_id || item.id;
         const imageUrl =
@@ -26,7 +26,11 @@ export default function ListingGrid({ items }) {
             status={item.status}
             location={item.location}
             imageUrl={imageUrl}
+            sellerUsername={item.seller_username}
+            createdAt={item.created_at}
+            viewCount={item.view_count}
             onClick={() => navigate(`/listing/${id}`)}
+            onSellerClick={(u) => navigate(`/seller/${u}`)}
           />
         );
       })}

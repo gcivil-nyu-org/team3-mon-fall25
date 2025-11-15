@@ -129,15 +129,11 @@ REST_FRAMEWORK = {
 
 # JWT settings
 SIMPLE_JWT = {
-    "USER_ID_FIELD": "user_id",
-    "USER_ID_CLAIM": "user_id",
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "user_id",  # Use user_id instead of id
-    "USER_ID_CLAIM": "user_id",  # Use user_id in JWT payload
 }
 
 # AWS S3 Configuration

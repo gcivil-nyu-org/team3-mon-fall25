@@ -14,6 +14,7 @@ class MessageSerializer(serializers.ModelSerializer):
 class ConversationListSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.IntegerField(read_only=True)
+    other_participant = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -22,6 +23,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
             "last_message_at",
             "last_message",
             "unread_count",
+            "other_participant",
         )
 
     def get_last_message(self, obj):
@@ -33,6 +35,24 @@ class ConversationListSerializer(serializers.ModelSerializer):
             "text": m.text,
             "sender": m.sender_id,
             "created_at": m.created_at,
+        }
+
+    def get_other_participant(self, obj):
+        """Get the other participant's information (not the current user)"""
+        request = self.context.get("request")
+        if not request or not request.user:
+            return None
+
+        # Get the other participant (not the current user)
+        other_participant = obj.participants.exclude(user=request.user).first()
+        if not other_participant:
+            return None
+
+        user = other_participant.user
+        return {
+            "id": user.user_id,
+            "email": user.email,
+            "netid": user.netid,
         }
 
 

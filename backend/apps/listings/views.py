@@ -1,7 +1,8 @@
 import logging
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
+from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, pagination, status, viewsets
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from rest_framework.permissions import (
     BasePermission,
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
+    AllowAny,
 )
 from rest_framework.response import Response
 from django.core.exceptions import RequestDataTooBig
@@ -66,7 +68,8 @@ class ListingViewSet(
     Supports multipart/form-data for image uploads.
     """
 
-    queryset = Listing.objects.filter(status="active")
+    queryset = Listing.objects.all()
+
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -83,11 +86,14 @@ class ListingViewSet(
     def get_queryset(self):
         queryset = super().get_queryset()
 
+        # Only public list/search should be restricted to active listings
+        if self.action in ["list", "search"]:
+            queryset = queryset.filter(status="active")
+
         allowed_fields = {"created_at", "price", "title"}
         ordering_param = self.request.query_params.get("ordering")
 
         if ordering_param:
-            # any mistake if made at the end of the URL will be stripped
             ordering_param = ordering_param.strip()
             raw = ordering_param.lstrip("-")
             if raw not in allowed_fields:
@@ -95,6 +101,9 @@ class ListingViewSet(
             queryset = queryset.order_by(ordering_param)
         else:
             queryset = queryset.order_by("-created_at")
+
+        # Performance optimizations to avoid N+1
+        queryset = queryset.select_related("user").prefetch_related("images")
 
         return queryset
 
@@ -113,12 +122,23 @@ class ListingViewSet(
 
     def get_permissions(self):
         """
-        Set different permissions for different actions
+        Set different permissions for different actions:
+
+        - list / retrieve / search: public (no auth required)
+        - user_listings: must be authenticated
+        - everything else: default (create/update/delete protected)
         """
+        # Public read-only endpoints
+        if self.action in ["list", "retrieve", "search"]:
+            return [AllowAny()]
+
+        # User's own listings require auth
         if self.action == "user_listings":
-            # User listings endpoint requires authentication
             return [IsAuthenticated()]
-        return super().get_permissions()
+
+        # Default: respect view’s base permissions
+        # (create/update/destroy + other actions)
+        return [IsAuthenticatedOrReadOnly(), IsOwnerOrReadOnly()]
 
     def create(self, request, *args, **kwargs):
         """Handle create with error handling for large uploads"""
@@ -320,3 +340,36 @@ class ListingViewSet(
                 )
 
         return Response({"conversation_id": str(conv.id)}, status=200)
+
+    # Record listing view-count
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        try:
+            should_track = request.headers.get(
+                "X-Track-View"
+            ) == "1" or request.query_params.get("track_view") in {"1", "true", "yes"}
+            if not should_track:
+                return response
+
+            obj = self.get_object()
+            cache_key = self._viewer_cache_key(request, obj.pk)  # obj.pk: listing_id
+            if not cache.get(cache_key):
+                Listing.objects.filter(pk=obj.pk).update(view_count=F("view_count") + 1)
+                cache.set(
+                    cache_key, 1, timeout=300
+                )  # Same visit won't be counted in 5 minutes
+        except Exception:
+            pass
+        return response
+
+    def _viewer_cache_key(self, request, listing_id):
+        if request.user.is_authenticated:
+            ident = f"user:{request.user.id}"
+        else:
+            ip = (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[
+                0
+            ].strip() or request.META.get("REMOTE_ADDR", "")
+            ua = (request.META.get("HTTP_USER_AGENT") or "")[:64]
+            ident = f"ip:{ip}|ua:{ua}"
+
+        return f"listing:view:{listing_id}:{ident}"

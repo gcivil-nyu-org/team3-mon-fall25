@@ -136,7 +136,8 @@ jobs:
         - cd backend && coveralls report --repo-token=$COVERALLS_REPO_TOKEN --job-flag "Backend Tests" --parallel --build-number $TRAVIS_BUILD_NUMBER || echo "Coveralls upload failed or not configured (expected for fork PRs)"
 
     # Job 1.2: Frontend (React) Tests
-    - name: "Frontend (React) Tests"
+    - stage: test
+      name: "Frontend (React) Tests"
       language: node_js
       node_js: "20" # Use a recent Node.js LTS version
 
