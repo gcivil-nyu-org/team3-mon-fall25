@@ -25,6 +25,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # Application definition
 INSTALLED_APPS = [
     "apps.users",
+    "apps.profiles",
     "apps.listings",
     "apps.chat",
     "channels",
