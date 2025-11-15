@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NYU Marketplace Verification Code</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .container {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .header h1 {
+        color: #56018d;
+        margin: 0;
+      }
+      .otp-code {
+        background-color: #f8f9fa;
+        border: 2px dashed #56018d;
+        padding: 20px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        color: #56018d;
+        letter-spacing: 8px;
+        margin: 30px 0;
+        border-radius: 4px;
+      }
+      .content {
+        margin: 20px 0;
+      }
+      .warning {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>NYU Marketplace</h1>
+      </div>
+
+      <div class="content">
+        <p>Hello,</p>
+        <p>Your email verification code for NYU Marketplace is:</p>
+
+        <div class="otp-code">{{ otp }}</div>
+
+        <p>
+          This code will expire in
+          <strong>{{ expiry_minutes }} minutes</strong>.
+        </p>
+
+        <div class="warning">
+          <strong>⚠️ Security Warning:</strong><br />
+          Do not share this code with anyone. NYU Marketplace staff will never
+          ask for your verification code.
+        </div>
+
+        <p>If you didn't request this code, please ignore this email.</p>
+      </div>
+
+      <div class="footer">
+        <p>This is an automated message from NYU Marketplace.</p>
+        <p>&copy; 2025 NYU Marketplace. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
+

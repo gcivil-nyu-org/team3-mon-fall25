@@ -32,9 +32,47 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "netid",
+            "is_email_verified",
             "created_at",
         ]
-        read_only_fields = ["user_id", "created_at"]
+        read_only_fields = ["user_id", "is_email_verified", "created_at"]
+
+
+# OTP Verification serializer
+class OTPVerificationSerializer(serializers.Serializer):
+    """Serializer for OTP verification"""
+
+    email = serializers.EmailField(required=True)
+    otp = serializers.CharField(required=True, min_length=6, max_length=6)
+
+    def validate_email(self, value):
+        """Validate that email ends with @nyu.edu"""
+        if not value.endswith("@nyu.edu"):
+            raise serializers.ValidationError(
+                "Only NYU email addresses (@nyu.edu) are allowed"
+            )
+        return value
+
+    def validate_otp(self, value):
+        """Validate OTP format"""
+        if not value.isdigit():
+            raise serializers.ValidationError("OTP must contain only digits")
+        return value
+
+
+# Send OTP serializer (for existing users)
+class SendOTPSerializer(serializers.Serializer):
+    """Serializer for sending OTP to existing users"""
+
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value):
+        """Validate that email ends with @nyu.edu"""
+        if not value.endswith("@nyu.edu"):
+            raise serializers.ValidationError(
+                "Only NYU email addresses (@nyu.edu) are allowed"
+            )
+        return value
 
 
 # Compact user serializer for references
