@@ -8,7 +8,7 @@ import Pagination from "../components/browse/Pagination";
 import Spinner from "../components/common/Spinner";
 import Empty from "../components/common/Empty";
 import ErrorBlock from "../components/common/ErrorBlock";
-import { getListings } from "../api/listings";
+import { getListings, getFilterOptions } from "../api/listings";
 import SEO from "../components/SEO";
 
 const PAGE_SIZE = 20; // should match backend pagination
@@ -40,9 +40,15 @@ export default function BrowseListings() {
   const sort = params.get("sort") ?? "newest";
   const page = Math.max(1, Number(params.get("page") ?? 1));
 
+  // Parse comma-separated values from URL
+  const parseCommaSeparated = (value) => {
+    if (!value) return [];
+    return value.split(",").map(v => v.trim()).filter(Boolean);
+  };
+
   const initialFiltersFromUrl = {
-    category: params.get("category") ?? "",
-    location: params.get("location") ?? "",
+    categories: parseCommaSeparated(params.get("categories")),
+    locations: parseCommaSeparated(params.get("locations")),
     dateRange: params.get("dateRange") ?? "",
     priceMin: params.get("min_price") ?? "",
     priceMax: params.get("max_price") ?? "",
@@ -50,6 +56,7 @@ export default function BrowseListings() {
   };
 
   const [filters, setFilters] = useState(initialFiltersFromUrl);
+  const [filterOptions, setFilterOptions] = useState({ categories: [], locations: [] });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -71,9 +78,18 @@ export default function BrowseListings() {
     } else {
       next.set("page", "1");
     }
-    // filters
-    if (nextFilters.category) next.set("category", nextFilters.category); else next.delete("category");
-    if (nextFilters.location) next.set("location", nextFilters.location); else next.delete("location");
+    // filters - arrays (categories, locations)
+    if (nextFilters.categories?.length > 0) {
+      next.set("categories", nextFilters.categories.join(","));
+    } else {
+      next.delete("categories");
+    }
+    if (nextFilters.locations?.length > 0) {
+      next.set("locations", nextFilters.locations.join(","));
+    } else {
+      next.delete("locations");
+    }
+    // filters - other
     if (nextFilters.priceMin !== "" && nextFilters.priceMin != null) next.set("min_price", nextFilters.priceMin); else next.delete("min_price");
     if (nextFilters.priceMax !== "" && nextFilters.priceMax != null) next.set("max_price", nextFilters.priceMax); else next.delete("max_price");
     if (nextFilters.dateRange) next.set("dateRange", nextFilters.dateRange); else next.delete("dateRange");
@@ -82,11 +98,24 @@ export default function BrowseListings() {
     setParams(next, { replace: false });
   };
 
+  // Fetch filter options on mount
+  useEffect(() => {
+    async function loadFilterOptions() {
+      try {
+        const options = await getFilterOptions();
+        setFilterOptions(options);
+      } catch (e) {
+        console.error("Failed to load filter options:", e);
+      }
+    }
+    loadFilterOptions();
+  }, []);
+
   // When URL changes externally (e.g., back/forward), update state
   useEffect(() => {
     setFilters({
-      category: params.get("category") ?? "",
-      location: params.get("location") ?? "",
+      categories: parseCommaSeparated(params.get("categories")),
+      locations: parseCommaSeparated(params.get("locations")),
       dateRange: params.get("dateRange") ?? "",
       priceMin: params.get("min_price") ?? "",
       priceMax: params.get("max_price") ?? "",
@@ -111,9 +140,13 @@ export default function BrowseListings() {
         // ordering mapping
         apiParams.ordering = sortToOrdering(sort);
 
-        // filters → backend params
-        if (filters.category) apiParams.category = filters.category;
-        if (filters.location) apiParams.location = filters.location;
+        // filters → backend params (arrays as comma-separated)
+        if (filters.categories?.length > 0) {
+          apiParams.categories = filters.categories.join(",");
+        }
+        if (filters.locations?.length > 0) {
+          apiParams.locations = filters.locations.join(",");
+        }
         if (filters.priceMin !== "" && filters.priceMin != null) apiParams.min_price = filters.priceMin;
         if (filters.priceMax !== "" && filters.priceMax != null) apiParams.max_price = filters.priceMax;
         if (filters.dateRange) {
@@ -220,7 +253,7 @@ export default function BrowseListings() {
         }}>
           {/* Left Sidebar - Filters */}
           <aside style={{ position: "sticky", top: 24 }}>
-            <Filters initial={filters} onChange={handleFiltersChange} />
+            <Filters initial={filters} onChange={handleFiltersChange} options={filterOptions} />
           </aside>
 
           {/* Right Content Area */}

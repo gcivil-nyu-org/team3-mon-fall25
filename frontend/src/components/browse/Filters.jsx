@@ -21,10 +21,12 @@ function useDebounce(value, delay) {
 
 const PRICE_DEBOUNCE_DELAY = 300;
 
-export default function Filters({ initial = {}, onChange }) {
+export default function Filters({ initial = {}, onChange, options = {} }) {
+  const { categories: availableCategories = [], locations: availableLocations = [] } = options;
+
   const [filters, setFilters] = useState({
     categories: initial.categories || [],
-    dorms: initial.dorms || [],
+    locations: initial.locations || [],
     priceMin: initial.priceMin ?? "",
     priceMax: initial.priceMax ?? "",
     availableOnly: initial.availableOnly || false,
@@ -166,18 +168,6 @@ export default function Filters({ initial = {}, onChange }) {
     onChange?.(newFilters);
   };
 
-  const categories = ["Electronics", "Books", "Furniture", "Sports", "Clothing", "Other"];
-  const dorms = [
-    "Othmer Hall",
-    "Clark Hall",
-    "Rubin Hall",
-    "Weinstein Hall",
-    "Brittany Hall",
-    "Founders Hall",
-  ];
-
-  const resultCount = 18; // This should come from props in real app
-
   return (
     <div style={{
       background: "#fff",
@@ -185,18 +175,16 @@ export default function Filters({ initial = {}, onChange }) {
       padding: 24,
       boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
     }}>
-      {/* Results count */}
-      <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 24 }}>
-        {resultCount} results
-      </div>
-
       {/* Category Filter */}
       <div style={{ marginBottom: 32 }}>
         <h4 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: "#111" }}>
           Category
         </h4>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {categories.map((cat) => (
+          {availableCategories.length === 0 ? (
+            <div style={{ color: "#6b7280", fontSize: 14 }}>Loading...</div>
+          ) : (
+            availableCategories.map((cat) => (
             <label
               key={cat}
               style={{
@@ -216,19 +204,23 @@ export default function Filters({ initial = {}, onChange }) {
               />
               {cat}
             </label>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
-      {/* Dorm Filter */}
+      {/* Location Filter */}
       <div style={{ marginBottom: 32 }}>
         <h4 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: "#111" }}>
-          Dorm
+          Location
         </h4>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {dorms.map((dorm) => (
+          {availableLocations.length === 0 ? (
+            <div style={{ color: "#6b7280", fontSize: 14 }}>Loading...</div>
+          ) : (
+            availableLocations.map((location) => (
             <label
-              key={dorm}
+              key={location}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -240,13 +232,14 @@ export default function Filters({ initial = {}, onChange }) {
             >
               <input
                 type="checkbox"
-                checked={filters.dorms.includes(dorm)}
-                onChange={() => handleCheckbox("dorms", dorm)}
+                checked={filters.locations.includes(location)}
+                onChange={() => handleCheckbox("locations", location)}
                 style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#56018D" }}
               />
-              {dorm}
+              {location}
             </label>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

@@ -61,3 +61,9 @@ export async function deleteListingAPI(listingId) {
     return false;
   }
 }
+
+// Get filter options (categories and locations)
+export async function getFilterOptions() {
+  const { data } = await apiClient.get(`${endpoints.listings}filter-options/`);
+  return data; // { categories: [...], locations: [...] }
+}
