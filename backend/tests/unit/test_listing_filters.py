@@ -4,8 +4,6 @@ Unit tests for ListingFilter with multiple category and location support.
 
 import pytest
 from decimal import Decimal
-from django.utils import timezone
-from datetime import timedelta
 from apps.listings.models import Listing
 from apps.listings.filters import ListingFilter
 from apps.users.models import User
@@ -381,8 +379,8 @@ class TestListingFilterCombined:
         )
         assert filterset.is_valid()
         results = list(filterset.qs)
-        # Laptop ($500) is excluded due to max_price, so only Textbook ($50) and Phone ($300) match
+        # Laptop ($500) excluded due to max_price,
+        # so only Textbook ($50) and Phone ($300) match
         assert len(results) == 2
         for result in results:
             assert Decimal("40") <= result.price <= Decimal("400")
-

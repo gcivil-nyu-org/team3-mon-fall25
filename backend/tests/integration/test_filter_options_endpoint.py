@@ -305,4 +305,3 @@ class TestMultipleCategoryLocationFiltering:
         data = response.json()
         results = data["results"]
         assert len(results) == 1
-
