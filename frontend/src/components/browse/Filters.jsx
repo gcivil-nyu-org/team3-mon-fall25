@@ -313,7 +313,6 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
               background: linear-gradient(135deg, #56018D 0%, #7B1FA2 100%);
               border: 3px solid #fff;
               box-shadow: 0 2px 8px rgba(86, 1, 141, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
-              transition: all 0.2s ease;
             }
             .price-range-slider .range-slider__thumb:hover {
               transform: translate(-50%, -50%) scale(1.1);
