@@ -564,6 +564,35 @@ describe('CreateListing', () => {
             await user.tab();
             expect(titleInput).not.toHaveFocus();
         });
+
+        it('handles button mouse over and out events', async () => {
+            const user = userEvent.setup();
+            listingsApi.createListing.mockResolvedValue({ id: 1 });
+            renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
+            const titleInput = screen.getByLabelText(/title/i);
+            const descInput = screen.getByLabelText(/description/i);
+            const priceInput = screen.getByLabelText(/price/i);
+            const categorySelect = screen.getByLabelText(/category/i);
+            const locationSelect = screen.getByLabelText(/location/i);
+            const submitButton = screen.getByRole('button', { name: /create listing/i });
+
+            await user.type(titleInput, 'Test Title');
+            await user.type(descInput, 'Test Description');
+            await user.type(priceInput, '99.99');
+            await user.selectOptions(categorySelect, 'Electronics');
+            await user.selectOptions(locationSelect, 'Othmer Hall');
+
+            // Test mouse over and out
+            await user.hover(submitButton);
+            await user.unhover(submitButton);
+
+            // Button should still be functional
+            expect(submitButton).not.toBeDisabled();
+        });
     });
 });
 
