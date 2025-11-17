@@ -140,6 +140,7 @@ class ListingFilter(django_filters.FilterSet):
 
         Special handling for "Off-Campus":
         - Matches listings with dorm_location = "Off-Campus" (exact match)
+        - Matches listings without location set (null or empty)
         - Also matches legacy listings with locations not in default dorm list
         """
         if not value:
@@ -169,17 +170,29 @@ class ListingFilter(django_filters.FilterSet):
         # Build OR query with Q objects (partial matching)
         q_objects = Q()
 
+        # Pre-compute tuple for "Off-Campus" optimization (only if needed)
+        # Convert to tuple once for better query optimization
+        has_off_campus = "Off-Campus" in location_list
+        default_locations_tuple = (
+            tuple(DEFAULT_DORM_LOCATIONS_FLAT) if has_off_campus else None
+        )
+
         for loc in location_list:
             if loc == "Off-Campus":
-                # Match exact "Off-Campus" or legacy locations not in default list
+                # Match exact "Off-Campus", legacy locations not in default list,
+                # or listings without location set (null/empty)
                 # Legacy locations are those with dorm_location not in
                 # DEFAULT_DORM_LOCATIONS_FLAT
-                q_objects |= Q(dorm_location__iexact="Off-Campus") | (
-                    Q(dorm_location__isnull=False)  # Not null
-                    & ~Q(dorm_location="")  # Not empty
-                    & ~Q(
-                        dorm_location__in=DEFAULT_DORM_LOCATIONS_FLAT
-                    )  # Not in default list
+                # Optimized: use __gt="" for non-empty check (more index-friendly)
+                # and use tuple for better query optimization
+                q_objects |= (
+                    Q(dorm_location__iexact="Off-Campus")
+                    | Q(dorm_location__isnull=True)
+                    | Q(dorm_location="")
+                    | (
+                        Q(dorm_location__isnull=False, dorm_location__gt="")
+                        & ~Q(dorm_location__in=default_locations_tuple)
+                    )
                 )
             else:
                 # Regular partial matching for other locations
