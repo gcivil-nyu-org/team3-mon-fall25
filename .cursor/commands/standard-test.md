@@ -1,1 +1,1 @@
-Reference to Travis CI `.travis.yml` file, do all the tests in script section to ensure the codebase will be deployable.
+Reference to Travis CI `.travis.yml` file, do run the script section to ensure the codebase pass all the tests.
