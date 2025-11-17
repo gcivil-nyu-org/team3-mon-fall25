@@ -23,12 +23,15 @@ vi.mock('react-toastify', () => ({
 // Mock navigate function
 const mockNavigate = vi.fn();
 
+// Mock useParams function that can be changed per test
+const mockUseParams = vi.fn(() => ({id: '123'}));
+
 // Mock react-router-dom hooks
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual('react-router-dom');
     return {
         ...actual,
-        useParams: () => ({id: '123'}),
+        useParams: () => mockUseParams(),
         useNavigate: () => mockNavigate,
     };
 });
@@ -97,6 +100,9 @@ describe('ListingDetail - Share Functionality', () => {
     beforeEach(() => {
         // Reset all mocks
         vi.clearAllMocks();
+        
+        // Reset useParams mock to default
+        mockUseParams.mockReturnValue({ id: '123' });
 
         // Mock API responses
         listingsApi.getListing.mockResolvedValue(mockListing);
@@ -1455,6 +1461,7 @@ describe('ListingDetail - Core Functionality', () => {
         beforeEach(() => {
             watchlistApi.addToWatchlist.mockResolvedValue({});
             watchlistApi.removeFromWatchlist.mockResolvedValue({});
+            mockUseParams.mockReturnValue({ id: '123' });
         });
 
         it('should add listing to watchlist when save button is clicked', async () => {
@@ -1588,8 +1595,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should return null when id is not provided', () => {
             // Mock useParams to return no id for this test
-            const originalUseParams = require('react-router-dom').useParams;
-            vi.mocked(require('react-router-dom')).useParams = vi.fn(() => ({ id: undefined }));
+            mockUseParams.mockReturnValue({ id: undefined });
             
             const { container } = render(
                 <BrowserRouter>
@@ -1603,7 +1609,7 @@ describe('ListingDetail - Core Functionality', () => {
             expect(container.firstChild).toBeNull();
             
             // Restore original mock
-            vi.mocked(require('react-router-dom')).useParams = originalUseParams;
+            mockUseParams.mockReturnValue({ id: '123' });
         });
 
         it('should handle seller stats fetch error for a page gracefully', async () => {
@@ -1705,7 +1711,7 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         it('should handle handleToggleSave when listing is null', async () => {
-            const { rerender } = render(
+            render(
                 <BrowserRouter>
                     <AuthProvider>
                         <ListingDetail />
@@ -1741,9 +1747,7 @@ describe('ListingDetail - Core Functionality', () => {
             });
 
             // Mock getListing to fail for one listing
-            let callCount = 0;
             listingsApi.getListing.mockImplementation((id) => {
-                callCount++;
                 if (id === '1') {
                     return Promise.reject(new Error('Failed to fetch'));
                 }

@@ -454,9 +454,11 @@ describe('Filters', () => {
 
     // Get the RangeSlider input element and simulate change
     // RangeSlider uses onInput callback with [min, max] array
-    const sliderInput = sliderContainer?.querySelector('input[type="range"]') || 
-                       sliderContainer?.querySelector('[role="slider"]');
-    
+    // Note: sliderInput is queried but not directly used as RangeSlider is complex
+    // We test by checking the inputs directly instead
+    const _sliderInput = sliderContainer?.querySelector('input[type="range"]') ||
+      sliderContainer?.querySelector('[role="slider"]');
+
     // Since RangeSlider is a complex third-party component, we test by checking
     // that the handleSliderChange function would update the inputs correctly
     // by directly updating the inputs which triggers the same flow
@@ -529,7 +531,7 @@ describe('Filters', () => {
     // Set a validation error first
     const minInput = screen.getByLabelText('Min price');
     fireEvent.change(minInput, { target: { value: '-10' } });
-    
+
     await waitFor(() => {
       expect(screen.getByText('Minimum price must be 0 or greater')).toBeInTheDocument();
     });
