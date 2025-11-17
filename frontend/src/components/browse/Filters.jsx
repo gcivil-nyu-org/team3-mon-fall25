@@ -395,6 +395,30 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
     setPriceMaxInput(String(max));
   };
 
+  const handleClearAll = () => {
+    const cleared = {
+      categories: [],
+      locations: [],
+      priceMin: "",
+      priceMax: "",
+      dateRange: "",
+    };
+    setFilters(cleared);
+    setPriceMinInput("");
+    setPriceMaxInput("");
+    setPriceMinError("");
+    setPriceMaxError("");
+    onChange?.(cleared);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters =
+    filters.categories.length > 0 ||
+    filters.locations.length > 0 ||
+    filters.priceMin !== "" ||
+    filters.priceMax !== "" ||
+    filters.dateRange !== "";
+
   return (
     <div style={{
       background: "#fff",
@@ -402,6 +426,37 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
       padding: 24,
       boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
     }}>
+      {/* Clear All Button */}
+      {hasActiveFilters && (
+        <div style={{ marginBottom: 24, display: "flex", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            style={{
+              fontSize: 14,
+              color: "#56018D",
+              background: "transparent",
+              border: "1px solid #56018D",
+              borderRadius: 8,
+              padding: "6px 12px",
+              cursor: "pointer",
+              fontWeight: 500,
+              transition: "all 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = "#56018D";
+              e.target.style.color = "#fff";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = "transparent";
+              e.target.style.color = "#56018D";
+            }}
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
+
       {/* Category Filter */}
       <div style={{ marginBottom: 32 }}>
         <h4 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: "#111" }}>

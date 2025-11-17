@@ -133,6 +133,36 @@ export default function BrowseListings() {
     loadFilterOptions();
   }, []);
 
+  // Validate and filter out invalid filter values from URL when filterOptions are loaded
+  useEffect(() => {
+    if (!filterOptions.categories || !filterOptions.dorm_locations) return;
+
+    // Get all valid locations from dorm_locations grouped structure
+    const allValidLocations = Object.values(filterOptions.dorm_locations).flat();
+
+    // Filter out invalid values
+    const validCategories = filters.categories.filter(cat =>
+      filterOptions.categories.includes(cat)
+    );
+    const validLocations = filters.locations.filter(loc =>
+      allValidLocations.includes(loc)
+    );
+
+    // Only update if there were invalid values removed
+    if (validCategories.length !== filters.categories.length ||
+      validLocations.length !== filters.locations.length) {
+      const cleanedFilters = {
+        ...filters,
+        categories: validCategories,
+        locations: validLocations,
+      };
+      setFilters(cleanedFilters);
+      // Update URL to remove invalid values
+      syncUrl(cleanedFilters, { page: 1 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterOptions.categories, filterOptions.dorm_locations]);
+
   // When URL changes externally (e.g., back/forward), update state
   useEffect(() => {
     setFilters({

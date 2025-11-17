@@ -492,4 +492,68 @@ describe('Filters', () => {
     // Verify it uses the grouped structure
     expect(screen.getByText('Washington Square')).toBeInTheDocument();
   });
+
+  it('shows clear all button when filters are active', async () => {
+    const onChange = vi.fn();
+    render(<Filters initial={{ categories: ['Electronics'], priceMin: '100' }} onChange={onChange} options={mockOptions} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Clear all filters')).toBeInTheDocument();
+    });
+
+    const clearButton = screen.getByText('Clear all filters');
+    fireEvent.click(clearButton);
+
+    expect(onChange).toHaveBeenCalled();
+    const lastCall = onChange.mock.calls.at(-1);
+    expect(lastCall?.[0]).toMatchObject({
+      categories: [],
+      locations: [],
+      priceMin: '',
+      priceMax: '',
+      dateRange: '',
+    });
+  });
+
+  it('does not show clear all button when no filters are active', () => {
+    const onChange = vi.fn();
+    render(<Filters initial={{}} onChange={onChange} options={mockOptions} />);
+
+    expect(screen.queryByText('Clear all filters')).not.toBeInTheDocument();
+  });
+
+  it('clears all filters including price inputs and errors', async () => {
+    const onChange = vi.fn();
+    render(<Filters initial={{ categories: ['Electronics'], priceMin: '100', priceMax: '500' }} onChange={onChange} options={mockOptions} />);
+
+    // Set a validation error first
+    const minInput = screen.getByLabelText('Min price');
+    fireEvent.change(minInput, { target: { value: '-10' } });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Minimum price must be 0 or greater')).toBeInTheDocument();
+    });
+
+    // Clear all
+    const clearButton = screen.getByText('Clear all filters');
+    fireEvent.click(clearButton);
+
+    // Verify all filters are cleared
+    expect(onChange).toHaveBeenCalled();
+    const lastCall = onChange.mock.calls.at(-1);
+    expect(lastCall?.[0]).toMatchObject({
+      categories: [],
+      locations: [],
+      priceMin: '',
+      priceMax: '',
+      dateRange: '',
+    });
+
+    // Verify inputs are cleared
+    expect(screen.getByLabelText('Min price')).toHaveValue(null);
+    expect(screen.getByLabelText('Max price')).toHaveValue(null);
+
+    // Verify errors are cleared
+    expect(screen.queryByText('Minimum price must be 0 or greater')).not.toBeInTheDocument();
+  });
 });

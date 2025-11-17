@@ -546,6 +546,43 @@ describe("BrowseListings integration", () => {
     });
   });
 
+  it("filters out invalid category and location values from URL", async () => {
+    listingsApi.getListings.mockResolvedValue({ results: [], count: 0 });
+    
+    // Mock filter options with valid values
+    vi.mocked(listingsApi.getFilterOptions).mockResolvedValue({
+      categories: ['Electronics', 'Books', 'Furniture'],
+      locations: ['Othmer Hall', 'Alumni Hall'],
+      dorm_locations: {
+        washington_square: ['Othmer Hall', 'Alumni Hall'],
+        downtown: [],
+        other: []
+      }
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/browse?categories=Electronics,InvalidCategory&locations=Othmer Hall,InvalidLocation"]}>
+        <BrowseListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      // Invalid values should be filtered out
+      // The component should only use valid categories and locations
+      expect(listingsApi.getListings).toHaveBeenCalled();
+    });
+
+    // Check that API was called with only valid values
+    const apiCalls = vi.mocked(listingsApi.getListings).mock.calls;
+    const lastCall = apiCalls[apiCalls.length - 1];
+    const params = lastCall[0];
+    
+    // Should only contain valid category
+    expect(params.categories).toBe('Electronics');
+    // Should only contain valid location
+    expect(params.locations).toBe('Othmer Hall');
+  });
+
   it("resets page to 1 when filters change without page override", async () => {
     listingsApi.getListings.mockResolvedValue({ results: [], count: 0 });
 
