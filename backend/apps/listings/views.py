@@ -307,40 +307,41 @@ class ListingViewSet(
         # Delete the listing (will cascade delete ListingImage records)
         instance.delete()
 
-    # @action(detail=False, methods=["get"], url_path="filter-options")
-    # def filter_options(self, request):
-    #     """
-    #     Get filter options (categories and locations) from all **currently
-    #     active listings**. Returns only distinct values that actually exist
-    #     in active listings, sorted alphabetically. For example, if no active
-    #     listings contain "Furniture" category, it will not be included in
-    #     the returned options.
+    # Not connect to frontend because it only returns options that are actually in active listings
+    @action(detail=False, methods=["get"], url_path="filter-options")
+    def filter_options(self, request):
+        """
+        Get filter options (categories and locations) from all **currently
+        active listings**. Returns only distinct values that actually exist
+        in active listings, sorted alphabetically. For example, if no active
+        listings contain "Furniture" category, it will not be included in
+        the returned options.
 
-    #     Endpoint: GET /api/v1/listings/filter-options/
-    #     Response: {"categories": [...], "locations": [...]}
-    #     """
-    #     # Get distinct categories (non-empty, sorted)
-    #     categories = (
-    #         Listing.objects.filter(status="active")
-    #         .exclude(Q(category__isnull=True) | Q(category=""))
-    #         .values_list("category", flat=True)
-    #         .distinct()
-    #         .order_by("category")
-    #     )
+        Endpoint: GET /api/v1/listings/filter-options/
+        Response: {"categories": [...], "locations": [...]}
+        """
+        # Get distinct categories (non-empty, sorted)
+        categories = (
+            Listing.objects.filter(status="active")
+            .exclude(Q(category__isnull=True) | Q(category=""))
+            .values_list("category", flat=True)
+            .distinct()
+            .order_by("category")
+        )
 
-    #     # Get distinct locations (non-empty, non-null, sorted)
-    #     locations = (
-    #         Listing.objects.filter(status="active")
-    #         .exclude(Q(location__isnull=True) | Q(location=""))
-    #         .values_list("location", flat=True)
-    #         .distinct()
-    #         .order_by("location")
-    #     )
+        # Get distinct locations (non-empty, non-null, sorted)
+        locations = (
+            Listing.objects.filter(status="active")
+            .exclude(Q(location__isnull=True) | Q(location=""))
+            .values_list("location", flat=True)
+            .distinct()
+            .order_by("location")
+        )
 
-    #     return Response(
-    #         {"categories": list(categories), "locations": list(locations)},
-    #         status=status.HTTP_200_OK,
-    #     )
+        return Response(
+            {"categories": list(categories), "locations": list(locations)},
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=True,
