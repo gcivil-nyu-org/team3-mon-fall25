@@ -81,7 +81,7 @@ class ListingViewSet(
     filterset_class = ListingFilter
     ordering_fields = ["created_at", "price", "title"]
     ordering = ["-created_at"]
-    search_fields = ["title", "description", "location"]
+    search_fields = ["title", "description", "location", "category"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
