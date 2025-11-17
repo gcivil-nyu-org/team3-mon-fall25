@@ -35,7 +35,7 @@ const EditListing = () => {
         setDescription(data.description || "");
         setPrice(data.price?.toString() || "");
         setCategory(data.category || "");
-        setLocation(data.location || "");
+        setLocation(data.dorm_location || data.location || "");
         setExistingImages(data.images || []);
       } catch (error) {
         console.error("Failed to fetch listing:", error);
@@ -127,7 +127,7 @@ const EditListing = () => {
       formData.append("description", description.trim());
       formData.append("price", Number(price));
       formData.append("category", category);
-      formData.append("location", location);
+      formData.append("dorm_location", location);
 
       // Append new images
       newImages.forEach((image) => {

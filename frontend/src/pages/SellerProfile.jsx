@@ -222,7 +222,7 @@ export default function SellerProfile() {
     ? {
         username: sellerListings[0].user_netid || sellerListings[0].user_email?.split("@")[0] || username,
         name: sellerListings[0].user_netid || sellerListings[0].user_email?.split("@")[0] || username,
-        location: sellerListings[0].location || "Not specified",
+        location: sellerListings[0].dorm_location || sellerListings[0].location || "Not specified",
         memberSince: sellerListings[0].created_at || new Date().toISOString(),
         activeListings: sellerListings.filter((l) => l.status === "active").length,
         soldItems: sellerListings.filter((l) => l.status === "sold").length,

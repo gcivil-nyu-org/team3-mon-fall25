@@ -381,6 +381,15 @@ class CompactListingSerializer(serializers.ModelSerializer):
         source="user.netid", read_only=True, allow_null=True
     )
 
+    # Add dorm_location field
+    dorm_location = serializers.CharField(read_only=True, allow_null=True)
+
+    # Add location as alias for dorm_location (backward compatibility)
+    # Will update to off campus geolocation in the future
+    location = serializers.CharField(
+        source="dorm_location", read_only=True, allow_null=True
+    )
+
     class Meta:
         model = Listing
         fields = [
@@ -393,6 +402,8 @@ class CompactListingSerializer(serializers.ModelSerializer):
             "seller_username",
             "created_at",
             "view_count",
+            "dorm_location",
+            "location",
         ]
 
     def get_primary_image(self, obj):
