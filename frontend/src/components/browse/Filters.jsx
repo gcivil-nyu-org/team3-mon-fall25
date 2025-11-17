@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import RangeSlider from "react-range-slider-input";
 import "react-range-slider-input/dist/style.css";
+import { CATEGORIES, LOCATIONS } from "../../constants/filterOptions";
 
 // Custom hook for debouncing values
 function useDebounce(value, delay) {
@@ -38,7 +39,11 @@ const PRICE_MAX = 2000;
 const PRICE_STEP = 10;
 
 export default function Filters({ initial = {}, onChange, options = {} }) {
-  const { categories: availableCategories = [], locations: availableLocations = [] } = options;
+  // TODO: Temporarily hardcoded until filter-options API is stable
+  // Use hardcoded values as fallback, but prefer API options if available
+  const { categories: apiCategories = [], locations: apiLocations = [] } = options;
+  const availableCategories = apiCategories.length > 0 ? apiCategories : CATEGORIES;
+  const availableLocations = apiLocations.length > 0 ? apiLocations : LOCATIONS;
 
   const [filters, setFilters] = useState({
     categories: initial.categories || [],

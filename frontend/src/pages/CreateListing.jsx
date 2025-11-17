@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createListing, getFilterOptions } from "../api/listings";
 import SEO from "../components/SEO";
 import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
+import { CATEGORIES, LOCATIONS } from "../constants/filterOptions";
 
 const CreateListing = () => {
   const navigate = useNavigate();
@@ -15,19 +16,23 @@ const CreateListing = () => {
   const [images, setImages] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [filterOptions, setFilterOptions] = useState({ categories: [], locations: [] });
-  const [optionsLoading, setOptionsLoading] = useState(true);
+  // TODO: Temporarily hardcoded until filter-options API is stable
+  // Use hardcoded values as default, API will override if successful
+  const [filterOptions, setFilterOptions] = useState({ categories: CATEGORIES, locations: LOCATIONS });
 
-  // Fetch filter options on mount
+  // Fetch filter options on mount (with hardcoded fallback)
   useEffect(() => {
     async function loadFilterOptions() {
       try {
         const options = await getFilterOptions();
-        setFilterOptions(options);
+        // Only use API response if it has data
+        if (options.categories?.length > 0 && options.locations?.length > 0) {
+          setFilterOptions(options);
+        }
+        // Otherwise, keep hardcoded values (already set in useState)
       } catch (e) {
         console.error("Failed to load filter options:", e);
-      } finally {
-        setOptionsLoading(false);
+        // Keep hardcoded values on error (already set in useState)
       }
     }
     loadFilterOptions();
@@ -228,7 +233,7 @@ const CreateListing = () => {
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                disabled={loading || optionsLoading}
+                disabled={loading}
                 style={{
                   width: "100%",
                   padding: "12px 14px",
@@ -237,12 +242,12 @@ const CreateListing = () => {
                   fontSize: 15,
                   outline: "none",
                   background: "#fff",
-                  cursor: optionsLoading ? "wait" : "pointer",
+                  cursor: "pointer",
                 }}
                 onFocus={(e) => e.target.style.borderColor = "#56018D"}
                 onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
               >
-                <option value="">{optionsLoading ? "Loading..." : "Select a category"}</option>
+                <option value="">Select a category</option>
                 {filterOptions.categories.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -266,7 +271,7 @@ const CreateListing = () => {
                 id="location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                disabled={loading || optionsLoading}
+                disabled={loading}
                 style={{
                   width: "100%",
                   padding: "12px 14px",
@@ -275,12 +280,12 @@ const CreateListing = () => {
                   fontSize: 15,
                   outline: "none",
                   background: "#fff",
-                  cursor: optionsLoading ? "wait" : "pointer",
+                  cursor: "pointer",
                 }}
                 onFocus={(e) => e.target.style.borderColor = "#56018D"}
                 onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
               >
-                <option value="">{optionsLoading ? "Loading..." : "Select your location"}</option>
+                <option value="">Select your location</option>
                 {filterOptions.locations.map((loc) => (
                   <option key={loc} value={loc}>
                     {loc}
