@@ -51,6 +51,14 @@ def send_otp_email(email: str, otp: str, request=None) -> bool:
     default_sender = settings.EMAIL_HOST_USER or "noreply@nyu-marketplace.com"
     from_email = getattr(settings, "OTP_EMAIL_SENDER", default_sender)
 
+    logger.info(
+        "[OTP EMAIL] settings=%s backend=%s from=%s to=%s",
+        getattr(settings, "SETTINGS_MODULE", "unknown"),
+        settings.EMAIL_BACKEND,
+        from_email,
+        email,
+    )
+    
     # Prepare context for email template
     context = {
         "otp": otp,

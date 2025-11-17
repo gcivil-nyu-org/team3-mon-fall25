@@ -54,7 +54,7 @@ export default function Login() {
       const data = err.response?.data;
 
       // New user: automatically register then redirect to OTP verification
-      if (status === 404 && data?.requires_registration) {
+      if (status === 404) {
         try {
           await apiClient.post(endpoints.auth.register, {
             email,
