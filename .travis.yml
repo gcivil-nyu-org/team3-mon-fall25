@@ -256,6 +256,8 @@ jobs:
         - zip -r ../deploy.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc"
         - cd ..
         - ls -lh deploy.zip
+        - export DEPLOY_TIMESTAMP=$(date -u +'%Y-%m-%d_%H-%M-%S_UTC')
+        - echo "Deploy timestamp $DEPLOY_TIMESTAMP"
 
       deploy:
         # Deploy to DEV
@@ -285,7 +287,7 @@ jobs:
           bucket: "nyu-marketplace-images"
           edge: true
           zip_file: deploy.zip
-          label: "prod-build-$TRAVIS_BUILD_NUMBER-$TRAVIS_COMMIT"
+          label: "prod-build-$TRAVIS_BUILD_NUMBER-$TRAVIS_COMMIT-$DEPLOY_TIMESTAMP"
           wait_until_deployed: true
           wait_until_deployed_timeout: 900
           on:
