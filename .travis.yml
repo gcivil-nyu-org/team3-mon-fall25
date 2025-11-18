@@ -270,7 +270,7 @@ jobs:
           bucket: "nyu-marketplace-dev-images"
           edge: true
           zip_file: deploy.zip
-          label: "prod-build-$TRAVIS_BUILD_NUMBER-$TRAVIS_COMMIT-$DEPLOY_TIMESTAMP"
+          label: "dev-build-$TRAVIS_BUILD_NUMBER-$TRAVIS_COMMIT-$DEPLOY_TIMESTAMP"
           wait_until_deployed: true
           wait_until_deployed_timeout: 900
           on:
