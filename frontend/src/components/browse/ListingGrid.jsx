@@ -24,7 +24,7 @@ export default function ListingGrid({ items }) {
             title={item.title}
             price={item.price}
             status={item.status}
-            location={item.location}
+            location={item.dorm_location || item.location}
             imageUrl={imageUrl}
             sellerUsername={item.seller_username}
             createdAt={item.created_at}

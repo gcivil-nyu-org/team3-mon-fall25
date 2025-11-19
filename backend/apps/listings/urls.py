@@ -15,7 +15,7 @@ urlpatterns = router.urls
 
     1. POST   Y   /api/v1/listings/              create a listing
        Fields: category, title, description, price, status,
-               location, images (optional, max 10)
+               dorm_location, images (optional, max 10)
 
     2. GET    N   /api/v1/listings/              list all listings
        Fields: listing_id, category, title, price, status,
@@ -23,12 +23,12 @@ urlpatterns = router.urls
 
     3. GET    N   /api/v1/listings/<id>/         retrieve single
        Fields: listing_id, category, title, description, price,
-               status, location, created_at, updated_at, images,
+               status, dorm_location, created_at, updated_at, images,
                user_email, user_netid
 
     4. PUT/PATCH Y* /api/v1/listings/<id>/       update a listing
        Fields: category, title, description, price, status,
-               location, new_images (optional),
+               dorm_location, new_images (optional),
                remove_image_ids (optional), update_images (optional)
 
     5. DELETE Y*  /api/v1/listings/<id>/         delete a listing
@@ -41,6 +41,19 @@ urlpatterns = router.urls
     7. GET    Y   /api/v1/listings/search/q=<query>  search listings
        Fields: listing_id, category, title, price, status,
                primary_image
+
+    8. GET    N   /api/v1/listings/filter-options/  get filter options
+       Returns: {
+         categories: [...],  # Sorted list of available + default categories
+         dorm_locations: {   # Grouped by area
+           washington_square: [...],
+           downtown: [...],
+           other: [...]      # Only if there are locations not in default groups
+         },
+         locations: [...]    # Flat list for backward compatibility
+       }
+       Note: Returns union of available options from database and defaults.
+             Public endpoint (no authentication required).
 
     * AUTH Y with OWNERSHIP CHECK: User must be authenticated
       AND own the listing

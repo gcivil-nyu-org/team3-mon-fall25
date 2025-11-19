@@ -99,6 +99,26 @@ describe("UserInfoBlock", () => {
       render(<UserInfoBlock user={userWithoutDate} showMemberSince={true} />);
       expect(screen.queryByText(/Member since/)).not.toBeInTheDocument();
     });
+
+    it("handles user without name and initials (fallback to 'U')", () => {
+      const userWithoutName = { ...mockUser, name: null, initials: null };
+      render(<UserInfoBlock user={userWithoutName} />);
+      expect(screen.getByText("U")).toBeInTheDocument();
+      expect(screen.getByText("User")).toBeInTheDocument();
+    });
+
+    it("handles user with empty string name", () => {
+      const userWithEmptyName = { ...mockUser, name: "", initials: null };
+      render(<UserInfoBlock user={userWithEmptyName} />);
+      expect(screen.getByText("U")).toBeInTheDocument();
+      expect(screen.getByText("User")).toBeInTheDocument();
+    });
+
+    it("handles user with memberSince as empty string", () => {
+      const userWithEmptyDate = { ...mockUser, memberSince: "" };
+      render(<UserInfoBlock user={userWithEmptyDate} showMemberSince={true} />);
+      expect(screen.queryByText(/Member since/)).not.toBeInTheDocument();
+    });
   });
 });
 

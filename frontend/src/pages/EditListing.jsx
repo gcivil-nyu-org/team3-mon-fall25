@@ -2,17 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getListing, updateListing } from "../api/listings";
 import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
-
-// Match these with the CreateListing component
-const CATEGORIES = ["Electronics", "Books", "Furniture", "Sports", "Clothing", "Other"];
-const DORMS = [
-  "Othmer Hall",
-  "Clark Hall",
-  "Rubin Hall",
-  "Weinstein Hall",
-  "Brittany Hall",
-  "Founders Hall",
-];
+import { CATEGORIES, LOCATIONS } from "../constants/filterOptions";
 
 const EditListing = () => {
   const { id } = useParams();
@@ -30,6 +20,8 @@ const EditListing = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Use hardcoded filter options
+  const filterOptions = { categories: CATEGORIES, locations: LOCATIONS };
 
   // Fetch listing data
   useEffect(() => {
@@ -43,7 +35,7 @@ const EditListing = () => {
         setDescription(data.description || "");
         setPrice(data.price?.toString() || "");
         setCategory(data.category || "");
-        setLocation(data.location || "");
+        setLocation(data.dorm_location || data.location || "");
         setExistingImages(data.images || []);
       } catch (error) {
         console.error("Failed to fetch listing:", error);
@@ -59,7 +51,7 @@ const EditListing = () => {
   const handleNewImagesChange = (e) => {
     const files = Array.from(e.target.files);
     setError("");
-    
+
     const totalImages = existingImages.length - removeImageIds.length + files.length;
 
     if (totalImages > 10) {
@@ -135,7 +127,7 @@ const EditListing = () => {
       formData.append("description", description.trim());
       formData.append("price", Number(price));
       formData.append("category", category);
-      formData.append("location", location);
+      formData.append("dorm_location", location);
 
       // Append new images
       newImages.forEach((image) => {
@@ -297,7 +289,7 @@ const EditListing = () => {
               onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
             >
               <option value="">Select a category</option>
-              {CATEGORIES.map((cat) => (
+              {filterOptions.categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>
@@ -337,10 +329,10 @@ const EditListing = () => {
               onFocus={(e) => (e.target.style.borderColor = "#56018D")}
               onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
             >
-              <option value="">Select your dorm</option>
-              {DORMS.map((dorm) => (
-                <option key={dorm} value={dorm}>
-                  {dorm}
+              <option value="">Select your location</option>
+              {filterOptions.locations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
                 </option>
               ))}
             </select>

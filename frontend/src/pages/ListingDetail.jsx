@@ -541,7 +541,7 @@ export default function ListingDetail() {
                             {/* Location */}
                             <div className="listing-detail-meta">
                                 <FaMapMarkerAlt className="listing-detail-meta-icon"/>
-                                <span>{listing.location || "Not specified"}</span>
+                                <span>{listing.dorm_location || listing.location || "Not specified"}</span>
                             </div>
 
                             {/* Posted Date */}

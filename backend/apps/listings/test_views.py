@@ -68,7 +68,7 @@ class TestListingViewSet:
         ListingFactory.create_batch(3)
         response = api_client.get("/api/v1/listings/")
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 3
+        assert len(response.data["results"]) == 3
 
     def test_retrieve_listing_is_public(self, api_client):
         """
@@ -338,7 +338,7 @@ class TestListingViewSet:
 
         response = api_client.get("/api/v1/listings/")
         assert response.status_code == status.HTTP_200_OK
-        results = {item["listing_id"]: item for item in response.data}
+        results = {item["listing_id"]: item for item in response.data["results"]}
 
         assert results[listing1.listing_id]["primary_image"] == "primary.jpg"
         assert results[listing2.listing_id]["primary_image"] == "first.jpg"
@@ -377,7 +377,9 @@ class TestListingViewSet:
             title="Lamp", description="Great desk lamp", category="Electronics"
         )
         # Matches by location
-        ListingFactory(title="Couch", description="Leather", location="West Desk Hall")
+        ListingFactory(
+            title="Couch", description="Leather", dorm_location="West Desk Hall"
+        )
         # Matches by category (the custom search action includes category)
         ListingFactory(
             title="Something", description="misc", category="Desk Accessories"
@@ -665,3 +667,206 @@ class TestViewerCacheKey:
         req_b.user = user_b
         key_b = view._viewer_cache_key(req_b, listing_id)
         assert key_b and key_b != key_a1
+
+
+@pytest.mark.django_db
+class TestListingViewSetAdditional:
+    """Additional tests for ListingViewSet to improve coverage."""
+
+    def test_is_owner_or_read_only_safe_methods(self, api_client):
+        """Test IsOwnerOrReadOnly permission allows SAFE_METHODS for any user."""
+        from apps.listings.views import IsOwnerOrReadOnly
+        from rest_framework.test import APIRequestFactory
+
+        permission = IsOwnerOrReadOnly()
+        factory = APIRequestFactory()
+        listing = ListingFactory()
+
+        # Create a request with GET method (SAFE_METHOD)
+        request = factory.get("/api/v1/listings/")
+        request.user = UserFactory()  # Different user
+
+        # SAFE_METHODS should return True
+        assert permission.has_object_permission(request, None, listing) is True
+
+    def test_is_saved_endpoint(self, authenticated_client):
+        """Test is_saved endpoint returns correct status."""
+        client, user = authenticated_client
+        listing = ListingFactory()
+
+        # Test when listing is not saved
+        response = client.get(f"/api/v1/listings/{listing.listing_id}/is_saved/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["is_saved"] is False
+
+        # Save the listing
+        from apps.listings.models import Watchlist
+
+        Watchlist.objects.create(user=user, listing=listing)
+
+        # Test when listing is saved
+        response = client.get(f"/api/v1/listings/{listing.listing_id}/is_saved/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["is_saved"] is True
+
+    def test_contact_seller_creates_conversation(self, authenticated_client):
+        """Test contact_seller creates or retrieves conversation."""
+        client, user = authenticated_client
+        seller = UserFactory()
+        listing = ListingFactory(user=seller)
+
+        # contact_seller requires authentication (IsAuthenticated permission)
+        response = client.post(f"/api/v1/listings/{listing.listing_id}/contact-seller/")
+        assert response.status_code == status.HTTP_200_OK
+        assert "conversation_id" in response.data
+
+        from apps.chat.models import Conversation, ConversationParticipant
+
+        # Verify conversation was created
+        conversation = Conversation.objects.get(id=response.data["conversation_id"])
+        assert conversation is not None
+
+        # Verify both users are participants
+        participants = ConversationParticipant.objects.filter(conversation=conversation)
+        participant_user_ids = {p.user_id for p in participants}
+        assert user.id in participant_user_ids
+        assert seller.id in participant_user_ids
+
+    def test_contact_seller_owner_cannot_contact_self(self, authenticated_client):
+        """Test that listing owner cannot contact themselves."""
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+
+        response = client.post(f"/api/v1/listings/{listing.listing_id}/contact-seller/")
+        assert response.status_code == 400
+        assert "owner" in response.data["detail"].lower()
+
+    def test_contact_seller_retrieves_existing_conversation(self, authenticated_client):
+        """Test contact_seller retrieves existing conversation."""
+        client, user = authenticated_client
+        seller = UserFactory()
+        listing = ListingFactory(user=seller)
+
+        from apps.chat.models import Conversation, ConversationParticipant
+
+        # Create conversation first with direct_key
+        dk = Conversation.make_direct_key(user.id, seller.id)
+        conv = Conversation.objects.create(created_by=user, direct_key=dk)
+        ConversationParticipant.objects.create(conversation=conv, user=user)
+        ConversationParticipant.objects.create(conversation=conv, user=seller)
+
+        # Call contact_seller again
+        response = client.post(f"/api/v1/listings/{listing.listing_id}/contact-seller/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["conversation_id"] == str(conv.id)
+
+    def test_perform_destroy_with_s3_delete_failure(self, authenticated_client):
+        """Test perform_destroy continues even if S3 delete fails."""
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+        ListingImageFactory(listing=listing)
+
+        with patch("utils.s3_service.s3_service.delete_image") as mock_delete, patch(
+            "apps.listings.views.logger"
+        ) as mock_logger:
+            mock_delete.return_value = False  # S3 delete fails
+
+            response = client.delete(f"/api/v1/listings/{listing.listing_id}/")
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not Listing.objects.filter(pk=listing.pk).exists()
+            # Verify logger was called
+            mock_logger.info.assert_called()
+
+    def test_perform_destroy_with_s3_exception(self, authenticated_client):
+        """Test perform_destroy handles S3 exceptions gracefully."""
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+        ListingImageFactory(listing=listing)
+
+        with patch("utils.s3_service.s3_service.delete_image") as mock_delete, patch(
+            "apps.listings.views.logger"
+        ) as mock_logger:
+            mock_delete.side_effect = Exception("S3 error")
+
+            response = client.delete(f"/api/v1/listings/{listing.listing_id}/")
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not Listing.objects.filter(pk=listing.pk).exists()
+            # Verify error was logged
+            mock_logger.error.assert_called()
+
+    def test_retrieve_with_exception_handling(self, api_client):
+        """Test retrieve handles exceptions gracefully."""
+        listing = ListingFactory()
+
+        # Test that retrieve handles exceptions in the try-except block
+        # by patching cache.get to raise an exception
+        with patch("apps.listings.views.cache.get") as mock_cache_get:
+            # Simulate an exception during cache operations
+            mock_cache_get.side_effect = Exception("Cache error")
+
+            # Should still return response (exception is caught)
+            response = api_client.get(
+                f"/api/v1/listings/{listing.listing_id}/?track_view=1"
+            )
+            assert response.status_code == status.HTTP_200_OK
+
+    def test_get_serializer_class_for_list_action(self, api_client):
+        """Test get_serializer_class returns CompactListingSerializer for list."""
+        from apps.listings.views import ListingViewSet
+        from apps.listings.serializers import CompactListingSerializer
+
+        view = ListingViewSet()
+        view.action = "list"
+        view.request = api_client.get("/api/v1/listings/").wsgi_request
+
+        serializer_class = view.get_serializer_class()
+        assert serializer_class == CompactListingSerializer
+
+    def test_get_serializer_class_for_user_listings_action(self, authenticated_client):
+        """Test get_serializer_class returns CompactListingSerializer
+        for user_listings."""
+        from apps.listings.views import ListingViewSet
+        from apps.listings.serializers import CompactListingSerializer
+
+        client, user = authenticated_client
+        view = ListingViewSet()
+        view.action = "user_listings"
+        view.request = client.get("/api/v1/listings/user/").wsgi_request
+
+        serializer_class = view.get_serializer_class()
+        assert serializer_class == CompactListingSerializer
+
+    def test_get_serializer_class_default(self, api_client):
+        """Test get_serializer_class returns default serializer for unknown action."""
+        from apps.listings.views import ListingViewSet
+        from apps.listings.serializers import ListingCreateSerializer
+
+        view = ListingViewSet()
+        view.action = "unknown_action"
+        view.request = api_client.get("/api/v1/listings/").wsgi_request
+
+        serializer_class = view.get_serializer_class()
+        assert serializer_class == ListingCreateSerializer
+
+    def test_perform_destroy_with_successful_s3_deletes(self, authenticated_client):
+        """Test perform_destroy counts successful S3 deletions."""
+        client, user = authenticated_client
+        listing = ListingFactory(user=user)
+        ListingImageFactory(listing=listing, image_url="http://example.com/img1.jpg")
+        ListingImageFactory(listing=listing, image_url="http://example.com/img2.jpg")
+
+        with patch("utils.s3_service.s3_service.delete_image") as mock_delete, patch(
+            "apps.listings.views.logger"
+        ) as mock_logger:
+            mock_delete.return_value = True  # Both deletions succeed
+
+            response = client.delete(f"/api/v1/listings/{listing.listing_id}/")
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not Listing.objects.filter(pk=listing.pk).exists()
+            # Verify logger was called with count of 2
+            mock_logger.info.assert_called()
+            # Check that delete_image was called twice
+            assert mock_delete.call_count == 2

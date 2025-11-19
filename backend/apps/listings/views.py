@@ -21,6 +21,13 @@ from django.core.exceptions import RequestDataTooBig
 from utils.s3_service import s3_service
 
 from apps.chat.models import Conversation, ConversationParticipant
+from .constants import (
+    DEFAULT_CATEGORIES,
+    DEFAULT_DORM_LOCATIONS_FLAT,
+    WASHINGTON_SQUARE_DORMS,
+    DOWNTOWN_DORMS,
+    OTHER,
+)
 from .filters import ListingFilter
 from .models import Listing
 from .serializers import (
@@ -72,6 +79,7 @@ class ListingViewSet(
 
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = ListingPagination
 
     filter_backends = [
         DjangoFilterBackend,
@@ -81,7 +89,11 @@ class ListingViewSet(
     filterset_class = ListingFilter
     ordering_fields = ["created_at", "price", "title"]
     ordering = ["-created_at"]
-    search_fields = ["title", "description", "location", "category"]
+
+    # TODO: add location to search_fields when we implement geographical location
+    # via Google Maps API
+    # search_fields = ["title", "description", "location", "dorm_location", "category"]
+    search_fields = ["title", "description", "dorm_location", "category"]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -126,6 +138,7 @@ class ListingViewSet(
 
         - list / retrieve / search: public (no auth required)
         - user_listings: must be authenticated
+        - contact_seller: must be authenticated (handled by @action decorator)
         - everything else: default (create/update/delete protected)
         """
         # Public read-only endpoints
@@ -136,7 +149,12 @@ class ListingViewSet(
         if self.action == "user_listings":
             return [IsAuthenticated()]
 
-        # Default: respect view’s base permissions
+        # contact_seller uses IsAuthenticated from @action decorator
+        # Don't apply IsOwnerOrReadOnly for this action
+        if self.action == "contact_seller":
+            return [IsAuthenticated()]
+
+        # Default: respect view's base permissions
         # (create/update/destroy + other actions)
         return [IsAuthenticatedOrReadOnly(), IsOwnerOrReadOnly()]
 
@@ -273,7 +291,7 @@ class ListingViewSet(
             qs = base_qs.filter(
                 Q(title__icontains=q)
                 | Q(description__icontains=q)
-                | Q(location__icontains=q)
+                | Q(dorm_location__icontains=q)
                 | Q(category__icontains=q)
             )
         else:
@@ -305,6 +323,89 @@ class ListingViewSet(
 
         # Delete the listing (will cascade delete ListingImage records)
         instance.delete()
+
+    @action(detail=False, methods=["get"], url_path="filter-options")
+    def filter_options(self, request):
+        """
+        Get filter options (categories and dorm locations) from active listings
+        merged with defaults. Returns a union of available options from the
+        database and default options, ensuring users always see a complete set
+        of filter choices.
+
+        Note: The original MVP implementation returned only options that exist
+        in active listings, which made the filter options seem very limited when
+        the database had few listings. This endpoint now returns available | defaults
+        to provide a better user experience.
+
+        Endpoint: GET /api/v1/listings/filter-options/
+        Response: {
+            "categories": [...],  # Sorted list of available + default categories
+            "dorm_locations": {  # Grouped by area (new format)
+                "washington_square": [...],
+                "downtown": [...],
+                "other": [...]
+            },
+            "locations": [...]  # Flat list for backward compatibility
+        }
+
+        Note: Currently, "locations" contains dorm locations only. In the future,
+        "location" may be used for non-dorm geographic locations
+        (e.g., via Google Maps API).
+        """
+        # Get distinct categories from active listings (non-empty, sorted)
+        available_categories = set(
+            Listing.objects.filter(status="active")
+            .exclude(Q(category__isnull=True) | Q(category=""))
+            .values_list("category", flat=True)
+            .distinct()
+        )
+
+        # Merge with defaults and sort
+        all_categories = sorted(set(DEFAULT_CATEGORIES) | available_categories)
+
+        # Get distinct dorm locations from active listings
+        # (non-empty, non-null, sorted)
+        available_locations = set(
+            Listing.objects.filter(status="active")
+            .exclude(Q(dorm_location__isnull=True) | Q(dorm_location=""))
+            .values_list("dorm_location", flat=True)
+            .distinct()
+        )
+
+        # Merge with defaults
+        all_dorm_locations = set(DEFAULT_DORM_LOCATIONS_FLAT) | available_locations
+
+        # Group dorm locations by area
+        # Include defaults and any matching locations from DB
+        grouped_dorm_locations = {
+            "washington_square": sorted(
+                set(WASHINGTON_SQUARE_DORMS)
+                | (all_dorm_locations & set(WASHINGTON_SQUARE_DORMS))
+            ),
+            "downtown": sorted(
+                set(DOWNTOWN_DORMS) | (all_dorm_locations & set(DOWNTOWN_DORMS))
+            ),
+            "other": sorted(
+                set(OTHER)
+                | (
+                    all_dorm_locations
+                    - set(WASHINGTON_SQUARE_DORMS)
+                    - set(DOWNTOWN_DORMS)
+                )
+            ),
+        }
+
+        # Flat list for backward compatibility (sorted)
+        flat_locations = sorted(all_dorm_locations)
+
+        return Response(
+            {
+                "categories": all_categories,
+                "dorm_locations": grouped_dorm_locations,
+                "locations": flat_locations,  # Backward compatibility
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=True,

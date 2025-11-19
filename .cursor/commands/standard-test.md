@@ -1,0 +1,1 @@
+Reference to Travis CI `.travis.yml` file, do run the script section to ensure the codebase pass all the tests.

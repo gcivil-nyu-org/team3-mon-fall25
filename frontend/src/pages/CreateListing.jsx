@@ -1,19 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { createListing } from "../api/listings";
+import { createListing, getFilterOptions } from "../api/listings";
 import SEO from "../components/SEO";
 import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
-
-// Match these with the Filters component options
-const CATEGORIES = ["Electronics", "Books", "Furniture", "Sports", "Clothing", "Other"];
-const DORMS = [
-  "Othmer Hall",
-  "Clark Hall",
-  "Rubin Hall",
-  "Weinstein Hall",
-  "Brittany Hall",
-  "Founders Hall",
-];
+import { CATEGORIES, LOCATIONS, DORM_LOCATIONS_GROUPED } from "../constants/filterOptions";
 
 const CreateListing = () => {
   const navigate = useNavigate();
@@ -26,16 +16,47 @@ const CreateListing = () => {
   const [images, setImages] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Filter options from API (with hardcoded fallback)
+  const [filterOptions, setFilterOptions] = useState({
+    categories: CATEGORIES,
+    locations: LOCATIONS,
+    dorm_locations: DORM_LOCATIONS_GROUPED, // Grouped structure for dropdown
+  });
+
+  // Fetch filter options from API on mount
+  useEffect(() => {
+    async function loadFilterOptions() {
+      try {
+        const apiOptions = await getFilterOptions();
+        // Flatten locations for dropdown (use flat list for now, grouped structure available for future)
+        const flatLocations = apiOptions.locations || [];
+        setFilterOptions({
+          categories: apiOptions.categories || CATEGORIES,
+          locations: flatLocations.length > 0 ? flatLocations : LOCATIONS,
+          dorm_locations: apiOptions.dorm_locations || DORM_LOCATIONS_GROUPED, // Use API or fallback to grouped
+        });
+      } catch (e) {
+        console.error("Error loading filter options:", e);
+        // Fallback to hardcoded values on error (grouped structure)
+        setFilterOptions({
+          categories: CATEGORIES,
+          locations: LOCATIONS,
+          dorm_locations: DORM_LOCATIONS_GROUPED,
+        });
+      }
+    }
+    loadFilterOptions();
+  }, []);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     setError("");
-    
+
     if (files.length > 10) {
       setError("Maximum 10 images allowed");
       return;
     }
-    
+
     // Validate file sizes
     const validation = validateImageFiles(files);
     if (!validation.valid) {
@@ -44,7 +65,7 @@ const CreateListing = () => {
       setImages([]);
       return;
     }
-    
+
     setImages(files);
   };
 
@@ -97,7 +118,7 @@ const CreateListing = () => {
       formData.append("description", description.trim());
       formData.append("price", Number(price));
       formData.append("category", category);
-      formData.append("location", location);
+      formData.append("dorm_location", location);
 
       // Append all images
       images.forEach((image) => {
@@ -237,7 +258,7 @@ const CreateListing = () => {
                 onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
               >
                 <option value="">Select a category</option>
-                {CATEGORIES.map((cat) => (
+                {filterOptions.categories.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>
@@ -245,7 +266,7 @@ const CreateListing = () => {
               </select>
             </div>
 
-            {/* Location/Dorm */}
+            {/* Location/Dorm - Grouped by area */}
             <div>
               <label htmlFor="location" style={{
                 display: "block",
@@ -274,12 +295,48 @@ const CreateListing = () => {
                 onFocus={(e) => e.target.style.borderColor = "#56018D"}
                 onBlur={(e) => e.target.style.borderColor = "#E5E7EB"}
               >
-                <option value="">Select your dorm</option>
-                {DORMS.map((dorm) => (
-                  <option key={dorm} value={dorm}>
-                    {dorm}
-                  </option>
-                ))}
+                <option value="">Select your location</option>
+                {filterOptions.dorm_locations ? (
+                  <>
+                    {/* Washington Square */}
+                    {filterOptions.dorm_locations.washington_square && filterOptions.dorm_locations.washington_square.length > 0 && (
+                      <optgroup label="Washington Square">
+                        {filterOptions.dorm_locations.washington_square.map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {/* Downtown */}
+                    {filterOptions.dorm_locations.downtown && filterOptions.dorm_locations.downtown.length > 0 && (
+                      <optgroup label="Downtown">
+                        {filterOptions.dorm_locations.downtown.map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {/* Other */}
+                    {filterOptions.dorm_locations.other && filterOptions.dorm_locations.other.length > 0 && (
+                      <optgroup label="Other">
+                        {filterOptions.dorm_locations.other.map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                ) : (
+                  // Fallback to flat list if grouped structure not available
+                  filterOptions.locations.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 

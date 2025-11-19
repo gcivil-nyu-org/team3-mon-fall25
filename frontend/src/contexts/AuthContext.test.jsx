@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AuthProvider, useAuth } from './AuthContext';
 import { jwtDecode } from 'jwt-decode';
@@ -165,7 +165,9 @@ describe('AuthContext', () => {
             });
 
             const loginButton = screen.getByText('Login');
-            loginButton.click();
+            await act(async () => {
+                loginButton.click();
+            });
 
             await waitFor(() => {
                 expect(localStorage.getItem('access_token')).toBe('access123');
@@ -198,7 +200,9 @@ describe('AuthContext', () => {
             expect(screen.getByTestId('isAuthenticated')).toHaveTextContent('false');
 
             const loginButton = screen.getByText('Login');
-            loginButton.click();
+            await act(async () => {
+                loginButton.click();
+            });
 
             await waitFor(() => {
                 expect(screen.getByTestId('isAuthenticated')).toHaveTextContent('true');
@@ -227,7 +231,9 @@ describe('AuthContext', () => {
             });
 
             const logoutButton = screen.getByText('Logout');
-            logoutButton.click();
+            await act(async () => {
+                logoutButton.click();
+            });
 
             await waitFor(() => {
                 expect(localStorage.getItem('access_token')).toBeNull();
