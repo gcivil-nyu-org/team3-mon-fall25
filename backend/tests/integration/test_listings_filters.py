@@ -5,9 +5,9 @@ from tests.factories.factories import ListingFactory
 @pytest.mark.django_db
 def test_integration_combined_filters(api_client=None):
     # Create data
-    ListingFactory(category="Books", price=8, location="Manhattan")
-    ListingFactory(category="Books", price=30, location="Manhattan")
-    ListingFactory(category="Electronics", price=12, location="Manhattan")
+    ListingFactory(category="Books", price=8, dorm_location="Manhattan")
+    ListingFactory(category="Books", price=30, dorm_location="Manhattan")
+    ListingFactory(category="Electronics", price=12, dorm_location="Manhattan")
 
     from rest_framework.test import APIClient
 
@@ -23,5 +23,6 @@ def test_integration_combined_filters(api_client=None):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert isinstance(data, list)
-    assert len(data) == 1
+    assert isinstance(data, dict)
+    assert "results" in data
+    assert len(data["results"]) == 1

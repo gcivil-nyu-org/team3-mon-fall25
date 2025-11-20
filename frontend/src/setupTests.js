@@ -1,5 +1,68 @@
-import { vi, } from "vitest";
+import { vi } from "vitest";
 import "@testing-library/jest-dom";
+
+// ---------- localStorage mock ----------
+// Ensure localStorage is properly available in test environment
+// jsdom should provide localStorage, but there can be timing issues where
+// modules are loaded before jsdom fully initializes the window object.
+// This ensures localStorage is available even during module initialization.
+if (typeof window !== 'undefined') {
+  // Check if localStorage exists and has the required methods
+  const hasValidLocalStorage =
+    window.localStorage &&
+    typeof window.localStorage.getItem === 'function' &&
+    typeof window.localStorage.setItem === 'function' &&
+    typeof window.localStorage.removeItem === 'function' &&
+    typeof window.localStorage.clear === 'function';
+
+  if (!hasValidLocalStorage) {
+    // Create a mock localStorage only if jsdom's localStorage is not properly set up
+    const storage = {};
+    const localStorageMock = {
+      getItem: (key) => {
+        return storage[key] || null;
+      },
+      setItem: (key, value) => {
+        storage[key] = String(value);
+      },
+      removeItem: (key) => {
+        delete storage[key];
+      },
+      clear: () => {
+        Object.keys(storage).forEach(key => delete storage[key]);
+      },
+      get length() {
+        return Object.keys(storage).length;
+      },
+      key: (index) => {
+        const keys = Object.keys(storage);
+        return keys[index] || null;
+      },
+    };
+
+    // Replace with mock only if needed
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+  }
+}
+
+// Also ensure global.localStorage exists for Node.js context
+if (typeof global !== 'undefined' && !global.localStorage) {
+  // Use window.localStorage if available, otherwise create a simple mock
+  global.localStorage = typeof window !== 'undefined' && window.localStorage
+    ? window.localStorage
+    : {
+      getItem: () => null,
+      setItem: () => { },
+      removeItem: () => { },
+      clear: () => { },
+      get length() { return 0; },
+      key: () => null,
+    };
+}
 
 // ---------- DOM shims your components may rely on ----------
 if (!window.matchMedia) {
@@ -20,9 +83,9 @@ if (!window.matchMedia) {
 
 if (!window.ResizeObserver) {
   class MockResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe() { }
+    unobserve() { }
+    disconnect() { }
   }
   // @ts-ignore
   window.ResizeObserver = MockResizeObserver;
@@ -30,9 +93,9 @@ if (!window.ResizeObserver) {
 
 if (!window.IntersectionObserver) {
   class MockIO {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe() { }
+    unobserve() { }
+    disconnect() { }
     takeRecords() { return []; }
     root = null; rootMargin = ""; thresholds = [0];
   }
@@ -101,12 +164,12 @@ const onceOpen = (sock) =>
   !sock || sock.readyState === MockWS.OPEN
     ? Promise.resolve()
     : new Promise((resolve) => {
-        const prev = sock.onopen;
-        sock.onopen = (ev) => {
-          prev && prev(ev);
-          resolve();
-        };
-      });
+      const prev = sock.onopen;
+      sock.onopen = (ev) => {
+        prev && prev(ev);
+        resolve();
+      };
+    });
 
 globalThis.__WS_TEST__ = {
   MockWS,

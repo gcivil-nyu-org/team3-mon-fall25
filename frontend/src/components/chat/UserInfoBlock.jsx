@@ -34,9 +34,9 @@ export default function UserInfoBlock({
     : null;
   const memberSinceText = memberSinceDate
     ? memberSinceDate.toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      })
+      month: "short",
+      year: "numeric",
+    })
     : "";
 
   return (
@@ -67,6 +67,3 @@ export default function UserInfoBlock({
     </div>
   );
 }
-
-import "./UserInfoBlock.css";
-

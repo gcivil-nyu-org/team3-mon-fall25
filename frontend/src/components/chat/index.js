@@ -1,4 +1,3 @@
-// Export all chat components
 export { default as ChatModal } from "./ChatModal";
 export { default as ConversationList } from "./ConversationList";
 export { default as ConversationItem } from "./ConversationItem";

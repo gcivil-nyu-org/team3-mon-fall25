@@ -19,3 +19,5 @@ You are an expert AI assistant pair-programming on "NYU Marketplace", a course p
 *   **Testing:** We maintain a comprehensive test suite with high code coverage.
 *   **Agile Methodology:** We use Scrum for project management.
 *   **Git Workflow:** We follow a forking workflow. Branches must be named according to the convention: `feature/#issuenum-short-desc`.
+
+When running Python commands, always activate the virtual environment first.
