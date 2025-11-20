@@ -1,6 +1,7 @@
 """
 Tests for chat permissions.
 """
+
 import pytest
 from django.contrib.auth import get_user_model
 
@@ -51,12 +52,8 @@ class TestIsConversationMember:
         user1_request = MockRequest(user1)
         user2_request = MockRequest(user2)
 
-        assert permission.has_object_permission(
-            user1_request, MockView(), conversation
-        )
-        assert permission.has_object_permission(
-            user2_request, MockView(), conversation
-        )
+        assert permission.has_object_permission(user1_request, MockView(), conversation)
+        assert permission.has_object_permission(user2_request, MockView(), conversation)
 
     def test_non_member_no_permission(self, conversation):
         """Test that non-member does not have permission"""
@@ -96,4 +93,3 @@ class TestIsConversationMember:
         assert not permission.has_object_permission(
             anon_request, MockView(), conversation
         )
-

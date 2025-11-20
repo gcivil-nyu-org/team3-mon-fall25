@@ -6,13 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('listings', '0006_rename_location_to_dorm_location'),
+        ("listings", "0006_rename_location_to_dorm_location"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='listing',
-            name='status',
-            field=models.CharField(choices=[('active', 'Active'), ('pending', 'Pending'), ('sold', 'Sold'), ('inactive', 'Inactive')], default='active', max_length=20),
+            model_name="listing",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("active", "Active"),
+                    ("pending", "Pending"),
+                    ("sold", "Sold"),
+                    ("inactive", "Inactive"),
+                ],
+                default="active",
+                max_length=20,
+            ),
         ),
     ]

@@ -1,6 +1,5 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -17,7 +16,6 @@ from apps.transactions.views import (
     IsBuyer,
     IsBuyerOrSeller,
     IsSeller,
-    TransactionUpdateViewSet,
     TransactionViewSet,
 )
 
@@ -169,9 +167,7 @@ class TestTransactionSerializer:
 
     def test_delivery_details_serializer_pickup(self):
         """Test DeliveryDetailsUpdateSerializer for pickup"""
-        serializer = DeliveryDetailsUpdateSerializer(
-            data={"delivery_method": "pickup"}
-        )
+        serializer = DeliveryDetailsUpdateSerializer(data={"delivery_method": "pickup"})
         assert serializer.is_valid()
 
 
@@ -463,9 +459,7 @@ class TestPaymentMethodEndpoint:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_payment_method_creates_system_message(
-        self, authenticated_buyer, listing
-    ):
+    def test_payment_method_creates_system_message(self, authenticated_buyer, listing):
         """Test that updating payment method creates system message"""
         client, buyer = authenticated_buyer
 
@@ -725,7 +719,9 @@ class TestMarkSoldEndpoint:
         transaction.refresh_from_db()
         assert transaction.status == "COMPLETED"
 
-    def test_mark_sold_already_completed(self, authenticated_seller, listing, two_users):
+    def test_mark_sold_already_completed(
+        self, authenticated_seller, listing, two_users
+    ):
         """Test that marking already completed transaction fails"""
         client, seller = authenticated_seller
         buyer, _ = two_users
