@@ -66,7 +66,9 @@ export default function CreateProfile() {
           navigate("/", { replace: true });
           return;
         }
-      } catch (_) {}
+      } catch (statusError) {
+        console.error("Failed to fetch profile status", statusError);
+      }
 
       try {
         const { data } = await getMyProfile();
@@ -87,7 +89,9 @@ export default function CreateProfile() {
         if (alive) setInitializing(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [navigate]);
 
   const onChange = (e) => {

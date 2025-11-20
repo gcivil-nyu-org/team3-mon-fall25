@@ -1,7 +1,6 @@
 import apiClient from "./client";
 import { endpoints } from "./endpoints";
 
-const profileBase = endpoints.profiles.base;
 const profileMe = endpoints.profiles.me;
 
 export const fetchMeStatus = async () => {
