@@ -47,6 +47,7 @@ def spa_view(request):
 urlpatterns = [
     path("api/v1/", include("apps.chat.urls")),
     path("api/v1/", include("apps.users.urls")),
+    path("api/v1/", include("apps.profiles.urls")),
     path("api/v1/", include("apps.listings.urls")),
     path("admin/", admin.site.urls),
     path("", include("apps.common.urls")),  # Health check and other common endpoints

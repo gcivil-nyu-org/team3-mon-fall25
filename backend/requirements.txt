@@ -17,7 +17,6 @@ autobahn==25.10.2
 automat==25.4.16
     # via twisted
 awsebcli==3.25.3
-awsebcli==3.25.3
     # via -r requirements.in
 bcrypt==5.0.0
     # via paramiko
@@ -26,9 +25,7 @@ black==25.11.0
 blessed==1.23.0
     # via awsebcli
 boto3==1.40.72
-boto3==1.40.72
     # via -r requirements.in
-botocore==1.40.72
 botocore==1.40.72
     # via
     #   awsebcli
@@ -85,7 +82,6 @@ django==5.2.8
     #   djangorestframework
     #   djangorestframework-simplejwt
 django-admin-interface==0.31.0
-django-admin-interface==0.31.0
     # via -r requirements.in
 django-colorfield==0.14.0
     # via
@@ -113,7 +109,6 @@ fabric==3.2.2
     # via awsebcli
 factory-boy==3.3.3
     # via -r requirements.in
-faker==38.0.0
 faker==38.0.0
     # via
     #   -r requirements.in
@@ -190,7 +185,6 @@ pyjwt==2.10.1
 pymysql==1.1.2
     # via -r requirements.in
 pynacl==1.6.1
-pynacl==1.6.1
     # via paramiko
 pyopenssl==25.3.0
     # via twisted
@@ -262,10 +256,6 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-asyncio
     #   twisted
-    # via
-    #   pyopenssl
-    #   pytest-asyncio
-    #   twisted
 tzdata==2025.2
     # via
     #   django
@@ -283,6 +273,5 @@ whitenoise==6.11.0
     # via -r requirements.in
 wrapt==2.0.1
     # via deprecated
-zope-interface==8.1
 zope-interface==8.1
     # via twisted

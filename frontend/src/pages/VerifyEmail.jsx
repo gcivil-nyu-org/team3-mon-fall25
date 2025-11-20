@@ -27,6 +27,7 @@ export default function VerifyEmail() {
 
   const inputsRef = useRef([]);
 
+  // If no email is provided (e.g., user hits the URL directly), send them back to login
   useEffect(() => {
     if (locationEmail) {
       setLastAuthEmail(locationEmail);
@@ -106,7 +107,7 @@ export default function VerifyEmail() {
         otp: code,
       });
 
-      // Backend returns tokens + user payload
+      // Backend responds with access_token, refresh_token, and user
       login(
         response.data.access_token,
         response.data.refresh_token,
