@@ -162,10 +162,10 @@ def test_search_profiles_by_full_name(client, profile_factory, nyu_user_factory)
 def test_search_profiles_by_location(client, profile_factory, nyu_user_factory):
     """Test searching profiles by location."""
     c, u1 = client
-    profile_factory(u1, location="Manhattan, NY", username="alice")
+    profile_factory(u1, dorm_location="Manhattan, NY", username="alice")
 
     u2 = nyu_user_factory(2)
-    profile_factory(u2, location="Brooklyn, NY", username="bob")
+    profile_factory(u2, dorm_location="Brooklyn, NY", username="bob")
 
     res = c.get("/api/v1/profiles/", {"search": "Manhattan"})
     assert res.status_code == 200

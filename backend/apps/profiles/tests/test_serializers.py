@@ -254,7 +254,7 @@ def test_profile_serializer_optional_fields(nyu_user_factory):
     profile = serializer.save()
 
     assert profile.phone is None
-    assert profile.location is None
+    assert profile.dorm_location is None
     assert profile.bio is None
 
 

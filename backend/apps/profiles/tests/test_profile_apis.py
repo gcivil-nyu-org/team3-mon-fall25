@@ -220,10 +220,10 @@ def test_filter_profiles_by_location(
 ):
     """Test filtering profiles by location."""
     c, user = client_and_user
-    profile_factory(user, location="Manhattan, NY")
+    profile_factory(user, dorm_location="Manhattan, NY")
 
     user2 = nyu_user_factory(2)
-    profile_factory(user2, location="Brooklyn, NY")
+    profile_factory(user2, dorm_location="Brooklyn, NY")
 
     res = c.get("/api/v1/profiles/", {"search": "Manhattan"})
     assert res.status_code == 200

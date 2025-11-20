@@ -13,13 +13,16 @@ def test_profile_creation_with_required_fields():
     """Test creating a profile with all required fields."""
     user = User.objects.create_user(email="test@nyu.edu", password="pass123")
     profile = Profile.objects.create(
-        user=user, full_name="Test User", username="testuser", location="New York, NY"
+        user=user,
+        full_name="Test User",
+        username="testuser",
+        dorm_location="New York, NY",
     )
 
     assert profile.user == user
     assert profile.full_name == "Test User"
     assert profile.username == "testuser"
-    assert profile.location == "New York, NY"
+    assert profile.dorm_location == "New York, NY"
     assert profile.bio is None
     assert profile.avatar_url is None
 
@@ -63,7 +66,7 @@ def test_profile_optional_fields():
     )
 
     assert profile.phone is None
-    assert profile.location is None
+    assert profile.dorm_location is None
     assert profile.bio is None
     assert profile.avatar_url is None
 
@@ -76,13 +79,13 @@ def test_profile_with_all_fields():
         full_name="Full User",
         username="fulluser",
         phone="+12125551234",
-        location="Brooklyn, NY",
+        dorm_location="Brooklyn, NY",
         bio="This is a test bio",
         avatar_url="https://example.com/avatar.jpg",
     )
 
     assert profile.phone == "+12125551234"
-    assert profile.location == "Brooklyn, NY"
+    assert profile.dorm_location == "Brooklyn, NY"
     assert profile.bio == "This is a test bio"
     assert profile.avatar_url == "https://example.com/avatar.jpg"
 
