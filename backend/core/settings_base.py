@@ -130,10 +130,14 @@ REST_FRAMEWORK = {
 
 # JWT settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.environ.get("JWT_ACCESS_MINUTES", 120))  # 2 hours
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=int(os.environ.get("JWT_REFRESH_DAYS", 7))
+    ),
+    "ROTATE_REFRESH_TOKENS": os.environ.get("JWT_ROTATE", "False").lower() == "true",
+    "BLACKLIST_AFTER_ROTATION": os.environ.get("JWT_BLACKLIST", "False").lower() == "true",
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
