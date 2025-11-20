@@ -52,18 +52,56 @@ export default function Login() {
                 console.log('Welcome! Your account has been created.');
             }
 
-            // Redirect to home
-            navigate('/');
-        } catch (err) {
-            setError(
-                err.response?.data?.error ||
-                err.response?.data?.email?.[0] ||
-                'Login failed. Please try again.'
-            );
-        } finally {
-            setLoading(false);
+      // Redirect to home
+      navigate('/');
+    } catch (err) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+
+      // New user: automatically register then redirect to OTP verification
+      if (status === 404) {
+        try {
+          await apiClient.post(endpoints.auth.register, {
+            email,
+            password,
+          });
+
+          navigate('/verify-email', { state: { email } });
+          return;
+        } catch (regErr) {
+          const regData = regErr.response?.data;
+          setError(
+            regData?.error ||
+              regData?.email?.[0] ||
+              'Registration failed. Please try again.'
+          );
+          return;
         }
-    };
+      }
+
+      // Existing unverified user: trigger OTP flow and redirect to OTP page
+      if (status === 403 && data?.requires_verification) {
+        try {
+          await apiClient.post(endpoints.auth.sendOtp, { email });
+        } catch (sendErr) {
+          console.error('Failed to send OTP:', sendErr);
+          // We still send the user to OTP page; error message will show there.
+        }
+
+        navigate('/verify-email', { state: { email } });
+        return;
+      }
+
+      // Fallback: show login error as before
+      setError(
+        data?.error ||
+          data?.email?.[0] ||
+          'Login failed. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
     return (
         <div

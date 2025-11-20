@@ -51,6 +51,14 @@ def send_otp_email(email: str, otp: str, request=None) -> bool:
     default_sender = settings.EMAIL_HOST_USER or "noreply@nyu-marketplace.com"
     from_email = getattr(settings, "OTP_EMAIL_SENDER", default_sender)
 
+    logger.info(
+        "[OTP EMAIL] settings=%s backend=%s from=%s to=%s",
+        getattr(settings, "SETTINGS_MODULE", "unknown"),
+        settings.EMAIL_BACKEND,
+        from_email,
+        email,
+    )
+
     # Prepare context for email template
     context = {
         "otp": otp,
@@ -105,11 +113,15 @@ If you didn't request this code, please ignore this email.
         return False
 
 
+def _normalized_email(email: str) -> str:
+    return email.lower().strip()
+
+
 def store_otp(email: str, otp: str) -> None:
     """
     Store hashed OTP in cache with expiration
     """
-    cache_key = f"otp_{email}"
+    cache_key = f"otp_{_normalized_email(email)}"
     hashed_otp = hash_otp(otp)
     cache.set(cache_key, hashed_otp, timeout=OTP_EXPIRATION_MINUTES * 60)
 
@@ -119,7 +131,7 @@ def get_otp(email: str) -> str:
     Retrieve OTP from cache
     Returns None if OTP doesn't exist or has expired
     """
-    cache_key = f"otp_{email}"
+    cache_key = f"otp_{_normalized_email(email)}"
     return cache.get(cache_key)
 
 
@@ -193,5 +205,5 @@ def delete_otp(email: str) -> None:
     """
     Delete OTP from cache (useful for cleanup)
     """
-    cache_key = f"otp_{email}"
+    cache_key = f"otp_{_normalized_email(email)}"
     cache.delete(cache_key)

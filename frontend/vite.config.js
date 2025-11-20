@@ -35,6 +35,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'], // text for CI logs, lcov for Coveralls
       exclude: [
         'node_modules/',
+        'assets/*',
         'src/setupTests.js',
         'src/api/**',
         '**/*.css',
