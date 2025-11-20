@@ -126,7 +126,9 @@ class ProfileCreateSerializer(serializers.ModelSerializer):
                 except Exception as e:
                     # Rollback profile creation if avatar upload fails
                     profile.delete()
-                    raise serializers.ValidationError(f"Failed to upload avatar: {str(e)}")
+                    raise serializers.ValidationError(
+                        f"Failed to upload avatar: {str(e)}"
+                    )
 
             return profile
         except serializers.ValidationError:

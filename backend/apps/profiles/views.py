@@ -104,7 +104,7 @@ class ProfileViewSet(
         if instance.avatar_url:
             s3_service.delete_image(instance.avatar_url)
 
-        # Delete the user (this will cascade delete the profile due to OneToOne relationship)
+        # Delete the user (cascades to profile due to OneToOne relationship)
         user.delete()
 
     @action(detail=False, methods=["get", "put", "patch", "delete"], url_path="me")
