@@ -36,6 +36,7 @@ describe('VerifyEmail page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocation = { state: { email: 'user@nyu.edu' } };
+    sessionStorage.clear();
   });
 
   it('redirects to login if email is missing in location state', async () => {
@@ -94,7 +95,7 @@ describe('VerifyEmail page', () => {
         'refresh',
         { id: 1, email: 'user@nyu.edu', is_email_verified: true }
       );
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/create-profile', { replace: true });
     });
   });
 

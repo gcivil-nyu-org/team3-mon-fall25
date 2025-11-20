@@ -5,6 +5,9 @@ import { useAuth } from "../contexts/AuthContext";
 import apiClient from "../api/client";
 import { endpoints } from "../api/endpoints";
 import "./VerifyEmail.css";
+import { ROUTES } from "../constants/routes";
+import { redirectAfterAuth } from "../utils/postAuthRedirect";
+import { getLastAuthEmail, setLastAuthEmail } from "../utils/authEmailStorage";
 
 const OTP_LENGTH = 6;
 
@@ -13,8 +16,8 @@ export default function VerifyEmail() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Login page should call navigate("/verify-email", { state: { email } })
-  const email = location.state?.email || "";
+  const locationEmail = location.state?.email;
+  const email = locationEmail || getLastAuthEmail();
 
   const [otpValues, setOtpValues] = useState(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState("");
@@ -26,10 +29,13 @@ export default function VerifyEmail() {
 
   // If no email is provided (e.g., user hits the URL directly), send them back to login
   useEffect(() => {
-    if (!email) {
-      navigate("/login", { replace: true });
+    if (locationEmail) {
+      setLastAuthEmail(locationEmail);
     }
-  }, [email, navigate]);
+    if (!email) {
+      navigate(ROUTES.LOGIN, { replace: true });
+    }
+  }, [email, locationEmail, navigate]);
 
   const handleChange = (index, value) => {
     const numericValue = value.replace(/\D/g, "");
@@ -108,8 +114,10 @@ export default function VerifyEmail() {
         response.data.user
       );
 
-      // Verification succeeded → send the user back to the home page (or desired route)
-      navigate("/", { replace: true });
+      // Verification success → send user through completion redirect
+      await redirectAfterAuth(navigate, response.data?.user, ROUTES.COMPLETE_PROFILE, {
+        forceCompletePage: true,
+      });
     } catch (err) {
       const data = err.response?.data;
       setError(
@@ -153,7 +161,7 @@ export default function VerifyEmail() {
   };
 
   const handleBackToLogin = () => {
-    navigate("/login");
+    navigate(ROUTES.LOGIN);
   };
 
   return (

@@ -7,6 +7,10 @@ export const endpoints = {
     resendOtp: '/auth/resend-otp/',
     me: '/auth/me/',
   },
+  profiles: {
+    base: '/profiles/',
+    me: '/profiles/me/',
+  },
   listings: '/listings/',
   products: '/products/',
   users: '/users/',

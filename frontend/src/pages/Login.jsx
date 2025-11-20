@@ -3,8 +3,9 @@ import {useNavigate} from 'react-router-dom';
 import {useAuth} from '../contexts/AuthContext';
 import apiClient from '../api/client';
 import {endpoints} from '../api/endpoints';
-
-
+import {redirectAfterAuth} from '../utils/postAuthRedirect';
+import {ROUTES} from '../constants/routes';
+import {setLastAuthEmail} from '../utils/authEmailStorage';
 import {useLocation} from 'react-router-dom';
 
 
@@ -35,6 +36,7 @@ export default function Login() {
 
         setLoading(true);
         try {
+            setLastAuthEmail(email);
             const response = await apiClient.post(endpoints.auth.login, {
                 email,
                 password,
@@ -52,8 +54,7 @@ export default function Login() {
                 console.log('Welcome! Your account has been created.');
             }
 
-      // Redirect to home
-      navigate('/');
+            await redirectAfterAuth(navigate, response.data?.user);
     } catch (err) {
       const status = err.response?.status;
       const data = err.response?.data;
@@ -66,7 +67,7 @@ export default function Login() {
             password,
           });
 
-          navigate('/verify-email', { state: { email } });
+          navigate(ROUTES.VERIFY_EMAIL, { state: { email } });
           return;
         } catch (regErr) {
           const regData = regErr.response?.data;
@@ -88,7 +89,7 @@ export default function Login() {
           // We still send the user to OTP page; error message will show there.
         }
 
-        navigate('/verify-email', { state: { email } });
+        navigate(ROUTES.VERIFY_EMAIL, { state: { email } });
         return;
       }
 
