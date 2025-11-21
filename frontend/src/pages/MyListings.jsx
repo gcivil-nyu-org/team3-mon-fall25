@@ -30,6 +30,8 @@ export default function MyListings() {
             location: l.dorm_location || l.location,
             description: l.description,
             imageUrl: l.primary_image,
+            createdAt: l.created_at, 
+            viewCount: l.view_count,
           }));
           setListings(mapped);
         }
@@ -70,6 +72,8 @@ export default function MyListings() {
         location: l.dorm_location || l.location,
         description: l.description,
         imageUrl: l.primary_image,
+        createdAt: l.created_at, 
+        viewCount: l.view_count,
       }));
       setListings(mapped);
     } catch (e) {
