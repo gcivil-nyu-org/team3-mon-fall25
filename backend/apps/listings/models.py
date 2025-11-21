@@ -4,7 +4,12 @@ from django.db import models
 
 
 class Listing(models.Model):
-    STATUS_CHOICES = [("active", "Active"), ("sold", "Sold"), ("inactive", "Inactive")]
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("pending", "Pending"),
+        ("sold", "Sold"),
+        ("inactive", "Inactive"),
+    ]
 
     listing_id = models.AutoField(primary_key=True)
     user = models.ForeignKey(

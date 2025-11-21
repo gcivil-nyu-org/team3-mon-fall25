@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
@@ -95,11 +97,44 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
         limit = int(request.query_params.get("limit", 50))
 
         if before:
-            qs = qs.filter(created_at__lt=before)
+            # before can be timestamp or message_id
+            try:
+                # Try parsing as UUID (message_id)
+                uuid.UUID(before)
+                # If successful, it's a message_id
+                try:
+                    after_msg = Message.objects.get(id=before, conversation=conv)
+                    qs = qs.filter(created_at__lt=after_msg.created_at)
+                except Message.DoesNotExist:
+                    # Invalid message_id, treat as timestamp
+                    qs = qs.filter(created_at__lt=before)
+            except (ValueError, TypeError):
+                # Not a UUID, treat as timestamp
+                qs = qs.filter(created_at__lt=before)
+
         if after:
-            qs = Message.objects.filter(
-                conversation=conv, created_at__gt=after
-            ).order_by("created_at")
+            # after can be timestamp or message_id (for real-time polling)
+            try:
+                # Try parsing as UUID (message_id)
+                uuid.UUID(after)
+                # If successful, it's a message_id - get messages after this one
+                try:
+                    after_msg = Message.objects.get(id=after, conversation=conv)
+                    qs = Message.objects.filter(
+                        conversation=conv, created_at__gt=after_msg.created_at
+                    ).order_by("created_at")
+                except Message.DoesNotExist:
+                    # Invalid message_id, return empty
+                    return Response({"results": [], "next_before": None})
+            except ValueError:
+                # Not a UUID, treat as timestamp (backward compatibility)
+                # URL decode the timestamp if needed (e.g., + becomes space)
+                from urllib.parse import unquote
+
+                after_decoded = unquote(after.replace(" ", "+"))
+                qs = Message.objects.filter(
+                    conversation=conv, created_at__gt=after_decoded
+                ).order_by("created_at")
 
         page = list(qs[:limit])
         data = MessageSerializer(page, many=True).data

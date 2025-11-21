@@ -35,6 +35,9 @@ METHOD  AUTH  API Endpoints                            Function
               Fields: id, conversation, sender, text, created_at
               Query: limit, before, after
               Returns: next_before
+              Note: after parameter supports both timestamp (backward compatibility)
+              and message_id (UUID) for real-time polling. Use after=<last_message_id>
+              to get new messages since the last message you received.
 
 5. POST   Y*  /api/v1/chat/conversations/<id>/send
               send a message (REST optional)
