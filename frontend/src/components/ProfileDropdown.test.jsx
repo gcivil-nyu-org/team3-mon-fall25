@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import ProfileDropdown from './ProfileDropdown';
+import * as profilesApi from '../api/profiles.js';
+
+// Mock the APIs
+vi.mock('../api/profiles.js');
 
 // Mock the AuthContext
 vi.mock('../contexts/AuthContext', () => ({
@@ -34,12 +38,22 @@ describe('ProfileDropdown', () => {
         netid: 'test123',
     };
 
+    const mockProfile = {
+        profile_id: 1,
+        user_id: 1,
+        full_name: 'Alex Morgan',
+        username: 'alex_morgan',
+        email: 'test@nyu.edu',
+        avatar_url: null,
+    };
+
     beforeEach(() => {
         vi.clearAllMocks();
         useAuth.mockReturnValue({
             user: mockUser,
             logout: mockLogout,
         });
+        profilesApi.getMyProfile.mockResolvedValue({ data: mockProfile });
     });
 
     describe('Rendering', () => {
@@ -50,18 +64,31 @@ describe('ProfileDropdown', () => {
             expect(avatar).toHaveClass('profile-avatar');
         });
 
-        it('displays user initials in avatar', () => {
+        it('displays user initials from profile full name', async () => {
             renderWithRouter(<ProfileDropdown />);
-            expect(screen.getByText('T')).toBeInTheDocument(); // First letter of email
+            await waitFor(() => {
+                expect(screen.getByText('A')).toBeInTheDocument(); // First letter of "Alex Morgan"
+            });
         });
 
-        it('displays default initial when user has no email', () => {
+        it('displays initials from email when profile has no full_name', async () => {
+            profilesApi.getMyProfile.mockResolvedValue({ data: { ...mockProfile, full_name: null } });
+            renderWithRouter(<ProfileDropdown />);
+            await waitFor(() => {
+                expect(screen.getByText('T')).toBeInTheDocument(); // First letter of email
+            });
+        });
+
+        it('displays default initial when no profile or email', async () => {
+            profilesApi.getMyProfile.mockRejectedValue(new Error('No profile'));
             useAuth.mockReturnValue({
                 user: {},
                 logout: mockLogout,
             });
             renderWithRouter(<ProfileDropdown />);
-            expect(screen.getByText('U')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('U')).toBeInTheDocument();
+            });
         });
 
         it('does not show dropdown menu initially', () => {
@@ -114,31 +141,63 @@ describe('ProfileDropdown', () => {
     });
 
     describe('Dropdown Content', () => {
-        beforeEach(async () => {
+        it('displays user info section with name from profile', async () => {
             const user = userEvent.setup();
             renderWithRouter(<ProfileDropdown />);
             const avatar = screen.getByRole('button');
             await user.click(avatar);
-        });
 
-        it('displays user info section with email', () => {
-            expect(screen.getByText('Alex Morgan')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('Alex Morgan')).toBeInTheDocument();
+            });
             expect(screen.getByText('test@nyu.edu')).toBeInTheDocument();
         });
 
-        it('displays user avatar in dropdown', () => {
-            const avatars = screen.getAllByText('T');
-            expect(avatars.length).toBeGreaterThan(1); // One in button, one in dropdown
+        it('displays user avatar in dropdown', async () => {
+            const user = userEvent.setup();
+            renderWithRouter(<ProfileDropdown />);
+            const avatar = screen.getByRole('button');
+            await user.click(avatar);
+
+            await waitFor(() => {
+                const avatars = screen.getAllByText('A');
+                expect(avatars.length).toBeGreaterThan(1); // One in button, one in dropdown
+            });
         });
 
-        it('displays menu items with correct text', () => {
+        it('displays menu items with correct text', async () => {
+            const user = userEvent.setup();
+            renderWithRouter(<ProfileDropdown />);
+            const avatar = screen.getByRole('button');
+            await user.click(avatar);
+
             expect(screen.getByText('My Profile')).toBeInTheDocument();
             expect(screen.getByText('Logout')).toBeInTheDocument();
         });
 
-        it('displays divider between sections', () => {
+        it('displays divider between sections', async () => {
+            const user = userEvent.setup();
+            renderWithRouter(<ProfileDropdown />);
+            const avatar = screen.getByRole('button');
+            await user.click(avatar);
+
             const dropdown = screen.getByText('My Profile').closest('.dropdown-menu');
             expect(dropdown.querySelector('.dropdown-divider')).toBeInTheDocument();
+        });
+
+        it('displays avatar image when profile has avatar_url', async () => {
+            profilesApi.getMyProfile.mockResolvedValue({
+                data: { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' }
+            });
+            const user = userEvent.setup();
+            renderWithRouter(<ProfileDropdown />);
+            const avatar = screen.getByRole('button');
+            await user.click(avatar);
+
+            await waitFor(() => {
+                const avatarImgs = screen.getAllByAltText('Avatar');
+                expect(avatarImgs.length).toBeGreaterThan(0);
+            });
         });
     });
 
@@ -243,17 +302,21 @@ describe('ProfileDropdown', () => {
     });
 
     describe('Edge Cases', () => {
-        it('handles user with netid instead of email', () => {
+        it('handles user with netid instead of email', async () => {
+            profilesApi.getMyProfile.mockRejectedValue(new Error('No profile'));
             useAuth.mockReturnValue({
                 user: { netid: 'abc123' },
                 logout: mockLogout,
             });
             renderWithRouter(<ProfileDropdown />);
 
-            expect(screen.getByText('U')).toBeInTheDocument(); // Default since no email
+            await waitFor(() => {
+                expect(screen.getByText('U')).toBeInTheDocument(); // Default since no email
+            });
         });
 
-        it('handles null user gracefully', () => {
+        it('handles null user gracefully', async () => {
+            profilesApi.getMyProfile.mockRejectedValue(new Error('No profile'));
             useAuth.mockReturnValue({
                 user: null,
                 logout: mockLogout,
@@ -262,30 +325,32 @@ describe('ProfileDropdown', () => {
 
             const avatar = screen.getByRole('button');
             expect(avatar).toBeInTheDocument();
-            expect(screen.getByText('U')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('U')).toBeInTheDocument();
+            });
         });
 
-        it('displays netid when email is not available', async () => {
+        it('displays email from profile in dropdown', async () => {
             const user = userEvent.setup();
-            useAuth.mockReturnValue({
-                user: { netid: 'testuser123' },
-                logout: mockLogout,
-            });
             renderWithRouter(<ProfileDropdown />);
 
             const avatar = screen.getByRole('button');
             await user.click(avatar);
 
-            // Should show netid in email field
-            expect(screen.getByText('testuser123')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('test@nyu.edu')).toBeInTheDocument();
+            });
         });
 
-        it('displays default email when neither email nor netid is available', async () => {
-            const user = userEvent.setup();
+        it('displays default email when no profile email available', async () => {
+            profilesApi.getMyProfile.mockResolvedValue({
+                data: { ...mockProfile, email: null }
+            });
             useAuth.mockReturnValue({
                 user: {},
                 logout: mockLogout,
             });
+            const user = userEvent.setup();
             renderWithRouter(<ProfileDropdown />);
 
             const avatar = screen.getByRole('button');
@@ -293,6 +358,23 @@ describe('ProfileDropdown', () => {
 
             // Should show default email
             expect(screen.getByText('user@nyu.edu')).toBeInTheDocument();
+        });
+    });
+
+    describe('Profile Update Event', () => {
+        it('refreshes profile when profileUpdated event is dispatched', async () => {
+            renderWithRouter(<ProfileDropdown />);
+
+            await waitFor(() => {
+                expect(profilesApi.getMyProfile).toHaveBeenCalledTimes(1);
+            });
+
+            // Dispatch profileUpdated event
+            window.dispatchEvent(new Event('profileUpdated'));
+
+            await waitFor(() => {
+                expect(profilesApi.getMyProfile).toHaveBeenCalledTimes(2);
+            });
         });
     });
 });

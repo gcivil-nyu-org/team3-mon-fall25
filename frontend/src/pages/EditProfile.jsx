@@ -1,20 +1,35 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { FaTimes, FaCamera } from "react-icons/fa";
+import { updateMyProfile, createProfile } from "../api/profiles.js";
+import { FaTimes, FaCamera, FaTrash, FaPlus } from "react-icons/fa";
 import "./EditProfile.css";
 
-export default function EditProfile({ onClose }) {
+// Helper function to format file size
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+export default function EditProfile({ onClose, profile }) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: "Alex Morgan",
-    username: "current_user",
-    email: user?.email || "alex.morgan@nyu.edu",
-    phone: "(555) 123-4567",
-    dorm: "Founders Hall",
-    bio: "NYU student selling items I no longer need. Always happy to negotiate prices!",
+    fullName: profile?.full_name || "",
+    username: profile?.username || "",
+    email: profile?.email || user?.email || "",
+    phone: profile?.phone || "",
+    location: profile?.location || "",
+    bio: profile?.bio || "",
   });
 
   const [charCount, setCharCount] = useState(formData.bio.length);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,25 +44,92 @@ export default function EditProfile({ onClose }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would normally make an API call to update the profile
-    console.log("Updating profile with:", formData);
-    // Close the modal after saving
-    onClose();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = new FormData();
+      payload.append("full_name", formData.fullName);
+      payload.append("username", formData.username);
+      if (formData.phone) payload.append("phone", formData.phone);
+      if (formData.location) payload.append("location", formData.location);
+      if (formData.bio) payload.append("bio", formData.bio);
+
+      if (avatarFile) {
+        payload.append("new_avatar", avatarFile);
+      } else if (removeAvatar) {
+        payload.append("remove_avatar", "true");
+      }
+
+      if (profile) {
+        // Update existing profile
+        await updateMyProfile(payload, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        // Create new profile
+        await createProfile(payload);
+      }
+
+      // Dispatch event to notify other components (like ProfileDropdown) to refresh
+      window.dispatchEvent(new Event('profileUpdated'));
+
+      // Close modal and trigger refresh
+      onClose(true);
+    } catch (err) {
+      const errorData = err.response?.data;
+      if (errorData && typeof errorData === "object") {
+        // Format validation errors
+        const messages = Object.entries(errorData)
+          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(", ") : errors}`)
+          .join("\n");
+        setError(messages);
+      } else {
+        setError(err.response?.data?.detail || err.message || "Failed to save profile");
+      }
+      console.error("Failed to save profile:", err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleOverlayClick = (e) => {
     // Close modal when clicking on the overlay (not the modal content)
     if (e.target.className === "modal-overlay") {
-      onClose();
+      onClose(false);
     }
   };
 
   const handleChangePhoto = () => {
-    // In a real implementation, this would open a file picker
-    console.log("Change photo clicked");
-    alert("Photo upload functionality would be implemented here");
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/gif,image/webp";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+          setError("Image must be less than 10MB");
+          return;
+        }
+        setAvatarFile(file);
+        setRemoveAvatar(false);
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAvatarPreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  };
+
+  const handleRemovePhoto = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setRemoveAvatar(true);
   };
 
   // Get initials for avatar
@@ -69,28 +151,87 @@ export default function EditProfile({ onClose }) {
               Update your profile information. Changes will be visible to other users.
             </p>
           </div>
-          <button className="close-button" onClick={onClose}>
+          <button className="close-button" onClick={() => onClose(false)}>
             <FaTimes />
           </button>
         </div>
 
         {/* Modal Content */}
         <form onSubmit={handleSubmit} className="modal-form">
+          {/* Error Display */}
+          {error && (
+            <div className="error-message" style={{ color: "red", marginBottom: "1rem", whiteSpace: "pre-line" }}>
+              {error}
+            </div>
+          )}
+
           {/* Profile Photo Section */}
           <div className="photo-section">
             <div className="profile-photo-large">
-              {getInitials()}
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+              ) : (
+                getInitials()
+              )}
             </div>
-            <button
-              type="button"
-              className="change-photo-button"
-              onClick={handleChangePhoto}
-            >
-              <FaCamera />
-              <span>Change Photo</span>
-            </button>
+
+            {/* Photo action buttons */}
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+              {avatarPreview ? (
+                <>
+                  <button
+                    type="button"
+                    className="change-photo-button"
+                    onClick={handleChangePhoto}
+                    style={{ flex: "1", minWidth: "120px" }}
+                  >
+                    <FaCamera />
+                    <span>Change Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="change-photo-button"
+                    onClick={handleRemovePhoto}
+                    style={{ flex: "1", minWidth: "120px", background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}
+                  >
+                    <FaTrash />
+                    <span>Remove Photo</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="change-photo-button"
+                  onClick={handleChangePhoto}
+                >
+                  <FaPlus />
+                  <span>Add Photo</span>
+                </button>
+              )}
+            </div>
+
+            {/* File size info */}
+            {avatarFile && (
+              <div style={{
+                marginTop: "8px",
+                padding: "8px 12px",
+                background: avatarFile.size > 8 * 1024 * 1024 ? "#fef2f2" : "#f9fafb",
+                borderRadius: "6px",
+                fontSize: "12px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                color: avatarFile.size > 8 * 1024 * 1024 ? "#dc2626" : "#6b7280",
+              }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "150px" }}>
+                  {avatarFile.name}
+                </span>
+                <span style={{ fontWeight: 600 }}>{formatFileSize(avatarFile.size)}</span>
+              </div>
+            )}
+
             <p className="photo-helper-text">
-              Recommended: Square image, at least 400x400px
+              Recommended: Square image, at least 400x400px. Max 10MB.
             </p>
           </div>
 
@@ -161,28 +302,21 @@ export default function EditProfile({ onClose }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="dorm" className="form-label">
-              Dorm/Residence <span className="required">*</span>
+            <label htmlFor="location" className="form-label">
+              Location
             </label>
-            <select
-              id="dorm"
-              name="dorm"
-              value={formData.dorm}
+            <input
+              type="text"
+              id="location"
+              name="location"
+              value={formData.location}
               onChange={handleChange}
               className="form-input"
-              required
-            >
-              <option value="">Select a dorm</option>
-              <option value="Founders Hall">Founders Hall</option>
-              <option value="Hayden Hall">Hayden Hall</option>
-              <option value="Weinstein Hall">Weinstein Hall</option>
-              <option value="Brittany Hall">Brittany Hall</option>
-              <option value="Rubin Hall">Rubin Hall</option>
-              <option value="Third North">Third North</option>
-              <option value="U-Hall">U-Hall</option>
-              <option value="Palladium">Palladium</option>
-              <option value="Other">Other</option>
-            </select>
+              placeholder="e.g., Manhattan, NY or Founders Hall"
+            />
+            <p className="helper-text">
+              Your general location or dorm/residence
+            </p>
           </div>
 
           <div className="form-group">
@@ -207,12 +341,13 @@ export default function EditProfile({ onClose }) {
             <button
               type="button"
               className="cancel-button"
-              onClick={onClose}
+              onClick={() => onClose(false)}
+              disabled={saving}
             >
               Cancel
             </button>
-            <button type="submit" className="save-button">
-              Save Changes
+            <button type="submit" className="save-button" disabled={saving}>
+              {saving ? "Saving..." : (profile ? "Save Changes" : "Create Profile")}
             </button>
           </div>
         </form>
