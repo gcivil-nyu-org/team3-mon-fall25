@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getListing, updateListing } from "../api/listings";
 import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
 import { CATEGORIES, LOCATIONS } from "../constants/filterOptions";
+import ListingDetailContent from "../components/ListingDetailContent";
 
 const EditListing = () => {
   const { id } = useParams();
@@ -20,6 +21,9 @@ const EditListing = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [previewListing, setPreviewListing] = useState(null);
+  const [originalListing, setOriginalListing] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   // Use hardcoded filter options
   const filterOptions = { categories: CATEGORIES, locations: LOCATIONS };
 
@@ -37,6 +41,8 @@ const EditListing = () => {
         setCategory(data.category || "");
         setLocation(data.dorm_location || data.location || "");
         setExistingImages(data.images || []);
+        setOriginalListing(data);
+        setPreviewListing(data);
       } catch (error) {
         console.error("Failed to fetch listing:", error);
         setError("Failed to load listing. Please try again.");
@@ -47,6 +53,16 @@ const EditListing = () => {
 
     fetchListingData();
   }, [id]);
+
+  // Handle window resize for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleNewImagesChange = (e) => {
     const files = Array.from(e.target.files);
@@ -76,6 +92,68 @@ const EditListing = () => {
     setRemoveImageIds((prev) =>
       prev.includes(imageId) ? prev.filter((id) => id !== imageId) : [...prev, imageId]
     );
+  };
+
+  // Store object URLs for cleanup
+  const [previewObjectUrls, setPreviewObjectUrls] = useState([]);
+
+  // Cleanup object URLs when component unmounts or images change
+  useEffect(() => {
+    return () => {
+      previewObjectUrls.forEach((url) => {
+        if (url && url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [previewObjectUrls]);
+
+  // Build preview listing object from form state
+  const buildPreviewListing = () => {
+    if (!originalListing) return null;
+
+    // Filter out removed images
+    const remainingExistingImages = existingImages.filter(
+      (img) => !removeImageIds.includes(img.image_id)
+    );
+
+    // Cleanup old object URLs
+    previewObjectUrls.forEach((url) => {
+      if (url && url.startsWith("blob:")) {
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    // Convert new File objects to preview URLs
+    const newImagePreviews = newImages.map((file, index) => ({
+      image_id: `preview-${index}`,
+      image_url: URL.createObjectURL(file),
+    }));
+
+    // Store new object URLs for cleanup
+    setPreviewObjectUrls(newImagePreviews.map((img) => img.image_url));
+
+    // Combine existing and new images
+    const allImages = [...remainingExistingImages, ...newImagePreviews];
+
+    return {
+      ...originalListing,
+      title: title.trim() || originalListing.title,
+      description: description.trim() || originalListing.description,
+      price: price ? parseFloat(price) : originalListing.price,
+      category: category || originalListing.category,
+      dorm_location: location || originalListing.dorm_location || originalListing.location,
+      location: location || originalListing.dorm_location || originalListing.location,
+      images: allImages,
+    };
+  };
+
+  // Update preview when Save Changes is clicked
+  const updatePreview = () => {
+    const preview = buildPreviewListing();
+    if (preview) {
+      setPreviewListing(preview);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -175,245 +253,66 @@ const EditListing = () => {
     <div style={{ background: "#F5F5F5", minHeight: "calc(100vh - 64px)", padding: "60px 24px" }}>
       <div
         style={{
-          maxWidth: 600,
+          maxWidth: 1200,
           margin: "0 auto",
-          background: "#fff",
-          borderRadius: 16,
-          padding: 40,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "3fr 7fr",
+          gap: 32,
+          alignItems: "start",
         }}
       >
-        <h1
+        {/* Left Column - Edit Form */}
+        <div
           style={{
-            fontSize: 32,
-            fontWeight: 700,
-            marginBottom: 8,
-            color: "#111",
-            textAlign: "center",
+            background: "#fff",
+            borderRadius: 16,
+            padding: 40,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           }}
         >
-          Edit Listing
-        </h1>
-        <p
-          style={{
-            fontSize: 15,
-            color: "#6b7280",
-            textAlign: "center",
-            marginBottom: 32,
-          }}
-        >
-          Update your listing details
-        </p>
-
-        {error && (
-          <div
+          <h1
             style={{
-              background: "#FEE2E2",
-              border: "1px solid #FCA5A5",
-              color: "#991B1B",
-              padding: 12,
-              borderRadius: 8,
-              marginBottom: 20,
-              fontSize: 14,
+              fontSize: 32,
+              fontWeight: 700,
+              marginBottom: 8,
+              color: "#111",
+              textAlign: "center",
             }}
           >
-            {error}
-          </div>
-        )}
+            Edit Listing
+          </h1>
+          <p
+            style={{
+              fontSize: 15,
+              color: "#6b7280",
+              textAlign: "center",
+              marginBottom: 32,
+            }}
+          >
+            Update your listing details
+          </p>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Title */}
-          <div>
-            <label
-              htmlFor="title"
+          {error && (
+            <div
               style={{
-                display: "block",
-                marginBottom: 6,
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#374151",
-              }}
-            >
-              Title *
-            </label>
-            <input
-              id="title"
-              type="text"
-              placeholder="e.g., MacBook Pro 16'' 2021"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={saving}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
+                background: "#FEE2E2",
+                border: "1px solid #FCA5A5",
+                color: "#991B1B",
+                padding: 12,
                 borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                fontSize: 15,
-                outline: "none",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#56018D")}
-              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-            />
-          </div>
-
-          {/* Category */}
-          <div>
-            <label
-              htmlFor="category"
-              style={{
-                display: "block",
-                marginBottom: 6,
+                marginBottom: 20,
                 fontSize: 14,
-                fontWeight: 600,
-                color: "#374151",
               }}
             >
-              Category *
-            </label>
-            <select
-              id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              disabled={saving}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                fontSize: 15,
-                outline: "none",
-                background: "#fff",
-                cursor: "pointer",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#56018D")}
-              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-            >
-              <option value="">Select a category</option>
-              {filterOptions.categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
+              {error}
+            </div>
+          )}
 
-          {/* Location/Dorm */}
-          <div>
-            <label
-              htmlFor="location"
-              style={{
-                display: "block",
-                marginBottom: 6,
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#374151",
-              }}
-            >
-              Location (Dorm) *
-            </label>
-            <select
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              disabled={saving}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                fontSize: 15,
-                outline: "none",
-                background: "#fff",
-                cursor: "pointer",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#56018D")}
-              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-            >
-              <option value="">Select your location</option>
-              {filterOptions.locations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="description"
-              style={{
-                display: "block",
-                marginBottom: 6,
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#374151",
-              }}
-            >
-              Description *
-            </label>
-            <textarea
-              id="description"
-              placeholder="Describe your item in detail..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={saving}
-              rows={5}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                fontSize: 15,
-                outline: "none",
-                resize: "vertical",
-                fontFamily: "inherit",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#56018D")}
-              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-            />
-          </div>
-
-          {/* Price */}
-          <div>
-            <label
-              htmlFor="price"
-              style={{
-                display: "block",
-                marginBottom: 6,
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#374151",
-              }}
-            >
-              Price ($) *
-            </label>
-            <input
-              id="price"
-              type="number"
-              placeholder="0.00"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              disabled={saving}
-              min="0"
-              step="0.01"
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                fontSize: 15,
-                outline: "none",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "#56018D")}
-              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-            />
-          </div>
-
-          {/* Existing Images */}
-          {existingImages.length > 0 && (
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Title */}
             <div>
               <label
+                htmlFor="title"
                 style={{
                   display: "block",
                   marginBottom: 6,
@@ -422,154 +321,402 @@ const EditListing = () => {
                   color: "#374151",
                 }}
               >
-                Existing Images
+                Title *
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                {existingImages.map((img) => (
-                  <div
-                    key={img.image_id}
-                    style={{
-                      position: "relative",
-                      aspectRatio: "1",
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      border: removeImageIds.includes(img.image_id)
-                        ? "2px solid #ef4444"
-                        : "1px solid #E5E7EB",
-                    }}
-                  >
-                    <img
-                      src={img.image_url}
-                      alt="Listing"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        opacity: removeImageIds.includes(img.image_id) ? 0.5 : 1,
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleRemoveImage(img.image_id)}
-                      style={{
-                        position: "absolute",
-                        top: 4,
-                        right: 4,
-                        background: removeImageIds.includes(img.image_id) ? "#ef4444" : "#fff",
-                        color: removeImageIds.includes(img.image_id) ? "#fff" : "#111",
-                        border: "none",
-                        borderRadius: 4,
-                        padding: "4px 8px",
-                        fontSize: 12,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {removeImageIds.includes(img.image_id) ? "Undo" : "Remove"}
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <input
+                id="title"
+                type="text"
+                placeholder="e.g., MacBook Pro 16'' 2021"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #E5E7EB",
+                  fontSize: 15,
+                  outline: "none",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#56018D")}
+                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+              />
             </div>
-          )}
 
-          {/* Add New Images */}
-          <div>
-            <label
-              htmlFor="newImages"
-              style={{
-                display: "block",
-                marginBottom: 6,
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#374151",
-              }}
-            >
-              Add New Images (optional)
-            </label>
-            <input
-              id="newImages"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleNewImagesChange}
-              disabled={saving}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: 8,
-                border: "1px solid #E5E7EB",
-                fontSize: 14,
-                background: "#fff",
-                cursor: "pointer",
-              }}
-            />
-            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-              Up to 10 images total. Maximum 10MB per image, 100MB total.
-              {newImages.length > 0 && ` ${newImages.length} new selected`}
-            </p>
-            {newImages.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                {newImages.map((file, index) => {
-                  const fileSize = formatFileSize(file.size);
-                  const isLarge = file.size > 8 * 1024 * 1024; // > 8MB
-                  return (
-                    <div
-                      key={index}
-                      style={{
-                        fontSize: 12,
-                        color: isLarge ? "#dc2626" : "#6b7280",
-                        marginTop: 4,
-                        padding: "4px 8px",
-                        background: isLarge ? "#fef2f2" : "#f9fafb",
-                        borderRadius: 4,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span>{file.name}</span>
-                      <span style={{ fontWeight: 600 }}>{fileSize}</span>
-                    </div>
-                  );
-                })}
-                <div
+            {/* Category */}
+            <div>
+              <label
+                htmlFor="category"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Category *
+              </label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #E5E7EB",
+                  fontSize: 15,
+                  outline: "none",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#56018D")}
+                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+              >
+                <option value="">Select a category</option>
+                {filterOptions.categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Location/Dorm */}
+            <div>
+              <label
+                htmlFor="location"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Location (Dorm) *
+              </label>
+              <select
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #E5E7EB",
+                  fontSize: 15,
+                  outline: "none",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#56018D")}
+                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+              >
+                <option value="">Select your location</option>
+                {filterOptions.locations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label
+                htmlFor="description"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Description *
+              </label>
+              <textarea
+                id="description"
+                placeholder="Describe your item in detail..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={saving}
+                rows={5}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #E5E7EB",
+                  fontSize: 15,
+                  outline: "none",
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#56018D")}
+                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+              />
+            </div>
+
+            {/* Price */}
+            <div>
+              <label
+                htmlFor="price"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Price ($) *
+              </label>
+              <input
+                id="price"
+                type="number"
+                placeholder="0.00"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                disabled={saving}
+                min="0"
+                step="0.01"
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #E5E7EB",
+                  fontSize: 15,
+                  outline: "none",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#56018D")}
+                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+              />
+            </div>
+
+            {/* Existing Images */}
+            {existingImages.length > 0 && (
+              <div>
+                <label
                   style={{
-                    fontSize: 12,
-                    color: "#6b7280",
-                    marginTop: 8,
-                    paddingTop: 8,
-                    borderTop: "1px solid #e5e7eb",
+                    display: "block",
+                    marginBottom: 6,
+                    fontSize: 14,
                     fontWeight: 600,
+                    color: "#374151",
                   }}
                 >
-                  Total: {formatFileSize(newImages.reduce((sum, file) => sum + file.size, 0))}
+                  Existing Images
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {existingImages.map((img) => (
+                    <div
+                      key={img.image_id}
+                      style={{
+                        position: "relative",
+                        aspectRatio: "1",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        border: removeImageIds.includes(img.image_id)
+                          ? "2px solid #ef4444"
+                          : "1px solid #E5E7EB",
+                      }}
+                    >
+                      <img
+                        src={img.image_url}
+                        alt="Listing"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          opacity: removeImageIds.includes(img.image_id) ? 0.5 : 1,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleRemoveImage(img.image_id)}
+                        style={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          background: removeImageIds.includes(img.image_id) ? "#ef4444" : "#fff",
+                          color: removeImageIds.includes(img.image_id) ? "#fff" : "#111",
+                          border: "none",
+                          borderRadius: 4,
+                          padding: "4px 8px",
+                          fontSize: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {removeImageIds.includes(img.image_id) ? "Undo" : "Remove"}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={saving}
+            {/* Add New Images */}
+            <div>
+              <label
+                htmlFor="newImages"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Add New Images (optional)
+              </label>
+              <input
+                id="newImages"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleNewImagesChange}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #E5E7EB",
+                  fontSize: 14,
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              />
+              <p style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                Up to 10 images total. Maximum 10MB per image, 100MB total.
+                {newImages.length > 0 && ` ${newImages.length} new selected`}
+              </p>
+              {newImages.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {newImages.map((file, index) => {
+                    const fileSize = formatFileSize(file.size);
+                    const isLarge = file.size > 8 * 1024 * 1024; // > 8MB
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          fontSize: 12,
+                          color: isLarge ? "#dc2626" : "#6b7280",
+                          marginTop: 4,
+                          padding: "4px 8px",
+                          background: isLarge ? "#fef2f2" : "#f9fafb",
+                          borderRadius: 4,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <span>{file.name}</span>
+                        <span style={{ fontWeight: 600 }}>{fileSize}</span>
+                      </div>
+                    );
+                  })}
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: "1px solid #e5e7eb",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Total: {formatFileSize(newImages.reduce((sum, file) => sum + file.size, 0))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+              {/* Preview Button */}
+              <button
+                type="button"
+                onClick={updatePreview}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  background: saving ? "#9ca3af" : "#fff",
+                  color: saving ? "#fff" : "#56018D",
+                  padding: "14px 0",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  border: saving ? "none" : "2px solid #56018D",
+                  borderRadius: 8,
+                  cursor: saving ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseOver={(e) => !saving && (e.target.style.background = "#f3e8ff")}
+                onMouseOut={(e) => !saving && (e.target.style.background = "#fff")}
+              >
+                Preview
+              </button>
+
+              {/* Save and Close Button */}
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  background: saving ? "#9ca3af" : "#56018D",
+                  color: "#fff",
+                  padding: "14px 0",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  border: "2px solid transparent",
+                  borderRadius: 8,
+                  cursor: saving ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseOver={(e) => !saving && (e.target.style.filter = "brightness(1.1)")}
+                onMouseOut={(e) => !saving && (e.target.style.filter = "brightness(1)")}
+              >
+                {saving ? "Saving..." : "Save and Close"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Right Column - Preview */}
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: 40,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            position: "relative",
+            top: "auto",
+            maxHeight: "none",
+            overflowY: "visible",
+            minWidth: 0,
+          }}
+        >
+          <h2
             style={{
-              background: saving ? "#9ca3af" : "#56018D",
-              color: "#fff",
-              padding: "14px 0",
-              fontSize: 16,
-              fontWeight: 600,
-              border: "none",
-              borderRadius: 8,
-              cursor: saving ? "not-allowed" : "pointer",
-              marginTop: 12,
-              transition: "all 0.2s",
+              fontSize: 32,
+              fontWeight: 700,
+              marginBottom: 24,
+              color: "#111",
+              textAlign: "center",
             }}
-            onMouseOver={(e) => !saving && (e.target.style.filter = "brightness(1.1)")}
-            onMouseOut={(e) => !saving && (e.target.style.filter = "brightness(1)")}
           >
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </form>
+            Preview
+          </h2>
+          {previewListing && (
+            <ListingDetailContent
+              listing={previewListing}
+              isPreview={true}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

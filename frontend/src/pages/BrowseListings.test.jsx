@@ -548,7 +548,7 @@ describe("BrowseListings integration", () => {
 
   it("filters out invalid category and location values from URL", async () => {
     listingsApi.getListings.mockResolvedValue({ results: [], count: 0 });
-    
+
     // Mock filter options with valid values
     vi.mocked(listingsApi.getFilterOptions).mockResolvedValue({
       categories: ['Electronics', 'Books', 'Furniture'],
@@ -576,7 +576,7 @@ describe("BrowseListings integration", () => {
     const apiCalls = vi.mocked(listingsApi.getListings).mock.calls;
     const lastCall = apiCalls[apiCalls.length - 1];
     const params = lastCall[0];
-    
+
     // Should only contain valid category
     expect(params.categories).toBe('Electronics');
     // Should only contain valid location

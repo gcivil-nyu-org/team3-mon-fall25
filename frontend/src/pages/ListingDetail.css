@@ -20,7 +20,12 @@
 .listing-detail-page {
   min-height: 100vh;
   background: var(--bg-white);
-  padding-bottom: 80px; /* Space for mobile footer */
+  padding-bottom: 80px;
+  /* Space for mobile footer */
+}
+
+.listing-detail-content {
+  width: 100%;
 }
 
 /* Header with Back Button */
@@ -680,6 +685,100 @@
 
 .listing-detail-error {
   color: #D32F2F;
+}
+
+/* Preview Variant (embedded inside Edit Listing) */
+.listing-detail-preview .listing-detail-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.listing-detail-preview .listing-detail-grid {
+  gap: 16px;
+}
+
+.listing-detail-preview .listing-detail-main-image-wrapper {
+  border-radius: var(--border-radius-card);
+  overflow: hidden;
+}
+
+.listing-detail-preview .listing-detail-main-image {
+  min-height: 300px;
+  aspect-ratio: 4 / 3;
+}
+
+.listing-detail-preview .listing-detail-main-image img {
+  object-fit: contain;
+}
+
+.listing-detail-preview .listing-detail-nav-button {
+  width: 36px;
+  height: 36px;
+}
+
+.listing-detail-preview .listing-detail-nav-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.listing-detail-preview .listing-detail-nav-button--left {
+  left: 8px;
+}
+
+.listing-detail-preview .listing-detail-nav-button--right {
+  right: 8px;
+}
+
+.listing-detail-preview .listing-detail-image-counter {
+  bottom: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+}
+
+.listing-detail-preview .listing-detail-thumbnail {
+  width: 60px;
+  height: 60px;
+}
+
+.listing-detail-preview .listing-detail-title {
+  font-size: 1.5rem;
+}
+
+.listing-detail-preview .listing-detail-price {
+  font-size: 2rem;
+}
+
+.listing-detail-preview .listing-detail-badge {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.listing-detail-preview .listing-detail-meta {
+  font-size: 0.875rem;
+}
+
+.listing-detail-preview .listing-detail-meta-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.listing-detail-preview .listing-detail-description-title {
+  font-size: 1rem;
+}
+
+.listing-detail-preview .listing-detail-description-text {
+  font-size: 0.875rem;
+}
+
+.listing-detail-preview .listing-detail-details {
+  gap: 16px;
+}
+
+.listing-detail-preview .listing-detail-sidebar {
+  position: static;
 }
 
 /* Hide desktop sidebar on mobile */
