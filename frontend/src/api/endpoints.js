@@ -12,6 +12,7 @@ export const endpoints = {
     me: '/profiles/me/',
   },
   listings: '/listings/',
+  listingPriceStats: '/listings/price-stats/',
   products: '/products/',
   users: '/users/',
   orders: '/orders/',

@@ -476,6 +476,19 @@ describe('Filters', () => {
     expect(maxInput).toHaveValue(800);
   });
 
+  it('uses price stats to set slider bounds', async () => {
+    const onChange = vi.fn();
+    const optionsWithStats = {
+      ...mockOptions,
+      priceStats: { min_price: "12.5", max_price: "850" },
+    };
+    const { container } = render(<Filters initial={{}} onChange={onChange} options={optionsWithStats} />);
+    const sliderWrapper = container.querySelector('[data-slider-max]');
+    expect(sliderWrapper).toBeInTheDocument();
+    expect(sliderWrapper).toHaveAttribute('data-slider-max', '850');
+    expect(sliderWrapper).toHaveAttribute('data-slider-min', '12.5');
+  });
+
   it('always uses grouped dorm locations structure', async () => {
     const onChange = vi.fn();
     // Component always uses grouped structure (DORM_LOCATIONS_GROUPED fallback)

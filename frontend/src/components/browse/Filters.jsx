@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import RangeSlider from "react-range-slider-input";
 import "react-range-slider-input/dist/style.css";
 import { CATEGORIES, LOCATIONS, DORM_LOCATIONS_GROUPED } from "../../constants/filterOptions";
@@ -197,23 +197,33 @@ function useDebounce(value, delay) {
 
 const PRICE_DEBOUNCE_DELAY = 300;
 const PRICE_MIN = 0;
-// TODO: Investigate dynamic PRICE_MAX based on actual listing prices
-// Options:
-// 1. Calculate from listings data already fetched in BrowseListings
-//    - Find max price from current listings results
-//    - Pass as prop to Filters component
-// 2. Add separate price-stats endpoint
-//    - GET /api/v1/listings/price-stats/ returns { min_price, max_price }
-//    - Fetch on mount in BrowseListings and pass to Filters
 const PRICE_MAX = 2000;
 const PRICE_STEP = 10;
+
+const parsePriceValue = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 export default function Filters({ initial = {}, onChange, options = {} }) {
   // Use hardcoded values as fallback, but prefer provided options if available
   const {
     categories: apiCategories = [],
     dorm_locations: apiDormLocations = null, // Grouped structure: { washington_square: [...], downtown: [...], other: [...] }
+    priceStats = null,
   } = options;
+
+  const priceLimits = useMemo(() => {
+    const statsMin = parsePriceValue(priceStats?.min_price);
+    const statsMax = parsePriceValue(priceStats?.max_price);
+    const lower = statsMin !== null ? Math.max(PRICE_MIN, statsMin) : PRICE_MIN;
+    const upperCandidate = statsMax !== null ? Math.max(PRICE_MIN, statsMax) : PRICE_MAX;
+    const upper = Math.max(lower, upperCandidate);
+    return { min: lower, max: upper };
+  }, [priceStats?.min_price, priceStats?.max_price]);
 
   const availableCategories = apiCategories.length > 0 ? apiCategories : CATEGORIES;
   // Use grouped dorm_locations if available, otherwise fallback to grouped structure
@@ -232,16 +242,37 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
   const [priceMinInput, setPriceMinInput] = useState(filters.priceMin);
   const [priceMaxInput, setPriceMaxInput] = useState(filters.priceMax);
 
+  useEffect(() => {
+    setPriceMinInput((current) => {
+      if (current === "") return current;
+      const value = Number(current);
+      if (!Number.isFinite(value)) return current;
+      if (value < priceLimits.min) return String(priceLimits.min);
+      if (value > priceLimits.max) return String(priceLimits.max);
+      return current;
+    });
+    setPriceMaxInput((current) => {
+      if (current === "") return current;
+      const value = Number(current);
+      if (!Number.isFinite(value)) return current;
+      if (value < priceLimits.min) return String(priceLimits.min);
+      if (value > priceLimits.max) return String(priceLimits.max);
+      return current;
+    });
+  }, [priceLimits.min, priceLimits.max]);
+
   // Helper to get numeric value for slider (defaults to min/max if empty)
   const getSliderValue = (value, isMin) => {
+    const limitMin = priceLimits.min;
+    const limitMax = priceLimits.max;
     if (value === "" || value === null || value === undefined) {
-      return isMin ? PRICE_MIN : PRICE_MAX;
+      return isMin ? limitMin : limitMax;
     }
     const num = Number(value);
     if (isNaN(num)) {
-      return isMin ? PRICE_MIN : PRICE_MAX;
+      return isMin ? limitMin : limitMax;
     }
-    return Math.max(PRICE_MIN, Math.min(PRICE_MAX, num));
+    return Math.max(limitMin, Math.min(limitMax, num));
   };
 
   const minSliderValue = getSliderValue(priceMinInput, true);
@@ -510,10 +541,14 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
         </h4>
 
         {/* Double Range Slider */}
-        <div style={{ marginBottom: 20, padding: "12px 0" }}>
+        <div
+          style={{ marginBottom: 20, padding: "12px 0" }}
+          data-slider-min={priceLimits.min}
+          data-slider-max={priceLimits.max}
+        >
           <RangeSlider
-            min={PRICE_MIN}
-            max={PRICE_MAX}
+            min={priceLimits.min}
+            max={priceLimits.max}
             step={PRICE_STEP}
             value={[minSliderValue, maxSliderValue]}
             onInput={handleSliderChange}

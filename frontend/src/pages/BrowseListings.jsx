@@ -8,7 +8,7 @@ import Pagination from "../components/browse/Pagination";
 import Spinner from "../components/common/Spinner";
 import Empty from "../components/common/Empty";
 import ErrorBlock from "../components/common/ErrorBlock";
-import { getListings, getFilterOptions } from "../api/listings";
+import { getListings, getFilterOptions, getListingPriceStats } from "../api/listings";
 import SEO from "../components/SEO";
 import { CATEGORIES, LOCATIONS, DORM_LOCATIONS_GROUPED } from "../constants/filterOptions";
 
@@ -62,10 +62,15 @@ export default function BrowseListings() {
     locations: LOCATIONS,
     dorm_locations: DORM_LOCATIONS_GROUPED, // Grouped structure for UI
   });
+  const [priceStats, setPriceStats] = useState(null);
   // const [filterOptionsLoading, setFilterOptionsLoading] = useState(false); // Commented out - uncomment if loading state needed
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const filterOptionsWithPriceStats = useMemo(
+    () => ({ ...filterOptions, priceStats }),
+    [filterOptions, priceStats]
+  );
 
   // Keep URL in sync when filters change
   const syncUrl = (nextFilters, overrides = {}) => {
@@ -131,6 +136,24 @@ export default function BrowseListings() {
       }
     }
     loadFilterOptions();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPriceStats() {
+      try {
+        const stats = await getListingPriceStats();
+        if (!cancelled) {
+          setPriceStats(stats);
+        }
+      } catch (e) {
+        console.error("Error loading price stats:", e);
+      }
+    }
+    loadPriceStats();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Validate and filter out invalid filter values from URL when filterOptions are loaded
@@ -303,7 +326,7 @@ export default function BrowseListings() {
         }}>
           {/* Left Sidebar - Filters */}
           <aside style={{ position: "sticky", top: 24 }}>
-            <Filters initial={filters} onChange={handleFiltersChange} options={filterOptions} />
+            <Filters initial={filters} onChange={handleFiltersChange} options={filterOptionsWithPriceStats} />
           </aside>
 
           {/* Right Content Area */}
