@@ -1,5 +1,5 @@
 import os
-from .settings_base import * # noqa: F403, F401
+from .settings_base import *  # noqa: F403, F401
 from django.core.management.utils import get_random_secret_key
 
 DEBUG = True
@@ -49,18 +49,19 @@ CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
 if "REST_FRAMEWORK" not in locals():
     REST_FRAMEWORK = {}
 
-REST_FRAMEWORK.update({
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
-    "TEST_REQUEST_DEFAULT_FORMAT": "json",
-    "TEST_REQUEST_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.MultiPartRenderer",
-    ],
-})
+REST_FRAMEWORK.update(
+    {
+        "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
+        "TEST_REQUEST_DEFAULT_FORMAT": "json",
+        "TEST_REQUEST_RENDERER_CLASSES": [
+            "rest_framework.renderers.JSONRenderer",
+            "rest_framework.renderers.MultiPartRenderer",
+        ],
+    }
+)
 
-# This keeps ACCESS_TOKEN_LIFETIME=120 mins from base,
-# but overrides the signing key for local dev consistency.
-SIMPLE_JWT.update({
+# 2. Fix SIMPLE_JWT overwrite
+SIMPLE_JWT.update({  # noqa: F405
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
 })
