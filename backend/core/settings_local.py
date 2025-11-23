@@ -61,10 +61,12 @@ REST_FRAMEWORK.update(
 )
 
 # 2. Fix SIMPLE_JWT overwrite
-SIMPLE_JWT.update({  # noqa: F405
-    "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
-})
+SIMPLE_JWT.update(  # noqa: F405
+    {
+        "ALGORITHM": "HS256",
+        "SIGNING_KEY": SECRET_KEY,
+    }
+)
 
 
 # Use in-memory sqlite only when pytest is running
