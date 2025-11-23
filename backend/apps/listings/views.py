@@ -464,15 +464,19 @@ class ListingViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Check if listing is available
-        if listing.status != "active":
-            return Response(
-                {"error": "Listing is not available for purchase."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Create transaction
+        # Use a DB transaction and lock the listing row to avoid race conditions
         with transaction.atomic():
+            # Re-fetch listing with a row lock
+            listing = type(listing).objects.select_for_update().get(pk=listing.pk)
+
+            # Check if listing is available (done inside the transaction while locked)
+            if listing.status != "active":
+                return Response(
+                    {"error": "Listing is not available for purchase."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Create transaction
             transaction_obj = Transaction.objects.create(
                 listing=listing,
                 buyer=buyer,
