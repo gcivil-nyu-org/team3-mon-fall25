@@ -21,6 +21,7 @@ from django.core.exceptions import RequestDataTooBig
 from utils.s3_service import s3_service
 
 from apps.chat.models import Conversation, ConversationParticipant
+from apps.transactions.models import Transaction
 from .constants import (
     DEFAULT_CATEGORIES,
     DEFAULT_DORM_LOCATIONS_FLAT,
@@ -149,9 +150,9 @@ class ListingViewSet(
         if self.action == "user_listings":
             return [IsAuthenticated()]
 
-        # contact_seller uses IsAuthenticated from @action decorator
-        # Don't apply IsOwnerOrReadOnly for this action
-        if self.action == "contact_seller":
+        # contact_seller and buy use IsAuthenticated from @action decorator
+        # Don't apply IsOwnerOrReadOnly for these actions
+        if self.action in ["contact_seller", "buy"]:
             return [IsAuthenticated()]
 
         # Default: respect view's base permissions
@@ -441,6 +442,56 @@ class ListingViewSet(
                 )
 
         return Response({"conversation_id": str(conv.id)}, status=200)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="buy",
+    )
+    def buy(self, request, pk=None):
+        """
+        Create a new transaction for buying a listing.
+        POST /api/v1/listings/{id}/buy/
+        """
+        listing = self.get_object()
+        buyer = request.user
+
+        # Check if buyer is not the seller
+        if listing.user == buyer:
+            return Response(
+                {"error": "You cannot buy your own listing."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Use a DB transaction and lock the listing row to avoid race conditions
+        with transaction.atomic():
+            # Re-fetch listing with a row lock
+            listing = type(listing).objects.select_for_update().get(pk=listing.pk)
+
+            # Check if listing is available (done inside the transaction while locked)
+            if listing.status != "active":
+                return Response(
+                    {"error": "Listing is not available for purchase."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Create transaction
+            transaction_obj = Transaction.objects.create(
+                listing=listing,
+                buyer=buyer,
+                seller=listing.user,
+                status="PENDING",
+            )
+
+            # Update listing status to pending
+            listing.status = "pending"
+            listing.save(update_fields=["status"])
+
+        from apps.transactions.serializers import TransactionSerializer
+
+        serializer = TransactionSerializer(transaction_obj)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # Record listing view-count
     def retrieve(self, request, *args, **kwargs):
