@@ -123,7 +123,7 @@ const PaymentOption = ({ id, label, subLabel, icon, selected, onSelect }) => (
 const TimelineItem = ({ title, desc, status, isLast }) => {
   const isCompleted = status === 'completed';
   const isCurrent = status === 'current';
-  const isUpcoming = status === 'upcoming';
+  // const isUpcoming = status === 'upcoming';
 
   return (
     <div className="timeline-item">
