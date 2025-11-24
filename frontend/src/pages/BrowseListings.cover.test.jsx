@@ -7,6 +7,11 @@ import { MemoryRouter } from 'react-router-dom';
 // Mock the listings API module before importing the component
 vi.mock('../api/listings', () => ({
   getListings: vi.fn(),
+  getFilterOptions: vi.fn().mockResolvedValue({
+    categories: [],
+    dorm_locations: {},
+    locations: [],
+  }),
 }));
 
 import { getListings } from '../api/listings';

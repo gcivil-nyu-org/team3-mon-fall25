@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getMyListings } from "../api/listings.js";
+import { getMyProfile } from "../api/profiles.js";
 import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen } from "react-icons/fa";
 import EditProfile from "./EditProfile";
 import "./Profile.css";
@@ -16,24 +17,37 @@ export default function Profile() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [profile, setProfile] = useState(null);
+
+  // Load user's profile
+  const loadProfile = async () => {
+    try {
+      const response = await getMyProfile();
+      setProfile(response.data);
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      // Profile might not exist yet, that's okay
+    }
+  };
 
   // Load user's listings
-  useEffect(() => {
-    const loadListings = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getMyListings();
-        setListings(data);
-      } catch (err) {
-        const msg = err.response?.data?.detail || err.message || "Failed to load listings.";
-        setError(msg);
-        console.error("Failed to load listings:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadListings = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getMyListings();
+      setListings(data);
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || "Failed to load listings.";
+      setError(msg);
+      console.error("Failed to load listings:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    loadProfile();
     loadListings();
   }, []);
 
@@ -45,8 +59,11 @@ export default function Profile() {
     setIsEditModalOpen(true);
   };
 
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = (shouldRefresh = false) => {
     setIsEditModalOpen(false);
+    if (shouldRefresh) {
+      loadProfile();
+    }
   };
 
   const handleListingClick = (listingId) => {
@@ -55,6 +72,9 @@ export default function Profile() {
 
   // Get initials for avatar
   const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name.charAt(0).toUpperCase();
+    }
     if (user?.email) {
       const email = user.email.split("@")[0];
       return email.charAt(0).toUpperCase();
@@ -62,9 +82,16 @@ export default function Profile() {
     return "A";
   };
 
-  // Use dummy values for statistics
-  const activeListings = 6;
-  const soldItems = 18;
+  // Format member since date
+  const formatMemberSince = (dateString) => {
+    if (!dateString) return "Member";
+    const date = new Date(dateString);
+    return `Member since ${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  };
+
+  // Use profile data for statistics
+  const activeListings = profile?.active_listings ?? 0;
+  const soldItems = profile?.sold_items ?? 0;
 
   return (
     <>
@@ -92,36 +119,46 @@ export default function Profile() {
             {/* Profile Picture - Left Side */}
             <div className="profile-left">
               <div className="profile-avatar-large">
-                {getInitials()}
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                ) : (
+                  getInitials()
+                )}
               </div>
             </div>
 
             {/* Header Info - Right Side Top */}
             <div className="profile-right">
-              <h1 className="profile-name">Alex Morgan</h1>
-              <p className="profile-username">@current_user</p>
-              <p className="profile-bio">
-                NYU student selling items I no longer need. Always happy to negotiate prices!
-              </p>
+              <h1 className="profile-name">{profile?.full_name || user?.email?.split("@")[0] || "User"}</h1>
+              <p className="profile-username">@{profile?.username || "user"}</p>
+              {profile?.bio && (
+                <p className="profile-bio">
+                  {profile.bio}
+                </p>
+              )}
             </div>
 
             {/* Contact Information - Right Side Middle */}
             <div className="contact-info">
               <div className="contact-item">
                 <FaEnvelope className="contact-icon" />
-                <span>{user?.email || "alex.morgan@nyu.edu"}</span>
+                <span>{profile?.email || user?.email || "No email"}</span>
               </div>
-              <div className="contact-item">
-                <FaPhone className="contact-icon" />
-                <span>(555) 123-4567</span>
-              </div>
-              <div className="contact-item">
-                <FaMapMarkerAlt className="contact-icon" />
-                <span>Founders Hall</span>
-              </div>
+              {profile?.phone && (
+                <div className="contact-item">
+                  <FaPhone className="contact-icon" />
+                  <span>{profile.phone}</span>
+                </div>
+              )}
+              {profile?.location && (
+                <div className="contact-item">
+                  <FaMapMarkerAlt className="contact-icon" />
+                  <span>{profile.location}</span>
+                </div>
+              )}
               <div className="contact-item">
                 <FaCalendar className="contact-icon" />
-                <span>Member since August 2024</span>
+                <span>{formatMemberSince(profile?.member_since)}</span>
               </div>
             </div>
 
@@ -224,7 +261,10 @@ export default function Profile() {
 
         {/* Edit Profile Modal */}
         {isEditModalOpen && (
-          <EditProfile onClose={handleCloseEditModal} />
+          <EditProfile
+            onClose={handleCloseEditModal}
+            profile={profile}
+          />
         )}
       </div>
     </>

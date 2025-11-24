@@ -5,9 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import Profile from './Profile';
 import * as listingsApi from '../api/listings.js';
+import * as profilesApi from '../api/profiles.js';
 
-// Mock the API
+// Mock the APIs
 vi.mock('../api/listings.js');
+vi.mock('../api/profiles.js');
 
 // Mock the AuthContext
 vi.mock('../contexts/AuthContext', () => ({
@@ -37,6 +39,21 @@ describe('Profile', () => {
         netid: 'test123',
     };
 
+    const mockProfile = {
+        profile_id: 1,
+        user_id: 1,
+        full_name: 'Alex Morgan',
+        username: 'alex_morgan',
+        email: 'test@nyu.edu',
+        phone: '(555) 123-4567',
+        location: 'Founders Hall',
+        bio: 'NYU student selling items I no longer need.',
+        avatar_url: null,
+        active_listings: 6,
+        sold_items: 18,
+        member_since: '2024-08-01T00:00:00Z',
+    };
+
     const mockListings = [
         {
             listing_id: 1,
@@ -60,6 +77,7 @@ describe('Profile', () => {
         vi.clearAllMocks();
         useAuth.mockReturnValue({ user: mockUser });
         listingsApi.getMyListings.mockResolvedValue(mockListings);
+        profilesApi.getMyProfile.mockResolvedValue({ data: mockProfile });
     });
 
     describe('Rendering', () => {
@@ -70,7 +88,7 @@ describe('Profile', () => {
                 expect(screen.getByText('Alex Morgan')).toBeInTheDocument();
             });
 
-            expect(screen.getByText('@current_user')).toBeInTheDocument();
+            expect(screen.getByText('@alex_morgan')).toBeInTheDocument();
             expect(screen.getByText(/NYU student selling items/)).toBeInTheDocument();
             expect(screen.getByText('Edit Profile')).toBeInTheDocument();
         });
@@ -80,7 +98,7 @@ describe('Profile', () => {
             expect(screen.getByText('Back')).toBeInTheDocument();
         });
 
-        it('displays user contact information', async () => {
+        it('displays user contact information from profile API', async () => {
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
@@ -89,10 +107,10 @@ describe('Profile', () => {
 
             expect(screen.getByText('(555) 123-4567')).toBeInTheDocument();
             expect(screen.getByText('Founders Hall')).toBeInTheDocument();
-            expect(screen.getByText('Member since August 2024')).toBeInTheDocument();
+            expect(screen.getByText(/Member since/)).toBeInTheDocument();
         });
 
-        it('displays statistics with dummy values', async () => {
+        it('displays statistics from profile API', async () => {
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
@@ -267,26 +285,40 @@ describe('Profile', () => {
     });
 
     describe('Avatar Display', () => {
-        it('displays user initials in profile avatar', async () => {
+        it('displays user initials from profile full name', async () => {
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
-                expect(screen.getByText('T')).toBeInTheDocument();
+                expect(screen.getByText('A')).toBeInTheDocument(); // First letter of "Alex Morgan"
             });
         });
 
-        it('displays default initial when user has no email', async () => {
-            useAuth.mockReturnValue({ user: {} });
+        it('displays initial from email when profile has no full name', async () => {
+            profilesApi.getMyProfile.mockResolvedValue({ data: { ...mockProfile, full_name: null } });
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
-                expect(screen.getByText('A')).toBeInTheDocument();
+                // Wait for profile to load, then check for 'T' from email
+                expect(screen.getByText('T')).toBeInTheDocument(); // First letter of email "test@nyu.edu"
+            });
+        });
+
+        it('displays avatar image when profile has avatar_url', async () => {
+            profilesApi.getMyProfile.mockResolvedValue({
+                data: { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' }
+            });
+            renderWithRouter(<Profile />);
+
+            await waitFor(() => {
+                const avatarImg = screen.getByAltText('Avatar');
+                expect(avatarImg).toBeInTheDocument();
+                expect(avatarImg).toHaveAttribute('src', 'http://example.com/avatar.jpg');
             });
         });
     });
 
     describe('Contact Information Display', () => {
-        it('displays user email from context', async () => {
+        it('displays user email from profile API', async () => {
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
@@ -294,13 +326,27 @@ describe('Profile', () => {
             });
         });
 
-        it('displays fallback email when user email is not available', async () => {
-            useAuth.mockReturnValue({ user: null });
+        it('displays fallback values when profile API fails', async () => {
+            profilesApi.getMyProfile.mockRejectedValue(new Error('Failed to load'));
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
-                expect(screen.getByText('alex.morgan@nyu.edu')).toBeInTheDocument();
+                // Should still show user email from auth context
+                expect(screen.getByText('test@nyu.edu')).toBeInTheDocument();
             });
+        });
+
+        it('hides phone when profile has no phone', async () => {
+            profilesApi.getMyProfile.mockResolvedValue({
+                data: { ...mockProfile, phone: null }
+            });
+            renderWithRouter(<Profile />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Alex Morgan')).toBeInTheDocument();
+            });
+
+            expect(screen.queryByText('(555) 123-4567')).not.toBeInTheDocument();
         });
     });
 

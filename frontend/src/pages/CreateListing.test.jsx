@@ -26,8 +26,14 @@ const renderWithRouter = (component) => {
 };
 
 describe('CreateListing', () => {
+    const mockFilterOptions = {
+        categories: ['Electronics', 'Books', 'Furniture', 'Sports', 'Clothing', 'Other'],
+        locations: ['Othmer Hall', 'Clark Hall', 'Rubin Hall', 'Weinstein Hall', 'Brittany Hall', 'Founders Hall']
+    };
+
     beforeEach(() => {
         vi.clearAllMocks();
+        listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
         fileUtils.validateImageFiles.mockReturnValue({ valid: true, error: null });
         fileUtils.formatFileSize.mockImplementation((bytes) => {
             if (bytes < 1024) return `${bytes} Bytes`;
@@ -53,11 +59,11 @@ describe('CreateListing', () => {
             expect(screen.getByLabelText(/images/i)).toBeInTheDocument();
         });
 
-        it('renders all category options', () => {
+        it('renders all category options', async () => {
             renderWithRouter(<CreateListing />);
-            const categorySelect = screen.getByLabelText(/category/i);
-            expect(categorySelect).toBeInTheDocument();
-            expect(screen.getByText('Electronics')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
             expect(screen.getByText('Books')).toBeInTheDocument();
             expect(screen.getByText('Furniture')).toBeInTheDocument();
             expect(screen.getByText('Sports')).toBeInTheDocument();
@@ -65,11 +71,11 @@ describe('CreateListing', () => {
             expect(screen.getByText('Other')).toBeInTheDocument();
         });
 
-        it('renders all dorm options', () => {
+        it('renders all dorm options', async () => {
             renderWithRouter(<CreateListing />);
-            const locationSelect = screen.getByLabelText(/location/i);
-            expect(locationSelect).toBeInTheDocument();
-            expect(screen.getByText('Othmer Hall')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByText('Othmer Hall')).toBeInTheDocument();
+            });
             expect(screen.getByText('Clark Hall')).toBeInTheDocument();
             expect(screen.getByText('Rubin Hall')).toBeInTheDocument();
             expect(screen.getByText('Weinstein Hall')).toBeInTheDocument();
@@ -106,6 +112,9 @@ describe('CreateListing', () => {
         it('allows selecting category', async () => {
             const user = userEvent.setup();
             renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
             const categorySelect = screen.getByLabelText(/category/i);
             await user.selectOptions(categorySelect, 'Electronics');
             expect(categorySelect).toHaveValue('Electronics');
@@ -114,6 +123,9 @@ describe('CreateListing', () => {
         it('allows selecting location', async () => {
             const user = userEvent.setup();
             renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Othmer Hall')).toBeInTheDocument();
+            });
             const locationSelect = screen.getByLabelText(/location/i);
             await user.selectOptions(locationSelect, 'Othmer Hall');
             expect(locationSelect).toHaveValue('Othmer Hall');
@@ -126,9 +138,9 @@ describe('CreateListing', () => {
             renderWithRouter(<CreateListing />);
             const file = new File(['test'], 'test.png', { type: 'image/png' });
             const fileInput = screen.getByLabelText(/images/i);
-            
+
             await user.upload(fileInput, file);
-            
+
             expect(fileUtils.validateImageFiles).toHaveBeenCalled();
             expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
         });
@@ -136,13 +148,13 @@ describe('CreateListing', () => {
         it('displays error when more than 10 images are selected', async () => {
             const user = userEvent.setup();
             renderWithRouter(<CreateListing />);
-            const files = Array.from({ length: 11 }, (_, i) => 
+            const files = Array.from({ length: 11 }, (_, i) =>
                 new File(['test'], `test${i}.png`, { type: 'image/png' })
             );
             const fileInput = screen.getByLabelText(/images/i);
-            
+
             await user.upload(fileInput, files);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Maximum 10 images allowed')).toBeInTheDocument();
             });
@@ -150,16 +162,16 @@ describe('CreateListing', () => {
 
         it('displays error when image validation fails', async () => {
             const user = userEvent.setup();
-            fileUtils.validateImageFiles.mockReturnValue({ 
-                valid: false, 
-                error: 'Image is too large' 
+            fileUtils.validateImageFiles.mockReturnValue({
+                valid: false,
+                error: 'Image is too large'
             });
             renderWithRouter(<CreateListing />);
             const file = new File(['test'], 'test.png', { type: 'image/png' });
             const fileInput = screen.getByLabelText(/images/i);
-            
+
             await user.upload(fileInput, file);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Image is too large')).toBeInTheDocument();
             });
@@ -171,9 +183,9 @@ describe('CreateListing', () => {
             renderWithRouter(<CreateListing />);
             const file = new File(['test'], 'test.png', { type: 'image/png', size: 1024 * 1024 });
             const fileInput = screen.getByLabelText(/images/i);
-            
+
             await user.upload(fileInput, file);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('test.png')).toBeInTheDocument();
             });
@@ -186,9 +198,9 @@ describe('CreateListing', () => {
             const file1 = new File(['test1'], 'test1.png', { type: 'image/png', size: 1024 * 1024 });
             const file2 = new File(['test2'], 'test2.png', { type: 'image/png', size: 1024 * 1024 });
             const fileInput = screen.getByLabelText(/images/i);
-            
+
             await user.upload(fileInput, [file1, file2]);
-            
+
             await waitFor(() => {
                 expect(screen.getByText(/total:/i)).toBeInTheDocument();
             });
@@ -200,9 +212,9 @@ describe('CreateListing', () => {
             const user = userEvent.setup();
             renderWithRouter(<CreateListing />);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Title is required')).toBeInTheDocument();
             });
@@ -213,10 +225,10 @@ describe('CreateListing', () => {
             renderWithRouter(<CreateListing />);
             const titleInput = screen.getByLabelText(/title/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Description is required')).toBeInTheDocument();
             });
@@ -228,11 +240,11 @@ describe('CreateListing', () => {
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Price must be greater than 0')).toBeInTheDocument();
             });
@@ -245,12 +257,12 @@ describe('CreateListing', () => {
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '0');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Price must be greater than 0')).toBeInTheDocument();
             });
@@ -263,12 +275,12 @@ describe('CreateListing', () => {
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Please select a category')).toBeInTheDocument();
             });
@@ -277,18 +289,21 @@ describe('CreateListing', () => {
         it('shows error when location is not selected', async () => {
             const user = userEvent.setup();
             renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Please select a location')).toBeInTheDocument();
             });
@@ -301,6 +316,9 @@ describe('CreateListing', () => {
                 .mockReturnValueOnce({ valid: true, error: null }) // First call on upload
                 .mockReturnValueOnce({ valid: false, error: 'Image validation failed' }); // Second call on submit
             renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
@@ -308,17 +326,17 @@ describe('CreateListing', () => {
             const locationSelect = screen.getByLabelText(/location/i);
             const fileInput = screen.getByLabelText(/images/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             const file = new File(['test'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Image validation failed')).toBeInTheDocument();
             });
@@ -330,25 +348,28 @@ describe('CreateListing', () => {
             const user = userEvent.setup();
             listingsApi.createListing.mockResolvedValue({ id: 1 });
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const locationSelect = screen.getByLabelText(/location/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(listingsApi.createListing).toHaveBeenCalled();
             });
-            
+
             await waitFor(() => {
                 expect(mockNavigate).toHaveBeenCalledWith('/my-listings');
             });
@@ -358,7 +379,10 @@ describe('CreateListing', () => {
             const user = userEvent.setup();
             listingsApi.createListing.mockResolvedValue({ id: 1 });
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
@@ -366,17 +390,17 @@ describe('CreateListing', () => {
             const locationSelect = screen.getByLabelText(/location/i);
             const fileInput = screen.getByLabelText(/images/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             const file = new File(['test'], 'test.png', { type: 'image/png' });
             await user.upload(fileInput, file);
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(listingsApi.createListing).toHaveBeenCalled();
                 const formData = listingsApi.createListing.mock.calls[0][0];
@@ -386,25 +410,28 @@ describe('CreateListing', () => {
 
         it('shows loading state during submission', async () => {
             const user = userEvent.setup();
-            listingsApi.createListing.mockImplementation(() => 
+            listingsApi.createListing.mockImplementation(() =>
                 new Promise(resolve => setTimeout(() => resolve({ id: 1 }), 100))
             );
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const locationSelect = screen.getByLabelText(/location/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             expect(screen.getByText('Creating...')).toBeInTheDocument();
             expect(submitButton).toBeDisabled();
         });
@@ -415,21 +442,24 @@ describe('CreateListing', () => {
             error.response = { status: 413 };
             listingsApi.createListing.mockRejectedValue(error);
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const locationSelect = screen.getByLabelText(/location/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText(/file\(s\) are too large/i)).toBeInTheDocument();
             });
@@ -441,21 +471,24 @@ describe('CreateListing', () => {
             error.response = { data: { detail: 'Custom error message' } };
             listingsApi.createListing.mockRejectedValue(error);
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const locationSelect = screen.getByLabelText(/location/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Custom error message')).toBeInTheDocument();
             });
@@ -467,21 +500,24 @@ describe('CreateListing', () => {
             error.response = { data: { message: 'Error message' } };
             listingsApi.createListing.mockRejectedValue(error);
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const locationSelect = screen.getByLabelText(/location/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Error message')).toBeInTheDocument();
             });
@@ -492,21 +528,24 @@ describe('CreateListing', () => {
             const error = new Error('Network error');
             listingsApi.createListing.mockRejectedValue(error);
             renderWithRouter(<CreateListing />);
-            
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
             const titleInput = screen.getByLabelText(/title/i);
             const descInput = screen.getByLabelText(/description/i);
             const priceInput = screen.getByLabelText(/price/i);
             const categorySelect = screen.getByLabelText(/category/i);
             const locationSelect = screen.getByLabelText(/location/i);
             const submitButton = screen.getByRole('button', { name: /create listing/i });
-            
+
             await user.type(titleInput, 'Test Title');
             await user.type(descInput, 'Test Description');
             await user.type(priceInput, '99.99');
             await user.selectOptions(categorySelect, 'Electronics');
             await user.selectOptions(locationSelect, 'Othmer Hall');
             await user.click(submitButton);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Network error')).toBeInTheDocument();
             });
@@ -518,12 +557,41 @@ describe('CreateListing', () => {
             const user = userEvent.setup();
             renderWithRouter(<CreateListing />);
             const titleInput = screen.getByLabelText(/title/i);
-            
+
             await user.click(titleInput);
             expect(titleInput).toHaveFocus();
-            
+
             await user.tab();
             expect(titleInput).not.toHaveFocus();
+        });
+
+        it('handles button mouse over and out events', async () => {
+            const user = userEvent.setup();
+            listingsApi.createListing.mockResolvedValue({ id: 1 });
+            renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
+            const titleInput = screen.getByLabelText(/title/i);
+            const descInput = screen.getByLabelText(/description/i);
+            const priceInput = screen.getByLabelText(/price/i);
+            const categorySelect = screen.getByLabelText(/category/i);
+            const locationSelect = screen.getByLabelText(/location/i);
+            const submitButton = screen.getByRole('button', { name: /create listing/i });
+
+            await user.type(titleInput, 'Test Title');
+            await user.type(descInput, 'Test Description');
+            await user.type(priceInput, '99.99');
+            await user.selectOptions(categorySelect, 'Electronics');
+            await user.selectOptions(locationSelect, 'Othmer Hall');
+
+            // Test mouse over and out
+            await user.hover(submitButton);
+            await user.unhover(submitButton);
+
+            // Button should still be functional
+            expect(submitButton).not.toBeDisabled();
         });
     });
 });

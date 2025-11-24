@@ -25,8 +25,10 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # Application definition
 INSTALLED_APPS = [
     "apps.users",
+    "apps.profiles",
     "apps.listings",
     "apps.chat",
+    "apps.transactions",
     "channels",
     "rest_framework",
     "corsheaders",
@@ -54,7 +56,7 @@ ROOT_URLCONF = "core.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "frontend_build"],
+        "DIRS": [BASE_DIR / "frontend_build", BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -122,19 +124,23 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     # Don't set IsAuthenticated as default - let views control their own permissions
+    "DEFAULT_THROTTLE_RATES": {
+        "otp": "5/hour",
+    },
 }
 
 # JWT settings
 SIMPLE_JWT = {
-    "USER_ID_FIELD": "user_id",
-    "USER_ID_CLAIM": "user_id",
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.environ.get("JWT_ACCESS_MINUTES", 120))  # 2 hours
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=int(os.environ.get("JWT_REFRESH_DAYS", 7))
+    ),
+    "ROTATE_REFRESH_TOKENS": os.environ.get("JWT_ROTATE", "False").lower() == "true",
+    "BLACKLIST_AFTER_ROTATION": os.environ.get("JWT_BLACKLIST", "False").lower()
+    == "true",
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "user_id",  # Use user_id instead of id
-    "USER_ID_CLAIM": "user_id",  # Use user_id in JWT payload
 }
 
 # AWS S3 Configuration
@@ -142,6 +148,33 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "us-east-1")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+
+# Cache Configuration (for OTP storage)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
+# Email Configuration
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "email-smtp.us-east-1.amazonaws.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+OTP_EMAIL_SENDER = os.environ.get(
+    "OTP_EMAIL_SENDER", EMAIL_HOST_USER or "noreply@nyu-marketplace.com"
+)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "OTP_EMAIL_SENDER",
+    "no-reply@nyumarketplace.me",
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 
 # Django upload size limits
 # Configure to allow uploads up to 120MB (10MB × 10 images + overhead)

@@ -4,7 +4,12 @@ from django.db import models
 
 
 class Listing(models.Model):
-    STATUS_CHOICES = [("active", "Active"), ("sold", "Sold"), ("inactive", "Inactive")]
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("pending", "Pending"),
+        ("sold", "Sold"),
+        ("inactive", "Inactive"),
+    ]
 
     listing_id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
@@ -21,7 +26,7 @@ class Listing(models.Model):
         max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
-    location = models.CharField(max_length=100, blank=True, null=True)
+    dorm_location = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     view_count = models.PositiveIntegerField(default=0)

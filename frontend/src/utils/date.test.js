@@ -13,7 +13,14 @@ describe('humanizePosted branch coverage', () => {
     vi.useRealTimers();
   });
 
-  const daysAgoISO = (n) => new Date(fixed.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
+  const daysAgoISO = (n) =>
+    new Date(fixed.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
+
+  it('returns empty string when createdAtISO is falsy', () => {
+    expect(humanizePosted(null)).toBe('');
+    expect(humanizePosted(undefined)).toBe('');
+    expect(humanizePosted('')).toBe('');
+  });
 
   it('returns a non-empty string for today (0 days)', () => {
     const txt = humanizePosted(daysAgoISO(0));

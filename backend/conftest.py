@@ -12,6 +12,7 @@ import pytest
 # Ensure the local settings are used when running tests locally
 # Note: PR #208 moved CI test configuration to settings_local.py
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings_local")
+pytest_plugins = ("pytest_asyncio",)
 
 try:
     import django

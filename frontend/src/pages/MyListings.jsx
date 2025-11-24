@@ -27,9 +27,11 @@ export default function MyListings() {
             price: l.price,
             status: l.status?.charAt(0).toUpperCase() + l.status?.slice(1),
             category: l.category,
-            location: l.location,
+            location: l.dorm_location || l.location,
             description: l.description,
             imageUrl: l.primary_image,
+            createdAt: l.created_at, 
+            viewCount: l.view_count,
           }));
           setListings(mapped);
         }
@@ -67,9 +69,11 @@ export default function MyListings() {
         price: l.price,
         status: l.status?.charAt(0).toUpperCase() + l.status?.slice(1),
         category: l.category,
-        location: l.location,
+        location: l.dorm_location || l.location,
         description: l.description,
         imageUrl: l.primary_image,
+        createdAt: l.created_at, 
+        viewCount: l.view_count,
       }));
       setListings(mapped);
     } catch (e) {

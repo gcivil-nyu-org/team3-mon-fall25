@@ -1,3 +1,4 @@
+import os
 from .settings_base import *  # noqa: F403, F401
 from django.core.management.utils import get_random_secret_key
 
@@ -39,3 +40,40 @@ DATABASES = {
 
 # Debug extension
 INSTALLED_APPS += ["django_extensions"]  # noqa: F405
+
+# Channels: in-memory layer for tests
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+
+
+# This preserves 'DEFAULT_THROTTLE_RATES' from settings_base.py
+if "REST_FRAMEWORK" not in locals():
+    REST_FRAMEWORK = {}
+
+REST_FRAMEWORK.update(
+    {
+        "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
+        "TEST_REQUEST_DEFAULT_FORMAT": "json",
+        "TEST_REQUEST_RENDERER_CLASSES": [
+            "rest_framework.renderers.JSONRenderer",
+            "rest_framework.renderers.MultiPartRenderer",
+        ],
+    }
+)
+
+# 2. Fix SIMPLE_JWT overwrite
+SIMPLE_JWT.update(  # noqa: F405
+    {
+        "ALGORITHM": "HS256",
+        "SIGNING_KEY": SECRET_KEY,
+    }
+)
+
+
+# Use in-memory sqlite only when pytest is running
+if os.environ.get("PYTEST_CURRENT_TEST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }

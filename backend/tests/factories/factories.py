@@ -1,9 +1,6 @@
 import factory
 from apps.listings.models import Listing, ListingImage
 from apps.users.models import User
-from faker import Faker
-
-fake = Faker()
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -11,7 +8,7 @@ class UserFactory(factory.django.DjangoModelFactory):
         model = User
         skip_postgeneration_save = True
 
-    email = factory.LazyAttribute(lambda _: f"{fake.user_name()}@nyu.edu")
+    email = factory.Sequence(lambda n: f"user{n}@nyu.edu")
     first_name = factory.Faker("first_name")
     last_name = factory.Faker("last_name")
 

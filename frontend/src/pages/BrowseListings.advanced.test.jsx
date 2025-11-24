@@ -4,21 +4,31 @@ import { vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
 // Mock listings API
-vi.mock('../api/listings', () => ({ getListings: vi.fn() }));
-import { getListings } from '../api/listings';
+vi.mock('../api/listings', () => ({
+  getListings: vi.fn(),
+  getFilterOptions: vi.fn()
+}));
+import { getListings, getFilterOptions } from '../api/listings';
 import BrowseListings from './BrowseListings';
 
 describe('BrowseListings advanced param mapping', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock getFilterOptions for all tests
+    getFilterOptions.mockResolvedValue({
+      categories: ['Electronics', 'Books', 'Furniture', 'Apparel', 'Other'],
+      locations: ['Othmer Hall', 'Brooklyn', 'Manhattan', 'Other']
+    });
+  });
 
-  it('calls getListings with mapped ordering, posted_within and available_only when URL params set', async () => {
+  it('calls getListings with mapped ordering and posted_within when URL params set', async () => {
     // Return an array to exercise Array.isArray branch
     getListings.mockImplementation(async () => {
       // return some results so the component renders ListingGrid
-      return [ { listing_id: 1, title: 'X', price: '10.00', status: 'active' } ];
+      return [{ listing_id: 1, title: 'X', price: '10.00', status: 'active' }];
     });
 
-    const query = '?q=desk&sort=price_asc&dateRange=7d&availableOnly=1&category=Furniture&location=Othmer&page=2&min_price=10&max_price=100';
+    const query = '?q=desk&sort=price_asc&dateRange=7d&categories=Furniture&locations=Othmer&page=2&min_price=10&max_price=100';
 
     render(
       <MemoryRouter initialEntries={[`/browse${query}`]}>
@@ -35,9 +45,8 @@ describe('BrowseListings advanced param mapping', () => {
     expect(calledWith.ordering).toBe('price');
     expect(calledWith.search).toBe('desk');
     expect(calledWith.posted_within).toBe(7);
-    expect(calledWith.available_only).toBe(true);
-    expect(calledWith.category).toBe('Furniture');
-    expect(calledWith.location).toBe('Othmer');
+    expect(calledWith.categories).toBe('Furniture');
+    expect(calledWith.locations).toBe('Othmer');
     expect(calledWith.min_price).toBe('10');
     expect(calledWith.max_price).toBe('100');
     expect(calledWith.page).toBe(2);

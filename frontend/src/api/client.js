@@ -24,22 +24,29 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - clear storage and redirect to login
+      // ✅ Check if we *had* a token before clearing
+      const hadToken = !!localStorage.getItem('access_token');
+
+      // Clear auth storage
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login') {
+
+      // ✅ Only redirect if we *previously* had a token
+      // (i.e., session expired). If user was never logged in,
+      // let the app stay on Home/Browse/etc.
+      if (hadToken && window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
+
     // Handle 413 errors specifically
     if (error.response?.status === 413) {
       console.error('API Error (413): File(s) are too large', error);
-      // Error message will be handled by the calling component
     } else {
       console.error('API Error:', error);
     }
+
     return Promise.reject(error);
   }
 );

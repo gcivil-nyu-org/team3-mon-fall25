@@ -26,7 +26,7 @@ export default defineConfig({
   // Vitest configuration
   test: {
     globals: true, // Allows using describe, it, expect etc. globally
-    environment: 'jsdom', // Use jsdom for DOM simulation
+    environment: 'jsdom',   
     setupFiles: './src/setupTests.js', // Setup file for test configuration
     css: true, // Parse CSS imports
     testTimeout: 30000, // 30 seconds timeout for tests (needed for complex async operations)
@@ -35,6 +35,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'], // text for CI logs, lcov for Coveralls
       exclude: [
         'node_modules/',
+        'assets/*',
         'src/setupTests.js',
         'src/api/**',
         '**/*.css',

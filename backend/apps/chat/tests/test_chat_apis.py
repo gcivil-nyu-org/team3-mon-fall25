@@ -1,4 +1,3 @@
-# backend/apps/chat/tests/test_chat_apis.py
 import pytest
 from rest_framework.test import APIClient
 
