@@ -77,6 +77,10 @@ export default function AppRouter() {
                                     element={<TransactionPaymentPage/>}
                                 />
                                 <Route
+                                    path="/transaction/:id"
+                                    element={<TransactionPaymentPage/>}
+                                />
+                                <Route
                                     path="listing/:id/edit"
                                     element={
                                         <ProtectedRoute>
