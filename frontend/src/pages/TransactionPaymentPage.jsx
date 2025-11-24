@@ -48,7 +48,6 @@ const Header = ({ status = "PENDING" }) => (
 );
 
 const TransactionDetailsCard = ({ listing, status }) => {
-  // derive image the same way ListingGrid does
   const imageUrl =
     listing?.primary_image?.url ||
     listing?.images?.[0]?.image_url ||
@@ -178,13 +177,11 @@ export default function TransactionPaymentPage() {
         setLocation(tx.meet_location || "");
 
         if (tx.meet_time) {
-          // backend returns ISO; datetime-local wants YYYY-MM-DDTHH:mm
           setMeetingTime(tx.meet_time.slice(0, 16));
         } else {
           setMeetingTime("");
         }
 
-        // 2) Listing details linked to this transaction
         if (tx.listing) {
           try {
             const listingData = await getListing(tx.listing);
@@ -192,7 +189,6 @@ export default function TransactionPaymentPage() {
           } catch (err) {
             if (!cancelled) {
               console.error("Failed to load listing", err);
-              // keep page usable; just show a soft error
             }
           }
         }
@@ -217,7 +213,6 @@ export default function TransactionPaymentPage() {
     };
   }, [transactionId]);
 
-  // ---- Timeline helpers ----
 
   const mapStatusToStep = (status) => {
     switch (status) {
@@ -245,7 +240,6 @@ export default function TransactionPaymentPage() {
     return "upcoming";
   };
 
-  // ---- Save handlers (PATCH to backend) ----
 
   const handleSave = async () => {
     if (!transaction) return;

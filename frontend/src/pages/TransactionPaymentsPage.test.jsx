@@ -115,12 +115,10 @@ describe("TransactionPaymentPage", () => {
 
     const saveButton = screen.getByRole("button", { name: /Save Changes/i });
 
-    // click Save → should show Saving...
     fireEvent.click(saveButton);
     expect(saveButton).toBeDisabled();
     expect(saveButton).toHaveTextContent(/Saving\.\.\./i);
 
-    // wait for setTimeout in handleSave (1s) to complete
     await waitFor(
       () => {
         expect(saveButton).not.toBeDisabled();

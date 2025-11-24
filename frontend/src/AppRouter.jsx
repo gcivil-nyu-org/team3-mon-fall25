@@ -77,7 +77,7 @@ export default function AppRouter() {
                                     element={<TransactionPaymentPage/>}
                                 />
                                 <Route
-                                    path="/transaction/:id"
+                                    path="transaction/:id"
                                     element={<TransactionPaymentPage/>}
                                 />
                                 <Route
