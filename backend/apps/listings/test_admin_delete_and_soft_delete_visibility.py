@@ -1,5 +1,3 @@
-# tests/listings/test_admin_delete_and_soft_delete_visibility.py
-
 import pytest
 from django.contrib.admin.sites import AdminSite
 from rest_framework.test import APIClient
@@ -27,7 +25,6 @@ def test_soft_delete_listings_action_marks_is_deleted_and_inactive():
 
     qs = Listing.objects.filter(pk=listing.pk)
 
-    # 呼叫 admin action
     soft_delete_listings(admin, DummyRequest(), qs)
 
     listing.refresh_from_db()
@@ -47,7 +44,6 @@ def test_delete_model_soft_deletes_instead_of_hard_delete():
     listing.refresh_from_db()
     assert listing.is_deleted is True
     assert listing.status == "inactive"
-    # 確定真的沒被 delete 掉
     assert Listing.objects.filter(pk=listing.pk).exists()
 
 
@@ -68,7 +64,7 @@ def test_delete_queryset_soft_deletes_all_listings():
 
 
 # =======================
-# API / ViewSet 行為測試
+# API / ViewSet behavioral test
 # =======================
 
 
@@ -114,7 +110,6 @@ def test_public_list_excludes_soft_deleted_and_inactive(api_client):
 
     ids = {item["listing_id"] for item in results}
 
-    # 只會看到 active & is_deleted=False 的那筆
     assert visible.listing_id in ids
     assert deleted.listing_id not in ids
     assert inactive.listing_id not in ids
@@ -158,7 +153,6 @@ def test_user_listings_excludes_soft_deleted(authenticated_client):
     resp = client.get("/api/v1/listings/user/")
     assert resp.status_code == 200
 
-    # user_listings 沒有 pagination，是直接 list
     ids = {item["listing_id"] for item in resp.data}
 
     assert visible.listing_id in ids
@@ -172,7 +166,6 @@ def test_filter_options_ignores_categories_and_dorms_only_from_deleted_listings(
 ):
     owner = UserFactory()
 
-    # 只存在於 deleted listing 的 category / dorm
     deleted_only_category = "__deleted_only_category__"
     deleted_only_dorm = "__deleted_only_dorm__"
 
@@ -184,7 +177,6 @@ def test_filter_options_ignores_categories_and_dorms_only_from_deleted_listings(
         dorm_location=deleted_only_dorm,
     )
 
-    # 會被當作正常來源的 category / dorm
     visible_category = "__visible_category__"
     visible_dorm = "__visible_dorm__"
 
@@ -203,7 +195,6 @@ def test_filter_options_ignores_categories_and_dorms_only_from_deleted_listings(
     categories = data["categories"]
     locations = data["locations"]
 
-    # 只出現在 deleted listing 的值不應該被算進去
     assert visible_category in categories
     assert visible_dorm in locations
 
