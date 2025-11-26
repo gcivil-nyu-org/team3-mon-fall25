@@ -486,7 +486,24 @@ describe('Filters', () => {
     const sliderWrapper = container.querySelector('[data-slider-max]');
     expect(sliderWrapper).toBeInTheDocument();
     expect(sliderWrapper).toHaveAttribute('data-slider-max', '850');
-    expect(sliderWrapper).toHaveAttribute('data-slider-min', '12.5');
+    expect(sliderWrapper).toHaveAttribute('data-slider-min', '0');
+  });
+
+  it('prefills price inputs when filters are empty', async () => {
+    const onChange = vi.fn();
+    const optionsWithStats = {
+      ...mockOptions,
+      priceStats: { max_price: "850" },
+    };
+    render(<Filters initial={{}} onChange={onChange} options={optionsWithStats} />);
+
+    const minInput = screen.getByLabelText('Min price');
+    const maxInput = screen.getByLabelText('Max price');
+
+    await waitFor(() => {
+      expect(minInput).toHaveValue(0);
+      expect(maxInput).toHaveValue(850);
+    });
   });
 
   it('always uses grouped dorm locations structure', async () => {

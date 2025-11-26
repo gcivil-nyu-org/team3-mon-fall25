@@ -195,10 +195,10 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-const PRICE_DEBOUNCE_DELAY = 300;
+const PRICE_DEBOUNCE_DELAY = 1000;
 const PRICE_MIN = 0;
-const PRICE_MAX = 2000;
-const PRICE_STEP = 10;
+const PRICE_MAX = 2000; // the fallback default value. 
+const PRICE_STEP = 1;
 
 const parsePriceValue = (value) => {
   if (value === "" || value === null || value === undefined) {
@@ -217,13 +217,11 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
   } = options;
 
   const priceLimits = useMemo(() => {
-    const statsMin = parsePriceValue(priceStats?.min_price);
     const statsMax = parsePriceValue(priceStats?.max_price);
-    const lower = statsMin !== null ? Math.max(PRICE_MIN, statsMin) : PRICE_MIN;
-    const upperCandidate = statsMax !== null ? Math.max(PRICE_MIN, statsMax) : PRICE_MAX;
-    const upper = Math.max(lower, upperCandidate);
-    return { min: lower, max: upper };
-  }, [priceStats?.min_price, priceStats?.max_price]);
+    const upperCandidate = statsMax !== null ? statsMax : PRICE_MAX;
+    const upper = Math.max(PRICE_MIN, upperCandidate);
+    return { min: PRICE_MIN, max: upper };
+  }, [priceStats?.max_price]);
 
   const availableCategories = apiCategories.length > 0 ? apiCategories : CATEGORIES;
   // Use grouped dorm_locations if available, otherwise fallback to grouped structure
@@ -238,23 +236,43 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
     dateRange: initial.dateRange || "",
   });
 
-  // Local state for immediate UI updates (not debounced)
-  const [priceMinInput, setPriceMinInput] = useState(filters.priceMin);
-  const [priceMaxInput, setPriceMaxInput] = useState(filters.priceMax);
+  // Initialize price inputs with defaults if initial values are empty
+  const getInitialPriceInput = (initialValue, isMin) => {
+    if (initialValue !== "" && initialValue != null) {
+      return initialValue;
+    }
+    // Use current priceLimits for default
+    return String(isMin ? priceLimits.min : priceLimits.max);
+  };
 
+  // Local state for immediate UI updates (not debounced)
+  const [priceMinInput, setPriceMinInput] = useState(() =>
+    getInitialPriceInput(initial.priceMin, true)
+  );
+  const [priceMaxInput, setPriceMaxInput] = useState(() =>
+    getInitialPriceInput(initial.priceMax, false)
+  );
+
+  // Track if we've initialized with defaults (to avoid pushing defaults to parent on mount)
+  const initializedWithDefaultsRef = useRef({
+    min: initial.priceMin === "" || initial.priceMin == null,
+    max: initial.priceMax === "" || initial.priceMax == null,
+  });
+
+  // When priceLimits change, update inputs if they're at the old limits or out of bounds
   useEffect(() => {
     setPriceMinInput((current) => {
-      if (current === "") return current;
       const value = Number(current);
       if (!Number.isFinite(value)) return current;
+      // Clamp to new limits
       if (value < priceLimits.min) return String(priceLimits.min);
       if (value > priceLimits.max) return String(priceLimits.max);
       return current;
     });
     setPriceMaxInput((current) => {
-      if (current === "") return current;
       const value = Number(current);
       if (!Number.isFinite(value)) return current;
+      // Clamp to new limits
       if (value < priceLimits.min) return String(priceLimits.min);
       if (value > priceLimits.max) return String(priceLimits.max);
       return current;
@@ -329,6 +347,22 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
 
   // Update filters when debounced values change and trigger onChange (only if valid)
   useEffect(() => {
+    // Skip initial mount if we initialized with defaults
+    if (initializedWithDefaultsRef.current.min || initializedWithDefaultsRef.current.max) {
+      // Check if current values match the defaults we set
+      const minMatchesDefault = debouncedPriceMin === String(priceLimits.min);
+      const maxMatchesDefault = debouncedPriceMax === String(priceLimits.max);
+
+      if (
+        (initializedWithDefaultsRef.current.min && minMatchesDefault) ||
+        (initializedWithDefaultsRef.current.max && maxMatchesDefault)
+      ) {
+        // Clear the flags so subsequent changes will trigger onChange
+        initializedWithDefaultsRef.current = { min: false, max: false };
+        return;
+      }
+    }
+
     // Validate debounced values
     const minError = validatePriceMin(debouncedPriceMin);
     const maxError = validatePriceMax(debouncedPriceMax, debouncedPriceMin);
@@ -351,16 +385,26 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
         return newFilters;
       });
     }
-  }, [debouncedPriceMin, debouncedPriceMax]);
+  }, [debouncedPriceMin, debouncedPriceMax, priceLimits.min, priceLimits.max]);
 
   // Sync input state when initial props change (e.g., from URL)
   useEffect(() => {
-    setPriceMinInput(initial.priceMin ?? "");
-    setPriceMaxInput(initial.priceMax ?? "");
+    const newMin = initial.priceMin ?? "";
+    const newMax = initial.priceMax ?? "";
+
+    setPriceMinInput(newMin !== "" ? newMin : String(priceLimits.min));
+    setPriceMaxInput(newMax !== "" ? newMax : String(priceLimits.max));
+
+    // Update the initialized flags
+    initializedWithDefaultsRef.current = {
+      min: newMin === "",
+      max: newMax === "",
+    };
+
     // Clear validation errors when syncing from initial props
     setPriceMinError("");
     setPriceMaxError("");
-  }, [initial.priceMin, initial.priceMax]);
+  }, [initial.priceMin, initial.priceMax, priceLimits.min, priceLimits.max]);
 
   const handleCheckbox = (type, value) => {
     // Support both single value toggle and batch array update
