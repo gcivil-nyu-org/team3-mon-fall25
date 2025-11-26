@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaCommentDots } from "react-icons/fa";
-import { getListing } from "@/api/listings";
+import { getListing, patchListing, deleteListingAPI } from "@/api/listings";
 import { useAuth } from "../contexts/AuthContext";
 import ListingDetailContent from "../components/ListingDetailContent";
 import "./ListingDetail.css";
@@ -68,6 +68,53 @@ export default function ListingDetail() {
         });
     };
 
+    const handleEditListing = () => {
+        navigate(`/listing/${id}/edit`);
+    };
+
+    const handleMarkAsSold = async () => {
+        if (!listing) return;
+
+        const confirmed = window.confirm(
+            "Are you sure you want to mark this listing as sold?"
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await patchListing(id, { status: "sold" });
+            // Update local state
+            setListing((prev) => ({ ...prev, status: "sold" }));
+        } catch (err) {
+            console.error("Failed to mark as sold:", err);
+            alert("Failed to mark as sold. Please try again.");
+        }
+    };
+
+    const handleDeleteListing = async () => {
+        if (!listing) return;
+
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this listing? This action cannot be undone."
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const success = await deleteListingAPI(id);
+
+            if (success) {
+                // Navigate back to my listings page after successful deletion
+                navigate("/my-listings");
+            } else {
+                alert("Failed to delete listing. Please try again.");
+            }
+        } catch (err) {
+            console.error("Failed to delete listing:", err);
+            alert("Failed to delete listing. Please try again.");
+        }
+    };
+
 
 
     // Don't render anything if there's no ID (component is just rendered in background on chat page)
@@ -110,34 +157,84 @@ export default function ListingDetail() {
                 listing={listing}
                 isPreview={false}
                 onViewProfile={handleViewProfile}
+                onEditListing={handleEditListing}
+                onMarkAsSold={handleMarkAsSold}
+                onDeleteListing={handleDeleteListing}
             />
 
             {/* Mobile Sticky Footer */}
             <div className="listing-detail-mobile-footer">
                 <div className="listing-detail-mobile-footer-content">
-                    <div className="listing-detail-mobile-price">
-                        <p className="listing-detail-mobile-price-label">Price</p>
-                        <p className="listing-detail-mobile-price-value">
-                            ${parseFloat(listing.price || 0).toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                            })}
-                        </p>
-                    </div>
-                    <button
-                        className="listing-detail-mobile-contact-button"
-                        onClick={() => {
-                            if (!isAuthenticated()) {
-                                navigate("/login", {
-                                    state: { from: location },
-                                });
-                            }
-                        }}
-                        disabled={listing.status === "sold"}
-                    >
-                        <FaCommentDots />
-                        Contact
-                    </button>
+                    {listing.is_owner ? (
+                        // Owner view - show action buttons
+                        <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+                            <button
+                                className="listing-detail-mobile-contact-button"
+                                onClick={handleEditListing}
+                                style={{
+                                    background: "#56018D",
+                                    flex: 1,
+                                    fontSize: "14px",
+                                    padding: "10px"
+                                }}
+                            >
+                                Edit
+                            </button>
+                            {listing.status !== "sold" && (
+                                <button
+                                    className="listing-detail-mobile-contact-button"
+                                    onClick={handleMarkAsSold}
+                                    style={{
+                                        background: "#059669",
+                                        flex: 1,
+                                        fontSize: "14px",
+                                        padding: "10px"
+                                    }}
+                                >
+                                    Sold
+                                </button>
+                            )}
+                            <button
+                                className="listing-detail-mobile-contact-button"
+                                onClick={handleDeleteListing}
+                                style={{
+                                    background: "#dc2626",
+                                    flex: 1,
+                                    fontSize: "14px",
+                                    padding: "10px"
+                                }}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    ) : (
+                        // Non-owner view - show price and contact
+                        <>
+                            <div className="listing-detail-mobile-price">
+                                <p className="listing-detail-mobile-price-label">Price</p>
+                                <p className="listing-detail-mobile-price-value">
+                                    ${parseFloat(listing.price || 0).toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
+                                </p>
+                            </div>
+                            <button
+                                className="listing-detail-mobile-contact-button"
+                                onClick={() => {
+                                    if (!isAuthenticated()) {
+                                        navigate("/login", {
+                                            state: { from: location },
+                                        });
+                                    }
+                                }}
+                                disabled={listing.status === "sold"}
+                            >
+                                <FaCommentDots />
+                                Contact
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
