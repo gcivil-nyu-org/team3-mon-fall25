@@ -1799,4 +1799,243 @@ describe('ListingDetail - Core Functionality', () => {
             expect(screen.getByTestId('seller-card')).toBeInTheDocument();
         });
     });
+
+    describe('Owner Actions', () => {
+        const mockOwnerListing = {
+            ...mockListing,
+            is_owner: true,
+        };
+
+        const mockNonOwnerListing = {
+            ...mockListing,
+            is_owner: false,
+        };
+
+        beforeEach(() => {
+            vi.clearAllMocks();
+            listingsApi.patchListing.mockResolvedValue({});
+            listingsApi.deleteListingAPI.mockResolvedValue(true);
+        });
+
+        it('should show edit button for listing owner', async () => {
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const editButton = screen.getByRole('button', { name: /edit listing/i });
+            expect(editButton).toBeInTheDocument();
+        });
+
+        it('should navigate to edit page when edit button is clicked', async () => {
+            const user = userEvent.setup();
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const editButton = screen.getByRole('button', { name: /edit listing/i });
+            await user.click(editButton);
+
+            expect(mockNavigate).toHaveBeenCalledWith('/listing/123/edit');
+        });
+
+        it('should show mark as sold button for active listing owner', async () => {
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const soldButton = screen.getByRole('button', { name: /mark as sold/i });
+            expect(soldButton).toBeInTheDocument();
+        });
+
+        it('should not show mark as sold button for sold listing', async () => {
+            listingsApi.getListing.mockResolvedValue({
+                ...mockOwnerListing,
+                status: 'sold',
+            });
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const soldButton = screen.queryByRole('button', { name: /mark as sold/i });
+            expect(soldButton).not.toBeInTheDocument();
+        });
+
+        it('should call patchListing when mark as sold is clicked and confirmed', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => true);
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const soldButton = screen.getByRole('button', { name: /mark as sold/i });
+            await user.click(soldButton);
+
+            expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to mark this listing as sold?');
+            expect(listingsApi.patchListing).toHaveBeenCalledWith('123', { status: 'sold' });
+        });
+
+        it('should not call patchListing when mark as sold is cancelled', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => false);
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const soldButton = screen.getByRole('button', { name: /mark as sold/i });
+            await user.click(soldButton);
+
+            expect(global.confirm).toHaveBeenCalled();
+            expect(listingsApi.patchListing).not.toHaveBeenCalled();
+        });
+
+        it('should show delete button for listing owner', async () => {
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const deleteButton = screen.getByRole('button', { name: /delete listing/i });
+            expect(deleteButton).toBeInTheDocument();
+        });
+
+        it('should call deleteListingAPI when delete is clicked and confirmed', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => true);
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const deleteButton = screen.getByRole('button', { name: /delete listing/i });
+            await user.click(deleteButton);
+
+            expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to delete this listing? This action cannot be undone.');
+            expect(listingsApi.deleteListingAPI).toHaveBeenCalledWith('123');
+        });
+
+        it('should navigate to my-listings after successful deletion', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => true);
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            listingsApi.deleteListingAPI.mockResolvedValue(true);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const deleteButton = screen.getByRole('button', { name: /delete listing/i });
+            await user.click(deleteButton);
+
+            await waitFor(() => {
+                expect(mockNavigate).toHaveBeenCalledWith('/my-listings');
+            });
+        });
+
+        it('should not navigate if deletion fails', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => true);
+            global.alert = vi.fn();
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            listingsApi.deleteListingAPI.mockResolvedValue(false);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const deleteButton = screen.getByRole('button', { name: /delete listing/i });
+            await user.click(deleteButton);
+
+            await waitFor(() => {
+                expect(global.alert).toHaveBeenCalledWith('Failed to delete listing. Please try again.');
+                expect(mockNavigate).not.toHaveBeenCalledWith('/my-listings');
+            });
+        });
+
+        it('should not show owner actions for non-owner', async () => {
+            listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            expect(screen.queryByRole('button', { name: /edit listing/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /mark as sold/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /delete listing/i })).not.toBeInTheDocument();
+        });
+
+        it('should show contact and save buttons for non-owner', async () => {
+            listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            expect(screen.getByRole('button', { name: /contact seller/i })).toBeInTheDocument();
+        });
+
+        it('should handle mark as sold error gracefully', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => true);
+            global.alert = vi.fn();
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            listingsApi.patchListing.mockRejectedValue(new Error('API Error'));
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const soldButton = screen.getByRole('button', { name: /mark as sold/i });
+            await user.click(soldButton);
+
+            await waitFor(() => {
+                expect(global.alert).toHaveBeenCalledWith('Failed to mark as sold. Please try again.');
+            });
+        });
+
+        it('should handle delete error gracefully', async () => {
+            const user = userEvent.setup();
+            global.confirm = vi.fn(() => true);
+            global.alert = vi.fn();
+            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+            listingsApi.deleteListingAPI.mockRejectedValue(new Error('API Error'));
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const deleteButton = screen.getByRole('button', { name: /delete listing/i });
+            await user.click(deleteButton);
+
+            await waitFor(() => {
+                expect(global.alert).toHaveBeenCalledWith('Failed to delete listing. Please try again.');
+            });
+        });
+    });
 });
