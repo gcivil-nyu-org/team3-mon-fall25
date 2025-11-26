@@ -31,6 +31,7 @@ class ListingAdmin(admin.ModelAdmin):
         if obj.user:
             return obj.user.email
         return "-"
+
     seller_email.short_description = "Seller Email"
 
     # Add a「Delete listing」button（actually soft delete）

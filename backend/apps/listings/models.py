@@ -31,7 +31,7 @@ class Listing(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     view_count = models.PositiveIntegerField(default=0)
     is_deleted = models.BooleanField(default=False)
-    
+
     class Meta:
         db_table = "listings"
         # used for efficient filtering
