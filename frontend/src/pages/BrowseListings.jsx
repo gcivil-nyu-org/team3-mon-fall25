@@ -8,9 +8,10 @@ import Pagination from "../components/browse/Pagination";
 import Spinner from "../components/common/Spinner";
 import Empty from "../components/common/Empty";
 import ErrorBlock from "../components/common/ErrorBlock";
-import { getListings, getFilterOptions } from "../api/listings";
+import { getListings } from "../api/listings";
 import SEO from "../components/SEO";
 import { CATEGORIES, LOCATIONS, DORM_LOCATIONS_GROUPED } from "../constants/filterOptions";
+import { loadDormOptionas } from "../utils/dormOptions";
 
 const PAGE_SIZE = 20; // should match backend pagination
 
@@ -105,32 +106,13 @@ export default function BrowseListings() {
 
   // Fetch filter options from API on mount
   useEffect(() => {
-    async function loadFilterOptions() {
+    async function loadDormOptionasEffect() {
       // setFilterOptionsLoading(true); // Commented out - uncomment if loading state needed
-      try {
-        const apiOptions = await getFilterOptions();
-        // API returns: { categories: [...], dorm_locations: { washington_square: [...], downtown: [...], other: [...] }, locations: [...] }
-        // Flatten dorm_locations for current UI (flat checkbox list)
-        // TODO: Future enhancement - use grouped dorm_locations structure for grouped UI display
-        const flatLocations = apiOptions.locations || [];
-        setFilterOptions({
-          categories: apiOptions.categories || CATEGORIES,
-          locations: flatLocations.length > 0 ? flatLocations : LOCATIONS,
-          dorm_locations: apiOptions.dorm_locations || DORM_LOCATIONS_GROUPED, // Use API or fallback to grouped
-        });
-      } catch (e) {
-        console.error("Error loading filter options:", e);
-        // Fallback to hardcoded values on error (grouped structure)
-        setFilterOptions({
-          categories: CATEGORIES,
-          locations: LOCATIONS,
-          dorm_locations: DORM_LOCATIONS_GROUPED,
-        });
-      } finally {
-        // setFilterOptionsLoading(false); // Commented out - uncomment if loading state needed
-      }
+      const apiOptions = await loadDormOptionas();
+      setFilterOptions(apiOptions);
+      // setFilterOptionsLoading(false); // Commented out - uncomment if loading state needed
     }
-    loadFilterOptions();
+    loadDormOptionasEffect();
   }, []);
 
   // Validate and filter out invalid filter values from URL when filterOptions are loaded

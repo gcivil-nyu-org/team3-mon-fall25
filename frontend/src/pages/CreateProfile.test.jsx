@@ -81,7 +81,7 @@ describe("CreateProfile page", () => {
 
     const fullName = screen.getByLabelText(/Full Name/i);
     const username = screen.getByLabelText(/Username/i);
-    const dorm = screen.getByLabelText(/Dorm\/Residence/i);
+    const dorm = screen.getByLabelText(/Location \(Dorm\)/i);
     const email = screen.getByDisplayValue("student@nyu.edu");
 
     expect(fullName).toHaveAttribute("required");
@@ -125,7 +125,7 @@ describe("CreateProfile page", () => {
     await user.type(screen.getByLabelText(/Full Name/), "Alex Morgan");
     await user.type(screen.getByLabelText(/Username/), "alexm");
     await user.type(screen.getByLabelText(/Bio/), "NYU student");
-    await user.selectOptions(screen.getByLabelText(/Dorm\/Residence/), [
+    await user.selectOptions(screen.getByLabelText(/Location \(Dorm\)/), [
       "Founders Hall",
     ]);
 
@@ -164,7 +164,7 @@ describe("CreateProfile page", () => {
 
     await user.type(screen.getByLabelText(/Full Name/), "Alex Morgan");
     await user.type(screen.getByLabelText(/Username/), "alexm");
-    await user.selectOptions(screen.getByLabelText(/Dorm\/Residence/), [
+    await user.selectOptions(screen.getByLabelText(/Location \(Dorm\)/), [
       "Founders Hall",
     ]);
 
