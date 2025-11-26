@@ -6,7 +6,7 @@ from .models import Listing
 
 @admin.action(description="Soft delete selected listings (removed by admin)")
 def soft_delete_listings(modeladmin, request, queryset):
-    queryset.update(is_deleted=True, status="removed_by_admin")
+    queryset.update(is_deleted=True, status="inactive")
 
 
 @admin.register(Listing)
