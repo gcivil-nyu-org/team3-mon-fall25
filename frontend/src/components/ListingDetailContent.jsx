@@ -29,6 +29,7 @@ export default function ListingDetailContent({
     onEditListing,
     onMarkAsSold,
     onDeleteListing,
+    onBuyNow,
 }) {
     const { isAuthenticated } = useAuth();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -546,6 +547,16 @@ export default function ListingDetailContent({
                                             >
                                                 <FaCommentDots className="listing-detail-contact-icon" />
                                                 Contact Seller
+                                            </button>
+                                            <button
+                                                className="listing-detail-contact-button"
+                                                onClick={onBuyNow}
+                                                disabled={listing.status === "sold"}
+                                                style={{
+                                                    background: "#059669",
+                                                }}
+                                            >
+                                                Buy Now
                                             </button>
                                         </>
                                     )}
