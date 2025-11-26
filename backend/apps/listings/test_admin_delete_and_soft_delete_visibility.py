@@ -17,6 +17,7 @@ class DummyRequest:
 # Admin behavioral test
 # ============
 
+
 @pytest.mark.django_db
 def test_soft_delete_listings_action_marks_is_deleted_and_inactive():
     listing = ListingFactory(status="active", is_deleted=False)
@@ -53,7 +54,7 @@ def test_delete_model_soft_deletes_instead_of_hard_delete():
 @pytest.mark.django_db
 def test_delete_queryset_soft_deletes_all_listings():
     listings = ListingFactory.create_batch(3, status="active", is_deleted=False)
-    ids = [l.pk for l in listings]
+    ids = [item.pk for item in listings]
 
     site = AdminSite()
     admin = ListingAdmin(Listing, site)
@@ -61,14 +62,15 @@ def test_delete_queryset_soft_deletes_all_listings():
     qs = Listing.objects.filter(pk__in=ids)
     admin.delete_queryset(DummyRequest(), qs)
 
-    for l in Listing.objects.filter(pk__in=ids):
-        assert l.is_deleted is True
-        assert l.status == "inactive"
+    for item in Listing.objects.filter(pk__in=ids):
+        assert item.is_deleted is True
+        assert item.status == "inactive"
 
 
 # =======================
 # API / ViewSet 行為測試
 # =======================
+
 
 @pytest.fixture
 def api_client():
@@ -165,7 +167,9 @@ def test_user_listings_excludes_soft_deleted(authenticated_client):
 
 
 @pytest.mark.django_db
-def test_filter_options_ignores_categories_and_dorms_only_from_deleted_listings(api_client):
+def test_filter_options_ignores_categories_and_dorms_only_from_deleted_listings(
+    api_client,
+):
     owner = UserFactory()
 
     # 只存在於 deleted listing 的 category / dorm
