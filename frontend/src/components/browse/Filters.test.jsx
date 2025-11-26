@@ -5,7 +5,11 @@ import Filters from './Filters';
 
 const mockOptions = {
   categories: ['Electronics', 'Books', 'Furniture', 'Apparel', 'Other'],
-  locations: ['Othmer Hall', 'Brooklyn', 'Manhattan', 'Other']
+  dorm_locations: {
+    washington_square: ['Alumni Hall', 'Brittany Hall', 'Othmer Hall', 'Palladium', 'Rubin Hall', 'Third North', 'University Hall', 'Weinstein Hall', 'Founders Hall', 'Clark Hall', 'Hayden Hall', 'Lipton Hall'],
+    downtown: ['194 Mercer', '26th Street', 'Broome Street', 'Carlyle Court'],
+    other: ['Other Dorms', 'Off-Campus']
+  }
 };
 
 describe('Filters', () => {
@@ -42,9 +46,9 @@ describe('Filters', () => {
         fireEvent.change(maxInput, { target: { value: '1500' } });
       });
 
-      // Advance timers to complete debounce
+      // Advance timers to complete debounce (PRICE_DEBOUNCE_DELAY = 1000ms)
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(1000);
       });
 
       // Verify onChange was called with the correct values
@@ -310,9 +314,9 @@ describe('Filters', () => {
       fireEvent.change(maxInput, { target: { value: '500' } });
     });
 
-    // Wait for debounce
+    // Wait for debounce (PRICE_DEBOUNCE_DELAY = 1000ms)
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(1000);
     });
 
     expect(onChange).toHaveBeenCalled();
@@ -322,9 +326,9 @@ describe('Filters', () => {
 
   it('handles empty categories and locations arrays', () => {
     const onChange = vi.fn();
-    render(<Filters initial={{}} onChange={onChange} options={{ categories: [], locations: [] }} />);
+    render(<Filters initial={{}} onChange={onChange} options={{ categories: [] }} />);
 
-    // When options are empty, component uses fallback CATEGORIES and LOCATIONS
+    // When categories are empty, component uses fallback CATEGORIES
     // So it won't show "Loading..." - it will show the fallback options
     expect(screen.getByText('Electronics')).toBeInTheDocument();
   });
@@ -339,10 +343,9 @@ describe('Filters', () => {
     // Change initial props
     rerender(<Filters initial={{ priceMin: '200', priceMax: '500' }} onChange={onChange} options={mockOptions} />);
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Min price')).toHaveValue(200);
-      expect(screen.getByLabelText('Max price')).toHaveValue(500);
-    });
+    // Inputs should sync immediately with new initial props
+    expect(screen.getByLabelText('Min price')).toHaveValue(200);
+    expect(screen.getByLabelText('Max price')).toHaveValue(500);
   });
 
   it('does not call onChange when debounced values have validation errors', async () => {
@@ -371,15 +374,19 @@ describe('Filters', () => {
   it('handles onChange ref updates', async () => {
     vi.useFakeTimers();
     const onChange1 = vi.fn();
-    const { rerender } = render(<Filters initial={{}} onChange={onChange1} options={mockOptions} />);
+    const { rerender } = render(<Filters initial={{ priceMin: '50', priceMax: '500' }} onChange={onChange1} options={mockOptions} />);
 
     const onChange2 = vi.fn();
-    rerender(<Filters initial={{}} onChange={onChange2} options={mockOptions} />);
+    rerender(<Filters initial={{ priceMin: '50', priceMax: '500' }} onChange={onChange2} options={mockOptions} />);
 
     const minInput = screen.getByLabelText('Min price');
     act(() => {
-      fireEvent.change(minInput, { target: { value: '100' } });
-      vi.advanceTimersByTime(300);
+      fireEvent.change(minInput, { target: { value: '200' } });
+    });
+
+    // Advance timers in separate act to ensure debounce completes
+    act(() => {
+      vi.advanceTimersByTime(1000); // Match PRICE_DEBOUNCE_DELAY
     });
 
     expect(onChange2).toHaveBeenCalled();
@@ -388,28 +395,25 @@ describe('Filters', () => {
     vi.useRealTimers();
   });
 
-  it('deselects all locations in a group when all are selected', async () => {
+  it('deselects all locations in a group when all are selected', () => {
     const onChange = vi.fn();
     // Start with all Washington Square locations selected
     const initialLocations = ['Alumni Hall', 'Brittany Hall', 'Othmer Hall', 'Palladium', 'Rubin Hall', 'Third North', 'University Hall', 'Weinstein Hall', 'Founders Hall', 'Clark Hall', 'Hayden Hall', 'Lipton Hall'];
     render(<Filters initial={{ locations: initialLocations }} onChange={onChange} options={mockOptions} />);
 
-    // Wait for Washington Square group to render
-    await waitFor(() => {
-      expect(screen.getByText('Washington Square')).toBeInTheDocument();
-    });
+    // Washington Square group should be rendered
+    const washingtonSquareButton = screen.getByText('Washington Square');
+    expect(washingtonSquareButton).toBeInTheDocument();
 
     // Expand the Washington Square group
-    const washingtonSquareButton = screen.getByText('Washington Square').closest('button');
-    fireEvent.click(washingtonSquareButton);
+    fireEvent.click(washingtonSquareButton.closest('button'));
 
-    // Wait for locations to appear
-    await waitFor(() => {
-      expect(screen.getByLabelText('Othmer Hall')).toBeInTheDocument();
-    });
+    // Locations should appear after expanding
+    const othmerCheckbox = screen.getByLabelText('Othmer Hall');
+    expect(othmerCheckbox).toBeInTheDocument();
 
     // Find the select-all checkbox for Washington Square group (it's in a label before the button)
-    const groupContainer = washingtonSquareButton?.parentElement;
+    const groupContainer = washingtonSquareButton.closest('button')?.parentElement;
     const groupCheckbox = groupContainer?.querySelector('input[type="checkbox"]');
     expect(groupCheckbox).toBeInTheDocument();
     expect(groupCheckbox).toBeChecked(); // All should be selected
@@ -424,24 +428,21 @@ describe('Filters', () => {
     expect(lastCall?.[0].locations).not.toContain('Alumni Hall');
   });
 
-  it('handles mouse hover events on group buttons', async () => {
+  it('handles mouse hover events on group buttons', () => {
     const onChange = vi.fn();
     render(<Filters initial={{}} onChange={onChange} options={mockOptions} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Washington Square')).toBeInTheDocument();
-    });
-
-    const washingtonSquareButton = screen.getByText('Washington Square').closest('button');
-    expect(washingtonSquareButton).toBeInTheDocument();
+    const washingtonSquareButton = screen.getByText('Washington Square');
+    const buttonElement = washingtonSquareButton.closest('button');
+    expect(buttonElement).toBeInTheDocument();
 
     // Test onMouseOver
-    fireEvent.mouseOver(washingtonSquareButton);
-    expect(washingtonSquareButton.style.opacity).toBe('0.8');
+    fireEvent.mouseOver(buttonElement);
+    expect(buttonElement.style.opacity).toBe('0.8');
 
     // Test onMouseOut
-    fireEvent.mouseOut(washingtonSquareButton);
-    expect(washingtonSquareButton.style.opacity).toBe('1');
+    fireEvent.mouseOut(buttonElement);
+    expect(buttonElement.style.opacity).toBe('1');
   });
 
   it('handles slider change via RangeSlider component', async () => {
@@ -500,10 +501,9 @@ describe('Filters', () => {
     const minInput = screen.getByLabelText('Min price');
     const maxInput = screen.getByLabelText('Max price');
 
-    await waitFor(() => {
-      expect(minInput).toHaveValue(0);
-      expect(maxInput).toHaveValue(850);
-    });
+    // Inputs should be prefilled immediately with priceLimits
+    expect(minInput).toHaveValue(0);
+    expect(maxInput).toHaveValue(850);
   });
 
   it('always uses grouped dorm locations structure', async () => {
@@ -517,9 +517,7 @@ describe('Filters', () => {
     render(<Filters initial={{}} onChange={onChange} options={optionsWithLocations} />);
 
     // Component should render with grouped structure (always)
-    await waitFor(() => {
-      expect(screen.getByText('Electronics')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Electronics')).toBeInTheDocument();
 
     // Verify it uses the grouped structure
     expect(screen.getByText('Washington Square')).toBeInTheDocument();
@@ -529,11 +527,10 @@ describe('Filters', () => {
     const onChange = vi.fn();
     render(<Filters initial={{ categories: ['Electronics'], priceMin: '100' }} onChange={onChange} options={mockOptions} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Clear all filters')).toBeInTheDocument();
-    });
-
+    // Clear all button should be visible when filters are active
     const clearButton = screen.getByText('Clear all filters');
+    expect(clearButton).toBeInTheDocument();
+
     fireEvent.click(clearButton);
 
     expect(onChange).toHaveBeenCalled();
@@ -562,9 +559,8 @@ describe('Filters', () => {
     const minInput = screen.getByLabelText('Min price');
     fireEvent.change(minInput, { target: { value: '-10' } });
 
-    await waitFor(() => {
-      expect(screen.getByText('Minimum price must be 0 or greater')).toBeInTheDocument();
-    });
+    // Error should appear immediately (real-time validation)
+    expect(screen.getByText('Minimum price must be 0 or greater')).toBeInTheDocument();
 
     // Clear all
     const clearButton = screen.getByText('Clear all filters');
