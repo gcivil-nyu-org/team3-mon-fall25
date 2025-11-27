@@ -324,8 +324,7 @@ describe('NotificationContext', () => {
         );
       };
 
-      const { rerender } = renderWithProvider();
-      rerender(
+      render(
         <BrowserRouter>
           <NotificationProvider>
             <TestClickComponent />
@@ -358,7 +357,7 @@ describe('NotificationContext', () => {
         );
       };
 
-      const { rerender } = render(
+      render(
         <BrowserRouter>
           <NotificationProvider>
             <ReadNotificationComponent />
