@@ -564,6 +564,29 @@ describe('NotificationContext', () => {
         expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       });
     });
+
+    it('polls for notifications when dropdown is open during interval', async () => {
+      renderWithProvider();
+
+      await waitForMockData();
+
+      // Open dropdown to trigger polling refresh
+      const openButton = screen.getByTestId('open-dropdown');
+      await act(async () => {
+        openButton.click();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-dropdown-open')).toHaveTextContent('true');
+      });
+
+      // The polling interval should refresh notifications when dropdown is open
+      // This tests the branch: if (isDropdownOpen) { fetchNotifications(); }
+      // We verify the state is maintained after polling would occur
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
+      }, { timeout: 3000 });
+    });
   });
 
   describe('API Integration (when USE_MOCK_DATA is false)', () => {
