@@ -186,3 +186,41 @@ describe('NotificationPanel', () => {
   });
 });
 
+describe('Branches/Coverage', () => {
+  it('renders default icon for unknown notification type', () => {
+    const notifications = [
+      {
+        id: 'x',
+        title: 'Weird type',
+        body: 'Body',
+        created_at: new Date().toISOString(),
+        is_read: false,
+        notification_type: 'unknown-type',
+        icon_type: 'unknown',
+      },
+    ];
+    renderWithRouter(
+      <NotificationPanel {...defaultProps} notifications={notifications} />
+    );
+    const icon = document.querySelector('.notification-icon--default');
+    expect(icon).toBeInTheDocument();
+  });
+
+  it('shows "Recently" for bad timestamp', () => {
+    const notifications = [
+      {
+        id: 'y',
+        title: 'Bad Timestamp',
+        body: 'Testing fallback',
+        created_at: 'not-a-date',
+        is_read: false,
+        notification_type: 'message',
+      },
+    ];
+    renderWithRouter(
+      <NotificationPanel {...defaultProps} notifications={notifications} />
+    );
+    expect(screen.getByText('Recently')).toBeInTheDocument();
+  });
+});
+
