@@ -16,4 +16,10 @@ export const endpoints = {
   users: '/users/',
   orders: '/orders/',
   watchlist: '/watchlist/',
+  notifications: {
+    base: '/notifications/',
+    unreadCount: '/notifications/unread-count/',
+    markAllRead: '/notifications/mark-all-read/',
+    markRead: (id) => `/notifications/${id}/read/`,
+  },
 };
