@@ -4,9 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import NotificationPanel from './NotificationPanel';
 
+let throwFormatError = false;
+
 // Mock date-fns
 vi.mock('date-fns', () => ({
   formatDistanceToNow: vi.fn((date) => {
+    if (throwFormatError) throw new Error('bad date');
     const now = new Date();
     const diff = now - new Date(date);
     const minutes = Math.floor(diff / 60000);
@@ -205,6 +208,7 @@ describe('NotificationPanel', () => {
   });
 
   it('shows "Recently" for bad timestamp', () => {
+    throwFormatError = true;
     const notifications = [
       {
         id: 'y',
@@ -219,6 +223,7 @@ describe('NotificationPanel', () => {
       <NotificationPanel {...defaultProps} notifications={notifications} />
     );
     expect(screen.getByText('Recently')).toBeInTheDocument();
+    throwFormatError = false;
   });
 });
 
