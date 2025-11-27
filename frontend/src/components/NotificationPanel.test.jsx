@@ -184,9 +184,7 @@ describe('NotificationPanel', () => {
       expect(iconContainers.length).toBe(2);
     });
   });
-});
 
-describe('Branches/Coverage', () => {
   it('renders default icon for unknown notification type', () => {
     const notifications = [
       {
