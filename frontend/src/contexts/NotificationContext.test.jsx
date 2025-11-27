@@ -78,12 +78,10 @@ describe('NotificationContext', () => {
       isAuthenticated: mockIsAuthenticated,
     });
     useNavigate.mockReturnValue(mockNavigate);
-    vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.useRealTimers();
   });
 
   const renderWithProvider = () => {
@@ -122,14 +120,10 @@ describe('NotificationContext', () => {
     it('loads mock notifications when authenticated', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
-      });
-
       await waitFor(() => {
         expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
         expect(screen.getByTestId('unread-count')).toHaveTextContent('3');
-      });
+      }, { timeout: 2000 });
     });
 
     it('clears notifications when not authenticated', async () => {
@@ -155,7 +149,6 @@ describe('NotificationContext', () => {
       const openButton = screen.getByTestId('open-dropdown');
       await act(async () => {
         openButton.click();
-        await vi.advanceTimersByTimeAsync(400);
       });
 
       await waitFor(() => {
@@ -175,7 +168,10 @@ describe('NotificationContext', () => {
 
       await act(async () => {
         openButton.click();
-        await vi.advanceTimersByTimeAsync(400);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-dropdown-open')).toHaveTextContent('true');
       });
 
       await act(async () => {
@@ -198,7 +194,6 @@ describe('NotificationContext', () => {
 
       await act(async () => {
         toggleButton.click();
-        await vi.advanceTimersByTimeAsync(400);
       });
 
       await waitFor(() => {
@@ -219,10 +214,6 @@ describe('NotificationContext', () => {
     it('marks single notification as read', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
-      });
-
       await waitFor(() => {
         expect(screen.getByTestId('unread-count')).toHaveTextContent('3');
       });
@@ -239,10 +230,6 @@ describe('NotificationContext', () => {
 
     it('marks all notifications as read', async () => {
       renderWithProvider();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
-      });
 
       await waitFor(() => {
         expect(screen.getByTestId('unread-count')).toHaveTextContent('3');
@@ -261,8 +248,8 @@ describe('NotificationContext', () => {
     it('does not decrease unread count below zero', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('unread-count')).toHaveTextContent('3');
       });
 
       const markAllButton = screen.getByTestId('mark-all-read');
@@ -289,8 +276,8 @@ describe('NotificationContext', () => {
     it('navigates to redirect_url and marks as read for unread notification', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       });
 
       const handleClickButton = screen.getByTestId('handle-click');
@@ -365,8 +352,8 @@ describe('NotificationContext', () => {
         </BrowserRouter>
       );
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('unread-count-read')).toBeInTheDocument();
       });
 
       const initialUnread = screen.getByTestId('unread-count-read').textContent;
@@ -386,14 +373,17 @@ describe('NotificationContext', () => {
     it('fetches notifications when fetchNotifications is called', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toBeInTheDocument();
       });
 
       const fetchButton = screen.getByTestId('fetch-notifications');
       await act(async () => {
         fetchButton.click();
-        await vi.advanceTimersByTimeAsync(400);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       });
 
       await waitFor(() => {
@@ -421,8 +411,8 @@ describe('NotificationContext', () => {
     it('fetches unread count when fetchUnreadCount is called', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('unread-count')).toBeInTheDocument();
       });
 
       const fetchUnreadButton = screen.getByTestId('fetch-unread');
@@ -527,10 +517,6 @@ describe('NotificationContext', () => {
       // Since USE_MOCK_DATA is true, errors fall back to mock data
       // This is tested implicitly in the mock data tests above
       renderWithProvider();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
-      });
 
       // Should still have mock data even if API would fail
       await waitFor(() => {
