@@ -108,6 +108,7 @@ describe('NotificationContext', () => {
 
   describe('Initial State', () => {
     it('initializes with empty notifications and zero unread count', async () => {
+      mockIsAuthenticated.mockReturnValue(false);
       renderWithProvider();
 
       await waitFor(() => {
@@ -142,8 +143,8 @@ describe('NotificationContext', () => {
     it('opens dropdown when openDropdown is called', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       });
 
       const openButton = screen.getByTestId('open-dropdown');
@@ -159,8 +160,8 @@ describe('NotificationContext', () => {
     it('closes dropdown when closeDropdown is called', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       });
 
       const openButton = screen.getByTestId('open-dropdown');
@@ -186,8 +187,8 @@ describe('NotificationContext', () => {
     it('toggles dropdown when toggleDropdown is called', async () => {
       renderWithProvider();
 
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
+      await waitFor(() => {
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       });
 
       const toggleButton = screen.getByTestId('toggle-dropdown');
@@ -292,14 +293,7 @@ describe('NotificationContext', () => {
     });
 
     it('handles notification without redirect_url', async () => {
-      renderWithProvider();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
-      });
-
-      // Create a test component that calls handleNotificationClick with no redirect_url
-      const TestClickComponent = () => {
+      const NoUrlComponent = () => {
         const { handleNotificationClick } = useNotifications();
         return (
           <button
@@ -314,10 +308,14 @@ describe('NotificationContext', () => {
       render(
         <BrowserRouter>
           <NotificationProvider>
-            <TestClickComponent />
+            <NoUrlComponent />
           </NotificationProvider>
         </BrowserRouter>
       );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('handle-click-no-url')).toBeInTheDocument();
+      });
 
       const button = screen.getByTestId('handle-click-no-url');
       await act(async () => {
@@ -373,22 +371,20 @@ describe('NotificationContext', () => {
     it('fetches notifications when fetchNotifications is called', async () => {
       renderWithProvider();
 
+      // Wait for initial load
       await waitFor(() => {
-        expect(screen.getByTestId('notifications-count')).toBeInTheDocument();
-      });
+        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
+      }, { timeout: 2000 });
 
       const fetchButton = screen.getByTestId('fetch-notifications');
       await act(async () => {
         fetchButton.click();
       });
 
+      // Should still have notifications after manual fetch
       await waitFor(() => {
         expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
-      });
+      }, { timeout: 2000 });
     });
 
     it('does not fetch when not authenticated', async () => {
@@ -411,18 +407,20 @@ describe('NotificationContext', () => {
     it('fetches unread count when fetchUnreadCount is called', async () => {
       renderWithProvider();
 
+      // Wait for initial load
       await waitFor(() => {
-        expect(screen.getByTestId('unread-count')).toBeInTheDocument();
-      });
+        expect(screen.getByTestId('unread-count')).toHaveTextContent('3');
+      }, { timeout: 2000 });
 
       const fetchUnreadButton = screen.getByTestId('fetch-unread');
       await act(async () => {
         fetchUnreadButton.click();
       });
 
+      // Should still have unread count after manual fetch
       await waitFor(() => {
         expect(screen.getByTestId('unread-count')).toHaveTextContent('3');
-      });
+      }, { timeout: 2000 });
     });
 
     it('does not fetch when not authenticated', async () => {
