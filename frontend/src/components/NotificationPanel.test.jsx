@@ -186,6 +186,61 @@ describe('NotificationPanel', () => {
       // Should have 2 notifications without avatars (id 2 and 3)
       expect(iconContainers.length).toBe(2);
     });
+
+    it('renders listing icon for listing notification type', () => {
+      const notifications = [
+        {
+          id: 'listing-1',
+          title: 'Listing notification',
+          body: 'Someone viewed your listing',
+          created_at: new Date().toISOString(),
+          is_read: false,
+          notification_type: 'listing',
+        },
+      ];
+      const { container } = renderWithRouter(
+        <NotificationPanel {...defaultProps} notifications={notifications} />
+      );
+      const icon = container.querySelector('.notification-icon--listing');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('renders system icon for system notification type', () => {
+      const notifications = [
+        {
+          id: 'system-1',
+          title: 'System notification',
+          body: 'Welcome to NYU Marketplace!',
+          created_at: new Date().toISOString(),
+          is_read: false,
+          notification_type: 'system',
+        },
+      ];
+      const { container } = renderWithRouter(
+        <NotificationPanel {...defaultProps} notifications={notifications} />
+      );
+      const icon = container.querySelector('.notification-icon--system');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('renders system icon for info icon type', () => {
+      const notifications = [
+        {
+          id: 'info-1',
+          title: 'Info notification',
+          body: 'Information message',
+          created_at: new Date().toISOString(),
+          is_read: false,
+          notification_type: 'listing',
+          icon_type: 'info',
+        },
+      ];
+      const { container } = renderWithRouter(
+        <NotificationPanel {...defaultProps} notifications={notifications} />
+      );
+      const icon = container.querySelector('.notification-icon--system');
+      expect(icon).toBeInTheDocument();
+    });
   });
 
   it('renders default icon for unknown notification type', () => {

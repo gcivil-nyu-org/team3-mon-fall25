@@ -359,6 +359,42 @@ describe('NotificationContext', () => {
       expect(mockNavigate).not.toHaveBeenCalled();
     });
 
+    it('handles external URL redirects with window.location', async () => {
+      const ExternalUrlComponent = () => {
+        const { handleNotificationClick } = useNotifications();
+        return (
+          <button
+            onClick={() => handleNotificationClick({ id: '1', is_read: false, redirect_url: 'https://example.com' })}
+            data-testid="handle-click-external"
+          >
+            Click External
+          </button>
+        );
+      };
+
+      // Mock window.location.href
+      delete window.location;
+      window.location = { href: '' };
+
+      render(
+        <BrowserRouter>
+          <NotificationProvider>
+            <ExternalUrlComponent />
+          </NotificationProvider>
+        </BrowserRouter>
+      );
+
+      await waitForMockData();
+
+      const button = screen.getByTestId('handle-click-external');
+      await act(async () => {
+        button.click();
+      });
+
+      // Should set window.location.href for external URLs
+      expect(window.location.href).toBe('https://example.com');
+    });
+
     it('does not mark as read if notification is already read', async () => {
       const ReadNotificationComponent = () => {
         const { handleNotificationClick, unreadCount } = useNotifications();
@@ -558,5 +594,6 @@ describe('NotificationContext', () => {
         expect(screen.getByTestId('notifications-count')).toHaveTextContent('7');
       }, { timeout: 3000 });
     });
+
   });
 });

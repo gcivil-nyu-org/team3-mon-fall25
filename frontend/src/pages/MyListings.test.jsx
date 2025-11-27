@@ -313,5 +313,55 @@ describe("MyListings", () => {
     alertSpy.mockRestore();
     confirmSpy.mockRestore();
   });
+
+  it("handles error response with detail message in loadListings", async () => {
+    const errorWithDetail = {
+      response: {
+        data: {
+          detail: "Custom error message",
+        },
+      },
+    };
+    listingsApi.getMyListings.mockRejectedValue(errorWithDetail);
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Custom error message")).toBeInTheDocument();
+    });
+  });
+
+  it("handles delete failure when API returns false", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    listingsApi.deleteListingAPI.mockResolvedValue(false);
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Laptop")).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByText(/Delete/i);
+    if (deleteButtons.length > 0) {
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
+        expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2); // Initial load + reload after failure
+      });
+    }
+
+    alertSpy.mockRestore();
+    confirmSpy.mockRestore();
+  });
 });
 
