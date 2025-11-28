@@ -1,7 +1,8 @@
 import logging
+from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Q, F
+from django.db.models import F, Max, Min, Q
 from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, pagination, status, viewsets
@@ -409,6 +410,23 @@ class ListingViewSet(
                 "dorm_locations": grouped_dorm_locations,
                 "locations": flat_locations,  # Backward compatibility
             },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], url_path="price-stats")
+    def price_stats(self, request):
+        """
+        Return the minimum and maximum price across all active listings.
+        Endpoint: GET /api/v1/listings/price-stats/
+        Response: {"min_price": "<decimal>", "max_price": "<decimal>"}
+        """
+        stats = Listing.objects.filter(status="active").aggregate(
+            min_price=Min("price"), max_price=Max("price")
+        )
+        min_price = stats.get("min_price") or Decimal("0")
+        max_price = stats.get("max_price") or Decimal("0")
+        return Response(
+            {"min_price": str(min_price), "max_price": str(max_price)},
             status=status.HTTP_200_OK,
         )
 
