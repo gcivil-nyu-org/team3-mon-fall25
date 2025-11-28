@@ -13,7 +13,7 @@ if not SECRET_KEY:  # noqa: F405
         with open(env_path, "a") as env_file:
             env_file.write(f"DJANGO_SECRET_KEY={SECRET_KEY}\n")
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*"]
 
 # Vite dev server
 CORS_ALLOWED_ORIGINS = [
@@ -42,7 +42,7 @@ DATABASES = {
 INSTALLED_APPS += ["django_extensions"]  # noqa: F405
 
 # Channels: in-memory layer for tests
-CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+# backend/core/settings.py
 
 
 # This preserves 'DEFAULT_THROTTLE_RATES' from settings_base.py
@@ -77,3 +77,9 @@ if os.environ.get("PYTEST_CURRENT_TEST"):
             "NAME": ":memory:",
         }
     }
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+
+
+if "daphne" not in INSTALLED_APPS:
+    INSTALLED_APPS.insert(0, "daphne")

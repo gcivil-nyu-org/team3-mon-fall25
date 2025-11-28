@@ -1,12 +1,38 @@
 from urllib.parse import parse_qs
-from django.contrib.auth.models import AnonymousUser
+from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import UntypedToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.backends import TokenBackend
+from rest_framework_simplejwt.settings import api_settings
 
-User = get_user_model()
+
+@database_sync_to_async
+def get_user(token_key):
+    try:
+        UntypedToken(token_key)
+
+        tb = TokenBackend(
+            algorithm=api_settings.ALGORITHM,
+            signing_key=api_settings.SIGNING_KEY,
+            verifying_key=api_settings.VERIFYING_KEY,
+            audience=api_settings.AUDIENCE,
+            issuer=api_settings.ISSUER,
+        )
+
+        payload = tb.decode(token_key, verify=True)
+        user_id = payload.get("user_id")
+
+        if not user_id:
+            return AnonymousUser()
+
+        User = get_user_model()
+        return User.objects.get(pk=user_id)
+
+    except (InvalidToken, TokenError, Exception):
+        return AnonymousUser()
 
 
 class JWTAuthMiddleware:
@@ -14,38 +40,21 @@ class JWTAuthMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        scope = dict(scope)
-        query = parse_qs(scope.get("query_string", b"").decode())
-        token = (query.get("token") or [None])[0]
+        await database_sync_to_async(close_old_connections)()
 
-        user = None
-        if token:
-            try:
-                # Quick structural check
-                UntypedToken(token)
+        try:
+            query_string = scope.get("query_string", b"").decode()
+            query_params = parse_qs(query_string)
+            token = query_params.get("token", [None])[0]
 
-                # Decode & verify (omit jti_claim – not supported on your version)
-                from rest_framework_simplejwt.backends import TokenBackend
+            if token:
+                scope["user"] = await get_user(token)
+            else:
+                scope["user"] = AnonymousUser()
 
-                tb = TokenBackend(
-                    algorithm=jwt_settings.ALGORITHM,
-                    signing_key=jwt_settings.SIGNING_KEY,
-                    verifying_key=jwt_settings.VERIFYING_KEY,
-                    audience=jwt_settings.AUDIENCE,
-                    issuer=jwt_settings.ISSUER,
-                )
-                payload = tb.decode(token, verify=True)
-                uid = str(payload.get("user_id"))
-                if uid:
-                    try:
-                        user = await User.objects.aget(pk=uid)
-                    except Exception:
-                        user = None
-            except (InvalidToken, TokenError):
-                user = None
+        except Exception:
+            scope["user"] = AnonymousUser()
 
-        close_old_connections()
-        scope["user"] = user or AnonymousUser()
         return await self.app(scope, receive, send)
 
 
