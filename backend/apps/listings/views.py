@@ -99,6 +99,9 @@ class ListingViewSet(
     def get_queryset(self):
         queryset = super().get_queryset()
 
+        # All APIs filter out the listings that has been deleted by Admins
+        queryset = queryset.filter(is_deleted=False)
+
         # Only public list/search should be restricted to active listings
         if self.action in ["list", "search"]:
             queryset = queryset.filter(status="active")
@@ -249,7 +252,8 @@ class ListingViewSet(
         Get all listings for the authenticated user.
         Endpoint: GET /api/v1/listings/user/
         """
-        user_listings = Listing.objects.filter(user=request.user)
+        # Use get_queryset() to assure is_deleted=False
+        user_listings = self.get_queryset().filter(user=request.user)
         serializer = self.get_serializer(user_listings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -355,7 +359,7 @@ class ListingViewSet(
         """
         # Get distinct categories from active listings (non-empty, sorted)
         available_categories = set(
-            Listing.objects.filter(status="active")
+            Listing.objects.filter(status="active", is_deleted=False)
             .exclude(Q(category__isnull=True) | Q(category=""))
             .values_list("category", flat=True)
             .distinct()
@@ -367,7 +371,7 @@ class ListingViewSet(
         # Get distinct dorm locations from active listings
         # (non-empty, non-null, sorted)
         available_locations = set(
-            Listing.objects.filter(status="active")
+            Listing.objects.filter(status="active", is_deleted=False)
             .exclude(Q(dorm_location__isnull=True) | Q(dorm_location=""))
             .values_list("dorm_location", flat=True)
             .distinct()
