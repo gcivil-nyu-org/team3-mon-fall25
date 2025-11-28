@@ -28,10 +28,6 @@ describe('EditProfile', () => {
         avatar_url: null,
     };
 
-    const originalCreateElement = document.createElement.bind(document);
-    // Save original FileReader to restore later
-    const originalFileReader = global.FileReader;
-
     beforeEach(() => {
         vi.clearAllMocks();
         useAuth.mockReturnValue({ user: mockUser });
@@ -41,37 +37,57 @@ describe('EditProfile', () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
-        // Restore FileReader
-        global.FileReader = originalFileReader;
     });
+
+    // --- Helper to safely capture dynamic input ---
+    const captureDynamicInput = async (triggerAction) => {
+        const originalCreateElement = document.createElement.bind(document);
+        let capturedInput = null;
+
+        // Spy ONLY during the action
+        const spy = vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
+            const element = originalCreateElement(tagName);
+            if (tagName === 'input') {
+                capturedInput = element;
+                // Mock click to prevent JSDOM errors if any
+                element.click = vi.fn();
+            }
+            return element;
+        });
+
+        try {
+            await triggerAction();
+        } finally {
+            spy.mockRestore(); // Restore immediately
+        }
+
+        return capturedInput;
+    };
 
     // --- 1. Helper Functions ---
     describe('Photo Logic & Helpers', () => {
         it('formats file size correctly', async () => {
             const user = userEvent.setup();
 
-            // --- FIX: Mock FileReader as a Class ---
+            // Mock FileReader class
             class MockFileReader {
                 readAsDataURL = vi.fn();
                 onloadend = null;
                 result = 'data:image/png;base64,test';
             }
             global.FileReader = MockFileReader;
-            // --------------------------------------
-
-            let capturedInput;
-            vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
-                const element = originalCreateElement(tagName);
-                if (tagName === 'input') {
-                    capturedInput = element;
-                    element.click = vi.fn();
-                }
-                return element;
-            });
 
             render(<EditProfile onClose={mockOnClose} profile={null} />);
-            await user.click(screen.getByText("Add Photo").closest("button"));
 
+            // Capture input created by the button click
+            const addBtn = screen.getByText("Add Photo").closest("button");
+            const capturedInput = await captureDynamicInput(async () => {
+                await user.click(addBtn);
+            });
+
+            expect(capturedInput).not.toBeNull();
+
+            // Trigger change
             const largeFile = new File(['x'.repeat(1500)], 'large.jpg', { type: 'image/jpeg' });
             Object.defineProperty(capturedInput, 'files', { value: [largeFile] });
 
@@ -83,25 +99,60 @@ describe('EditProfile', () => {
                 expect(screen.getByText(/1.46 KB/)).toBeInTheDocument();
             });
         });
+
+        it('handles 0 bytes file size', async () => {
+            const user = userEvent.setup();
+            // Simple FileReader mock
+            class MockFileReader { readAsDataURL = vi.fn(); onloadend = null; }
+            global.FileReader = MockFileReader;
+
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            const addBtn = screen.getByText("Add Photo").closest("button");
+            const capturedInput = await captureDynamicInput(async () => {
+                await user.click(addBtn);
+            });
+
+            const emptyFile = new File([], 'empty.jpg', { type: 'image/jpeg' });
+            Object.defineProperty(capturedInput, 'files', { value: [emptyFile] });
+
+            act(() => {
+                fireEvent.change(capturedInput);
+            });
+
+            await waitFor(() => {
+                expect(screen.getByText(/0 Bytes/)).toBeInTheDocument();
+            });
+        });
     });
 
     // --- 2. File Selection ---
     describe('File Selection', () => {
-        it('previews image on valid selection', async () => {
+        it('validates file size limit (>10MB)', async () => {
             const user = userEvent.setup();
-            let capturedInput;
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
 
-            vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
-                const element = originalCreateElement(tagName);
-                if (tagName === 'input') {
-                    capturedInput = element;
-                    element.click = vi.fn();
-                }
-                return element;
+            const addBtn = screen.getByText("Add Photo").closest("button");
+            const capturedInput = await captureDynamicInput(async () => {
+                await user.click(addBtn);
             });
 
-            // --- FIX: Mock FileReader & Capture Instance ---
+            const hugeFile = { name: 'huge.jpg', size: 11 * 1024 * 1024, type: 'image/jpeg' };
+            Object.defineProperty(capturedInput, 'files', { value: [hugeFile] });
+
+            act(() => {
+                fireEvent.change(capturedInput);
+            });
+
+            await waitFor(() => {
+                expect(screen.getByText(/Image must be less than 10MB/)).toBeInTheDocument();
+            });
+        });
+
+        it('previews image on valid selection', async () => {
+            const user = userEvent.setup();
             let readerInstance;
+
             class MockFileReader {
                 constructor() {
                     this.readAsDataURL = vi.fn();
@@ -111,10 +162,13 @@ describe('EditProfile', () => {
                 }
             }
             global.FileReader = MockFileReader;
-            // -----------------------------------------------
 
             render(<EditProfile onClose={mockOnClose} profile={null} />);
-            await user.click(screen.getByText("Add Photo").closest("button"));
+
+            const addBtn = screen.getByText("Add Photo").closest("button");
+            const capturedInput = await captureDynamicInput(async () => {
+                await user.click(addBtn);
+            });
 
             const file = new File(['(⌐□_□)'], 'valid.jpg', { type: 'image/jpeg' });
             Object.defineProperty(capturedInput, 'files', { value: [file] });
@@ -123,7 +177,6 @@ describe('EditProfile', () => {
                 fireEvent.change(capturedInput);
             });
 
-            // Trigger the reader callback
             act(() => {
                 if (readerInstance && readerInstance.onloadend) {
                     readerInstance.onloadend();
@@ -139,6 +192,34 @@ describe('EditProfile', () => {
 
     // --- 3. Payload Logic ---
     describe('Payload Logic', () => {
+        it('appends new_avatar when file is selected', async () => {
+            const user = userEvent.setup();
+            class MockFileReader { readAsDataURL = vi.fn(); onloadend = () => {}; }
+            global.FileReader = MockFileReader;
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            // Button text depends on profile/avatar state. With mockProfile (null avatar), it's "Add Photo"
+            const btn = screen.getByText("Add Photo").closest("button");
+            const capturedInput = await captureDynamicInput(async () => {
+                await user.click(btn);
+            });
+
+            const file = new File(['test'], 'new.jpg', { type: 'image/jpeg' });
+            Object.defineProperty(capturedInput, 'files', { value: [file] });
+
+            act(() => {
+                fireEvent.change(capturedInput);
+            });
+
+            await user.click(screen.getByText("Save Changes").closest("button"));
+
+            await waitFor(() => {
+                const formData = profilesApi.updateMyProfile.mock.calls[0][0];
+                expect(formData.get('new_avatar')).toBe(file);
+            });
+        });
+
         it('appends remove_avatar when photo is removed', async () => {
             const profileWithAvatar = { ...mockProfile, avatar_url: 'http://old.jpg' };
             render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
@@ -189,6 +270,7 @@ describe('EditProfile', () => {
             fireEvent.change(bio, { target: { name: 'bio', value: 'Short' } });
             expect(bio.value).toBe("Short");
 
+            // Too long
             fireEvent.change(bio, { target: { name: 'bio', value: 'a'.repeat(501) } });
             expect(bio.value).toBe("Short");
         });
@@ -213,6 +295,21 @@ describe('EditProfile', () => {
             await waitFor(() => {
                 expect(screen.getByText(/username: Username taken/)).toBeInTheDocument();
                 expect(screen.getByText(/email: Invalid format/)).toBeInTheDocument();
+            });
+        });
+
+        it('handles string/generic errors (Else branch)', async () => {
+             const errorResponse = new Error("Something went wrong");
+             errorResponse.response = { data: null }; // Force else branch
+
+             profilesApi.updateMyProfile.mockRejectedValue(errorResponse);
+
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+            await user.click(screen.getByText("Save Changes").closest("button"));
+
+            await waitFor(() => {
+                expect(screen.getByText("Something went wrong")).toBeInTheDocument();
             });
         });
     });

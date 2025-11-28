@@ -25,21 +25,22 @@ export default function GlobalChat() {
   const [nextBefore, setNextBefore] = useState({});
   const [isMobile, setIsMobile] = useState(false);
   const loadedConversationsRef = useRef(new Set());
-
-  // Active ID Logic
+  console.log("NextBefore", nextBefore);
+  console.log("isMobile", isMobile);
+  // --- FIX 1: STOP AUTO-SELECTING FIRST CONVERSATION ---
+  // If no URL ID and no Internal Click, active ID is NULL.
   const activeConversationId =
     (isUrlMode ? paramConversationId : null) ||
     internalSelectedId ||
-    null; // Default to null so nothing is selected initially
+    null; // Was: (convs.length > 0 ? convs[0].id : null);
+  // -----------------------------------------------------
 
-  // Sync URL Mode with Context
   useEffect(() => {
     if (isUrlMode && !isChatOpen) {
         openChat();
     }
   }, [isUrlMode, isChatOpen, openChat]);
 
-  // Mobile Check
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -47,7 +48,6 @@ export default function GlobalChat() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Auth ID
   useEffect(() => {
     const jwtId = getSelfIdFromJWT();
     if (jwtId) setSelfId(String(jwtId));
@@ -100,7 +100,9 @@ export default function GlobalChat() {
                   else if (sellerNetid) sellerName = sellerNetid;
                 }
               }
-            } catch (e) {}
+            } catch (e) {
+                console.warn("Could not load bulk listings:", e);
+            }
 
             let isCurrentUserSeller = false;
             if (listingInfo && listingInfo.user_id) {
@@ -148,6 +150,7 @@ export default function GlobalChat() {
               last_message_at: conv.last_message_at,
             };
           } catch (err) {
+              console.error(err);
             return {
                 id: conv.id,
                 otherUser: { id: "unknown", name: "User", initials: "?" },
@@ -168,6 +171,7 @@ export default function GlobalChat() {
 
   // Load Messages
   useEffect(() => {
+    // --- FIX 2: Stop loading messages if no active ID ---
     if (!activeConversationId || !selfId) return;
 
     const fetchMsgs = async () => {
@@ -191,9 +195,8 @@ export default function GlobalChat() {
 
         setNextBefore((prev) => ({ ...prev, [activeConversationId]: next_before }));
 
-        // --- FIX 1: Only Mark Read if Chat is OPEN ---
         const unread = transformed.find(m => String(m.senderId) !== String(selfId) && !m.read);
-        if (unread && isChatOpen) { // <--- Check isChatOpen here
+        if (unread) {
            markRead(activeConversationId, unread.id).catch(() => {});
            setConvs(prev => prev.map(c => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c));
         }
@@ -202,27 +205,20 @@ export default function GlobalChat() {
       }
     };
 
-    // Always fetch messages to keep state updated, but mark-read is guarded above
     if (!loadedConversationsRef.current.has(activeConversationId)) {
         loadedConversationsRef.current.add(activeConversationId);
         fetchMsgs();
-    } else if (isChatOpen) {
-        // If already loaded but we just opened the window, we might need to mark as read now
-        const currentMsgs = messages[activeConversationId] || [];
-        const unread = currentMsgs.find(m => String(m.senderId) !== String(selfId) && !m.read);
-        if (unread) {
-            markRead(activeConversationId, unread.id).catch(() => {});
-            setConvs(prev => prev.map(c => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c));
-        }
     }
-  }, [activeConversationId, selfId, isChatOpen]); // Added isChatOpen dependency
+  }, [activeConversationId, selfId]);
 
-  // --- SOCKET CONNECTION ---
+  // Socket
   const { sendText, sendRead } = useChatSocket({
     conversationId: activeConversationId,
     onMessage: (msg) => {
       console.log("📩 WS Msg:", msg);
       const convId = msg.conversation || activeConversationId;
+
+      // Only process if we have a valid ID or message belongs to known conversation
       if (!convId) return;
 
       const newMsg = {
@@ -244,19 +240,18 @@ export default function GlobalChat() {
 
       setConvs(prev => prev.map(c => {
         if (String(c.id) === String(convId)) {
-            // --- FIX 2: Increment unread count if Chat is CLOSED or looking at other chat ---
-            const isViewing = isChatOpen && (activeConversationId === convId);
             return {
                 ...c,
                 lastMessage: { content: newMsg.text, timestamp: newMsg.timestamp },
-                unreadCount: isViewing ? 0 : (c.unreadCount || 0) + 1
+                // Increment unread ONLY if I am not looking at this specific chat
+                unreadCount: (activeConversationId !== convId) ? (c.unreadCount || 0) + 1 : 0
             };
         }
         return c;
       }));
 
-      // --- FIX 3: Only send Read Receipt if Chat is OPEN ---
-      if (isChatOpen && activeConversationId === convId && String(newMsg.senderId) !== String(selfId)) {
+      // Send Read Receipt ONLY if I am actively looking at THIS conversation
+      if (activeConversationId && activeConversationId === convId && String(newMsg.senderId) !== String(selfId)) {
           sendRead(newMsg.id);
       }
     },
@@ -264,15 +259,22 @@ export default function GlobalChat() {
         const { message_id, reader_id } = evt;
         if (String(reader_id) === String(selfId)) return;
 
+        // We need to find which conversation this message belongs to
+        // Since we might not have the conversation ID in the event, we check loaded messages
+        // or we use activeConversationId if available.
+
+        // Try active first
         if (activeConversationId) {
              updateReadStatus(activeConversationId, message_id);
         }
+        // Loop others (in case read receipt comes for a background tab)
         Object.keys(messages).forEach(cid => {
             if (cid !== activeConversationId) updateReadStatus(cid, message_id);
         });
     }
   });
 
+  // Helper to update state for read receipts
   const updateReadStatus = (convId, messageId) => {
       setMessages(prev => {
           const list = prev[convId] || [];

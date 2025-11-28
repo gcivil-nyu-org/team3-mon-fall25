@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -47,7 +47,6 @@ describe("ChatModal", () => {
 
   const mockOnOpenChange = vi.fn();
   const mockOnSendMessage = vi.fn();
-  const mockOnListingClick = vi.fn();
   const mockOnSidebarWidthChange = vi.fn();
   const mockOnConversationSelect = vi.fn();
 
@@ -132,8 +131,6 @@ describe("ChatModal", () => {
 
   describe("Resize Logic Branches", () => {
     it("toggles isMobile state when crossing 768px threshold", () => {
-      const { rerender } = render(<ChatModal open={true} conversations={mockConversations} />);
-
       act(() => {
         window.innerWidth = 500;
         window.dispatchEvent(new Event("resize"));
