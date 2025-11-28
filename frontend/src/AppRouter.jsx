@@ -17,19 +17,23 @@ import EditListing from "./pages/EditListing";
 import Login from "./pages/Login";
 import VerifyEmail from "./pages/VerifyEmail";
 import CreateProfile from "./pages/CreateProfile";
-import Chat from "./pages/Chat.jsx";
 import Profile from "./pages/Profile";
 import SellerProfile from "./pages/SellerProfile";
 import Watchlist from "./pages/Watchlist";
 import TransactionPaymentPage from "./pages/TransactionPaymentPage";
 
-import {ROUTES} from "./constants/routes";
+import { ROUTES } from "./constants/routes";
+
+import GlobalChat from "./components/chat/GlobalChat";
 
 export default function AppRouter() {
     return (
         <AuthProvider>
             <ChatProvider>
                 <BrowserRouter>
+
+                    <GlobalChat />
+
                     <Routes>
                         {/* Public login + OTP routes */}
                         <Route path={ROUTES.LOGIN} element={<Login/>}/>
@@ -73,10 +77,6 @@ export default function AppRouter() {
                                     }
                                 />
                                 <Route
-                                    path="/dev/transaction "
-                                    element={<TransactionPaymentPage/>}
-                                />
-                                <Route
                                     path="transaction/:id"
                                     element={<TransactionPaymentPage/>}
                                 />
@@ -96,22 +96,11 @@ export default function AppRouter() {
                                         </ProtectedRoute>
                                     }
                                 />
-                                <Route
-                                    path="chat"
-                                    element={
-                                        <ProtectedRoute>
-                                            <Chat/>
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="chat/:conversationId"
-                                    element={
-                                        <ProtectedRoute>
-                                            <Chat/>
-                                        </ProtectedRoute>
-                                    }
-                                />
+
+
+                                <Route path="chat" element={<div style={{minHeight: '100vh'}} />} />
+                                <Route path="chat/:conversationId" element={<div style={{minHeight: '100vh'}} />} />
+
                                 <Route
                                     path="profile"
                                     element={
@@ -130,7 +119,6 @@ export default function AppRouter() {
                                 />
                             </Route>
                         </Route>
-
                         {/* Fallback → home */}
                         <Route path="*" element={<Navigate to={ROUTES.HOME} replace/>}/>
                     </Routes>
