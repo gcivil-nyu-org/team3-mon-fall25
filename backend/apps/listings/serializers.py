@@ -134,6 +134,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     user_id = serializers.CharField(source="user.user_id", read_only=True)
     is_saved = serializers.SerializerMethodField()
     save_count = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -153,6 +154,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "user_id",
             "is_saved",
             "save_count",
+            "is_owner",
         ]
         read_only_fields = [
             "listing_id",
@@ -162,6 +164,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "user_netid",
             "is_saved",
             "save_count",
+            "is_owner",
         ]
 
     def get_is_saved(self, obj):
@@ -178,6 +181,13 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         from .models import Watchlist
 
         return Watchlist.objects.filter(listing=obj).count()
+
+    def get_is_owner(self, obj):
+        """Check if current user is the owner of this listing"""
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return obj.user == request.user
+        return False
 
 
 # Update listing— PUT / PATCH

@@ -9,6 +9,9 @@ import {
     FaTimes,
     FaShareAlt,
     FaHeart,
+    FaEdit,
+    FaTrash,
+    FaCheckCircle,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { getListings, getListing } from "@/api/listings";
@@ -23,6 +26,10 @@ export default function ListingDetailContent({
     isPreview = false,
     onViewProfile,
     onShare,
+    onEditListing,
+    onMarkAsSold,
+    onDeleteListing,
+    onBuyNow,
 }) {
     const { isAuthenticated } = useAuth();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -446,59 +453,113 @@ export default function ListingDetailContent({
                             {/* Action Buttons */}
                             {!isPreview && (
                                 <div className="listing-detail-actions">
-                                    <button
-                                        className="listing-detail-save-button"
-                                        onClick={handleToggleSave}
-                                        disabled={saving}
-                                        title={isSaved ? "Remove from watchlist" : "Save to watchlist"}
-                                        style={{
-                                            background: isSaved ? "#dc2626" : "#fff",
-                                            color: isSaved ? "#fff" : "#56018D",
-                                            border: `2px solid ${isSaved ? "#dc2626" : "#56018D"}`,
-                                            padding: "12px 20px",
-                                            borderRadius: 8,
-                                            fontSize: 16,
-                                            fontWeight: 600,
-                                            cursor: saving ? "not-allowed" : "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 8,
-                                            justifyContent: "center",
-                                            transition: "all 0.2s",
-                                            opacity: saving ? 0.6 : 1,
-                                        }}
-                                        onMouseOver={(e) => {
-                                            if (!saving) {
-                                                e.target.style.transform = "scale(1.05)";
-                                            }
-                                        }}
-                                        onMouseOut={(e) => {
-                                            e.target.style.transform = "scale(1)";
-                                        }}
-                                    >
-                                        <FaHeart
-                                            style={{
-                                                fill: isSaved ? "#fff" : "transparent",
-                                                stroke: isSaved ? "#fff" : "#56018D",
-                                                strokeWidth: 2,
-                                                transition: "all 0.2s",
-                                            }}
-                                        />
-                                        {isSaved ? "Saved" : "Save"}
-                                    </button>
-                                    <button
-                                        className="listing-detail-contact-button"
-                                        onClick={() => {
-                                            if (!isAuthenticated()) {
-                                                return;
-                                            }
-                                            setContactModalOpen(true);
-                                        }}
-                                        disabled={listing.status === "sold"}
-                                    >
-                                        <FaCommentDots className="listing-detail-contact-icon" />
-                                        Contact Seller
-                                    </button>
+                                    {listing.is_owner ? (
+                                        // Show Edit, Mark as Sold, and Delete buttons for owner
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                                            <button
+                                                className="listing-detail-contact-button"
+                                                onClick={onEditListing}
+                                                style={{
+                                                    width: "100%",
+                                                    background: "#56018D",
+                                                }}
+                                            >
+                                                <FaEdit className="listing-detail-contact-icon" />
+                                                Edit Listing
+                                            </button>
+                                            {listing.status !== "sold" && (
+                                                <button
+                                                    className="listing-detail-contact-button"
+                                                    onClick={onMarkAsSold}
+                                                    style={{
+                                                        width: "100%",
+                                                        background: "#059669",
+                                                    }}
+                                                >
+                                                    <FaCheckCircle className="listing-detail-contact-icon" />
+                                                    Mark as Sold
+                                                </button>
+                                            )}
+                                            <button
+                                                className="listing-detail-contact-button"
+                                                onClick={onDeleteListing}
+                                                style={{
+                                                    width: "100%",
+                                                    background: "#dc2626",
+                                                }}
+                                            >
+                                                <FaTrash className="listing-detail-contact-icon" />
+                                                Delete Listing
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        // Show Save and Contact buttons for non-owners
+                                        <>
+                                            <button
+                                                className="listing-detail-save-button"
+                                                onClick={handleToggleSave}
+                                                disabled={saving}
+                                                title={isSaved ? "Remove from watchlist" : "Save to watchlist"}
+                                                style={{
+                                                    background: isSaved ? "#dc2626" : "#fff",
+                                                    color: isSaved ? "#fff" : "#56018D",
+                                                    border: `2px solid ${isSaved ? "#dc2626" : "#56018D"}`,
+                                                    padding: "12px 20px",
+                                                    borderRadius: 8,
+                                                    fontSize: 16,
+                                                    fontWeight: 600,
+                                                    cursor: saving ? "not-allowed" : "pointer",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 8,
+                                                    justifyContent: "center",
+                                                    transition: "all 0.2s",
+                                                    opacity: saving ? 0.6 : 1,
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    if (!saving) {
+                                                        e.target.style.transform = "scale(1.05)";
+                                                    }
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    e.target.style.transform = "scale(1)";
+                                                }}
+                                            >
+                                                <FaHeart
+                                                    style={{
+                                                        fill: isSaved ? "#fff" : "transparent",
+                                                        stroke: isSaved ? "#fff" : "#56018D",
+                                                        strokeWidth: 2,
+                                                        transition: "all 0.2s",
+                                                    }}
+                                                />
+                                                {isSaved ? "Saved" : "Save"}
+                                            </button>
+                                            <button
+                                                className="listing-detail-contact-button"
+                                                onClick={() => {
+                                                    if (!isAuthenticated()) {
+                                                        return;
+                                                    }
+                                                    setContactModalOpen(true);
+                                                }}
+                                                disabled={listing.status === "sold"}
+                                            >
+                                                <FaCommentDots className="listing-detail-contact-icon" />
+                                                Contact Seller
+                                            </button>
+                                            <button
+                                                className="listing-detail-contact-button"
+                                                onClick={onBuyNow}
+                                                disabled={listing.status === "sold"}
+                                                style={{
+                                                    background: "#059669",
+                                                }}
+                                            >
+                                                Buy Now
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
