@@ -33,9 +33,12 @@ export default function ConversationItem({ conversation, isActive = false, onCli
   const lastMessage = conversation.lastMessage || conversation.last_message;
   const lastMessageText = lastMessage?.text || lastMessage?.content || "Start the conversation…";
   const lastMessageTime = lastMessage?.created_at || lastMessage?.timestamp || conversation.last_message_at;
-  const isSentByMe = lastMessage?.sender === conversation.currentUserId || 
-                     lastMessage?.senderId === conversation.currentUserId ||
-                     String(lastMessage?.sender) === String(conversation.currentUserId);
+
+  // Handle deleted users (sender will be null)
+  const isSentByMe = lastMessage?.sender !== null && lastMessage?.sender !== undefined &&
+                     (lastMessage?.sender === conversation.currentUserId ||
+                      lastMessage?.senderId === conversation.currentUserId ||
+                      String(lastMessage?.sender) === String(conversation.currentUserId));
 
   // Get listing image - handle various formats
   const listingImage = conversation.listingImage || 
