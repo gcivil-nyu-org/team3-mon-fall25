@@ -8,6 +8,13 @@ DEBUG = False
 # Avoid cache issues
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
+SIMPLE_JWT.update(  # noqa: F405
+    {
+        "ACCESS_TOKEN_LIFETIME": timedelta(minutes=120),
+        "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    }
+)
+
 ALLOWED_HOSTS = [
     "nyu-marketplace-dev.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
     os.environ.get("nyu-marketplace-dev-test.elasticbeanstalk.com"),
