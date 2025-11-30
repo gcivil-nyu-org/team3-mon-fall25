@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.listings",
     "apps.chat",
     "apps.transactions",
+    "apps.notifications",
     "channels",
     "rest_framework",
     "corsheaders",
