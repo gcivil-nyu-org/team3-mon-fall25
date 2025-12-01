@@ -1,13 +1,13 @@
 import React from 'react';
-import {render, screen, waitFor, fireEvent} from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
-import {BrowserRouter} from 'react-router-dom';
-import {toast} from 'react-toastify';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { BrowserRouter } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import ListingDetail from './ListingDetail';
 import * as listingsApi from '@/api/listings';
 import * as transactionsApi from '@/api/transactions';
-import {AuthProvider} from '../contexts/AuthContext';
+import { AuthProvider } from '../contexts/AuthContext';
 
 // Mock the APIs
 vi.mock('@/api/listings');
@@ -26,7 +26,7 @@ vi.mock('react-toastify', () => ({
 const mockNavigate = vi.fn();
 
 // Mock useParams function that can be changed per test
-const mockUseParams = vi.fn(() => ({id: '123'}));
+const mockUseParams = vi.fn(() => ({ id: '123' }));
 
 // Mock react-router-dom hooks
 vi.mock('react-router-dom', async () => {
@@ -40,7 +40,7 @@ vi.mock('react-router-dom', async () => {
 
 // Mock SellerCard component
 vi.mock('../components/SellerCard', () => ({
-    default: ({username, memberSince, activeListings, soldItems, onViewProfile}) => (
+    default: ({ username, memberSince, activeListings, soldItems, onViewProfile }) => (
         <div data-testid="seller-card">
             <div>Username: {username}</div>
             <div>Member Since: {memberSince}</div>
@@ -53,7 +53,7 @@ vi.mock('../components/SellerCard', () => ({
 
 // Mock ContactSellerModal component
 vi.mock('../components/ContactSellerModal', () => ({
-    default: ({open, onClose, listingTitle}) =>
+    default: ({ open, onClose, listingTitle }) =>
         open ? (
             <div data-testid="contact-modal">
                 <div>Contact Seller for {listingTitle}</div>
@@ -84,7 +84,7 @@ describe('ListingDetail - Share Functionality', () => {
         user_email: 'testuser@nyu.edu',
         created_at: '2024-01-01T00:00:00Z',
         images: [
-            {image_url: 'https://example.com/image1.jpg'},
+            { image_url: 'https://example.com/image1.jpg' },
         ],
     };
 
@@ -93,7 +93,7 @@ describe('ListingDetail - Share Functionality', () => {
         return render(
             <BrowserRouter>
                 <AuthProvider>
-                    <ListingDetail/>
+                    <ListingDetail />
                 </AuthProvider>
             </BrowserRouter>
         );
@@ -102,7 +102,7 @@ describe('ListingDetail - Share Functionality', () => {
     beforeEach(() => {
         // Reset all mocks
         vi.clearAllMocks();
-        
+
         // Reset useParams mock to default
         mockUseParams.mockReturnValue({ id: '123' });
 
@@ -116,7 +116,7 @@ describe('ListingDetail - Share Functionality', () => {
 
         // Mock window.location
         delete window.location;
-        window.location = {origin: 'http://localhost:3000'};
+        window.location = { origin: 'http://localhost:3000' };
     });
 
     afterEach(() => {
@@ -131,7 +131,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             expect(shareButton).toBeInTheDocument();
         });
 
@@ -139,7 +139,7 @@ describe('ListingDetail - Share Functionality', () => {
             renderListingDetail();
 
             await waitFor(() => {
-                const shareButton = screen.getByRole('button', {name: /share listing/i});
+                const shareButton = screen.getByRole('button', { name: /share listing/i });
                 expect(shareButton).toBeInTheDocument();
                 expect(shareButton.querySelector('svg')).toBeInTheDocument();
             });
@@ -149,7 +149,7 @@ describe('ListingDetail - Share Functionality', () => {
             renderListingDetail();
 
             await waitFor(() => {
-                const shareButton = screen.getByRole('button', {name: /share listing/i});
+                const shareButton = screen.getByRole('button', { name: /share listing/i });
                 expect(shareButton).toHaveAttribute('aria-label', 'Share listing');
                 expect(shareButton).toHaveAttribute('title', 'Share this listing');
             });
@@ -162,7 +162,7 @@ describe('ListingDetail - Share Functionality', () => {
                 const titleContainer = screen.getByText('Test Laptop').parentElement;
                 expect(titleContainer).toHaveClass('listing-detail-title-container');
 
-                const shareButton = screen.getByRole('button', {name: /share listing/i});
+                const shareButton = screen.getByRole('button', { name: /share listing/i });
                 expect(titleContainer).toContainElement(shareButton);
             });
         });
@@ -184,7 +184,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             expect(mockShare).toHaveBeenCalledWith({
@@ -208,7 +208,7 @@ describe('ListingDetail - Share Functionality', () => {
             });
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -218,7 +218,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -240,7 +240,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -250,7 +250,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -263,7 +263,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -273,7 +273,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -292,7 +292,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -302,7 +302,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -316,7 +316,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockRejectedValue(new Error('Clipboard error'));
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -326,7 +326,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -360,7 +360,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -394,7 +394,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -425,7 +425,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -442,7 +442,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -452,7 +452,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
 
             // Click multiple times
             await user.click(shareButton);
@@ -469,7 +469,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -485,7 +485,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await userEvent.click(shareButton);
 
             // Note: The URL will still use the mocked useParams id '123'
@@ -502,7 +502,7 @@ describe('ListingDetail - Share Functionality', () => {
             const mockWriteText = vi.fn().mockResolvedValue(undefined);
 
             Object.defineProperty(navigator, 'clipboard', {
-                value: {writeText: mockWriteText},
+                value: { writeText: mockWriteText },
                 configurable: true,
             });
 
@@ -512,7 +512,7 @@ describe('ListingDetail - Share Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
 
             // Tab to button and press Enter
             shareButton.focus();
@@ -527,7 +527,7 @@ describe('ListingDetail - Share Functionality', () => {
             renderListingDetail();
 
             await waitFor(() => {
-                const shareButton = screen.getByRole('button', {name: /share listing/i});
+                const shareButton = screen.getByRole('button', { name: /share listing/i });
 
                 expect(shareButton).toHaveAttribute('aria-label', 'Share listing');
                 expect(shareButton).toHaveAttribute('title', 'Share this listing');
@@ -549,8 +549,8 @@ describe('ListingDetail - Core Functionality', () => {
         user_email: 'testuser@nyu.edu',
         created_at: '2024-01-01T00:00:00Z',
         images: [
-            {image_url: 'https://example.com/image1.jpg'},
-            {image_url: 'https://example.com/image2.jpg'},
+            { image_url: 'https://example.com/image1.jpg' },
+            { image_url: 'https://example.com/image2.jpg' },
         ],
     };
 
@@ -558,7 +558,7 @@ describe('ListingDetail - Core Functionality', () => {
         return render(
             <BrowserRouter>
                 <AuthProvider>
-                    <ListingDetail/>
+                    <ListingDetail />
                 </AuthProvider>
             </BrowserRouter>
         );
@@ -606,7 +606,7 @@ describe('ListingDetail - Core Functionality', () => {
 
     describe('Image Gallery', () => {
         it('should display main image when images are available', async () => {
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -635,7 +635,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should navigate to next image when next button is clicked', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -652,7 +652,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should navigate to previous image when prev button is clicked', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -679,7 +679,7 @@ describe('ListingDetail - Core Functionality', () => {
         it('should not show navigation arrows for single image', async () => {
             listingsApi.getListing.mockResolvedValue({
                 ...mockListing,
-                images: [{image_url: 'https://example.com/image1.jpg'}],
+                images: [{ image_url: 'https://example.com/image1.jpg' }],
             });
 
             renderListingDetail();
@@ -693,7 +693,7 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         it('should display thumbnail strip for multiple images', async () => {
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 const thumbnails = container.querySelectorAll('img[alt*="Test Laptop thumbnail"]');
@@ -703,7 +703,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should change main image when thumbnail is clicked', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -722,7 +722,7 @@ describe('ListingDetail - Core Functionality', () => {
     describe('Lightbox', () => {
         it('should open lightbox when main image is clicked', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -740,7 +740,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should close lightbox when close button is clicked', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -766,7 +766,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should close lightbox when clicking backdrop', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -792,7 +792,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should close lightbox on Escape key', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -807,7 +807,7 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(lightbox).toBeInTheDocument();
             });
 
-            fireEvent.keyDown(window, {key: 'Escape'});
+            fireEvent.keyDown(window, { key: 'Escape' });
 
             await waitFor(() => {
                 const lightbox = document.querySelector('.listing-detail-lightbox');
@@ -817,7 +817,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should navigate to next image on ArrowRight key', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -832,7 +832,7 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(lightbox).toBeInTheDocument();
             });
 
-            fireEvent.keyDown(window, {key: 'ArrowRight'});
+            fireEvent.keyDown(window, { key: 'ArrowRight' });
 
             await waitFor(() => {
                 const images = container.querySelectorAll('img[alt*="Test Laptop"]');
@@ -842,7 +842,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should navigate to previous image on ArrowLeft key', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -857,7 +857,7 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(lightbox).toBeInTheDocument();
             });
 
-            fireEvent.keyDown(window, {key: 'ArrowLeft'});
+            fireEvent.keyDown(window, { key: 'ArrowLeft' });
 
             await waitFor(() => {
                 const images = container.querySelectorAll('img[alt*="Test Laptop"]');
@@ -867,7 +867,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should navigate to next image using lightbox nav button', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -897,7 +897,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should navigate to previous image using lightbox nav button', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -935,7 +935,7 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const backButton = screen.getByRole('button', {name: /back to listings/i});
+            const backButton = screen.getByRole('button', { name: /back to listings/i });
             await user.click(backButton);
 
             expect(mockNavigate).toHaveBeenCalledWith(-1);
@@ -994,7 +994,7 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const contactButton = screen.getByRole('button', {name: /contact seller/i});
+            const contactButton = screen.getByRole('button', { name: /contact seller/i });
             expect(contactButton).toBeDisabled();
         });
 
@@ -1024,7 +1024,7 @@ describe('ListingDetail - Core Functionality', () => {
                 status: 'sold',
             });
 
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1041,9 +1041,9 @@ describe('ListingDetail - Core Functionality', () => {
     describe('Seller Stats', () => {
         it('should fetch and display seller stats', async () => {
             const sellerListings = [
-                {listing_id: '1', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu'},
-                {listing_id: '2', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu'},
-                {listing_id: '3', status: 'sold', user_netid: 'testuser', user_email: 'testuser@nyu.edu'},
+                { listing_id: '1', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu' },
+                { listing_id: '2', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu' },
+                { listing_id: '3', status: 'sold', user_netid: 'testuser', user_email: 'testuser@nyu.edu' },
             ];
 
             listingsApi.getListings.mockResolvedValue({
@@ -1068,11 +1068,11 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should handle paginated seller stats fetching', async () => {
             const page1Listings = [
-                {listing_id: '1', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu'},
+                { listing_id: '1', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu' },
             ];
 
             const page2Listings = [
-                {listing_id: '2', status: 'sold', user_netid: 'testuser', user_email: 'testuser@nyu.edu'},
+                { listing_id: '2', status: 'sold', user_netid: 'testuser', user_email: 'testuser@nyu.edu' },
             ];
 
             listingsApi.getListings
@@ -1104,7 +1104,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should handle array response format for seller stats', async () => {
             const sellerListings = [
-                {listing_id: '1', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu'},
+                { listing_id: '1', status: 'active', user_netid: 'testuser', user_email: 'testuser@nyu.edu' },
             ];
 
             listingsApi.getListings.mockResolvedValue(sellerListings);
@@ -1136,7 +1136,7 @@ describe('ListingDetail - Core Functionality', () => {
 
     describe('Listing Display', () => {
         it('should display listing title and price', async () => {
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1290,7 +1290,7 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            const shareButton = screen.getByRole('button', {name: /share listing/i});
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
             await user.click(shareButton);
 
             await waitFor(() => {
@@ -1328,7 +1328,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should not prevent click on lightbox content', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1430,7 +1430,7 @@ describe('ListingDetail - Core Functionality', () => {
                 price: '123.45',
             });
 
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1447,7 +1447,7 @@ describe('ListingDetail - Core Functionality', () => {
                 price: 999.99,
             });
 
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1468,7 +1468,7 @@ describe('ListingDetail - Core Functionality', () => {
 
         it('should add listing to watchlist when save button is clicked', async () => {
             const user = userEvent.setup();
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1496,7 +1496,7 @@ describe('ListingDetail - Core Functionality', () => {
                 is_saved: true,
             });
 
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1521,7 +1521,7 @@ describe('ListingDetail - Core Functionality', () => {
             const user = userEvent.setup();
             watchlistApi.addToWatchlist.mockRejectedValue(new Error('API Error'));
 
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1568,7 +1568,7 @@ describe('ListingDetail - Core Functionality', () => {
                 price: 0,
             });
 
-            const {container} = renderListingDetail();
+            const { container } = renderListingDetail();
 
             await waitFor(() => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
@@ -1598,7 +1598,7 @@ describe('ListingDetail - Core Functionality', () => {
         it('should return null when id is not provided', () => {
             // Mock useParams to return no id for this test
             mockUseParams.mockReturnValue({ id: undefined });
-            
+
             const { container } = render(
                 <BrowserRouter>
                     <AuthProvider>
@@ -1609,7 +1609,7 @@ describe('ListingDetail - Core Functionality', () => {
 
             // Component should return null when no id
             expect(container.firstChild).toBeNull();
-            
+
             // Restore original mock
             mockUseParams.mockReturnValue({ id: '123' });
         });
@@ -1728,7 +1728,7 @@ describe('ListingDetail - Core Functionality', () => {
 
             // Mock listing to become null (edge case)
             listingsApi.getListing.mockResolvedValue(null);
-            
+
             // This is a rare edge case, but we test that handleToggleSave handles it
             // by checking that it doesn't crash when listing is null
             const saveButton = screen.queryByLabelText(/save|unsave/i);
@@ -2041,158 +2041,155 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         describe('Buy Now Functionality', () => {
-        beforeEach(() => {
-            vi.clearAllMocks();
-            transactionsApi.createTransaction.mockResolvedValue({
-                transaction_id: 'tx123',
-            });
-        });
-
-        it('should show buy now button for non-owner', async () => {
-            listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
-            renderListingDetail();
-
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            beforeEach(() => {
+                vi.clearAllMocks();
+                transactionsApi.createTransaction.mockResolvedValue({
+                    transaction_id: 'tx123',
+                });
             });
 
-            const buyButton = screen.getByRole('button', { name: /buy now/i });
-            expect(buyButton).toBeInTheDocument();
-        });
+            it('should show buy now button for non-owner', async () => {
+                listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
+                renderListingDetail();
 
-        it('should not show buy now button for owner', async () => {
-            listingsApi.getListing.mockResolvedValue(mockOwnerListing);
-            renderListingDetail();
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
 
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                const buyButton = screen.getByRole('button', { name: /buy now/i });
+                expect(buyButton).toBeInTheDocument();
             });
 
-            expect(screen.queryByRole('button', { name: /buy now/i })).not.toBeInTheDocument();
-        });
+            it('should not show buy now button for owner', async () => {
+                listingsApi.getListing.mockResolvedValue(mockOwnerListing);
+                renderListingDetail();
 
-        it('should create transaction and navigate when buy now is clicked', async () => {
-            const user = userEvent.setup();
-            listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
-            renderListingDetail();
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
 
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                expect(screen.queryByRole('button', { name: /buy now/i })).not.toBeInTheDocument();
             });
 
-            const buyButton = screen.getByRole('button', { name: /buy now/i });
+            it('should create transaction and navigate when buy now is clicked', async () => {
+                const user = userEvent.setup();
+                listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
+                renderListingDetail();
 
-            // Click the button - auth is handled by AuthProvider wrapper
-            await user.click(buyButton);
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
 
-            // Since auth might redirect to login or create transaction,
-            // we just verify the button is clickable and mock is called if authenticated
-            // The actual behavior depends on AuthProvider mock which wraps the component
-            await waitFor(() => {
-                // Either createTransaction was called (if authenticated)
-                // or navigate was called to login (if not authenticated)
-                expect(
-                    transactionsApi.createTransaction.mock.calls.length > 0 ||
-                    mockNavigate.mock.calls.length > 0
-                ).toBe(true);
-            });
-        });
+                const buyButton = screen.getByRole('button', { name: /buy now/i });
 
-        it('should disable buy button when listing is sold', async () => {
-            listingsApi.getListing.mockResolvedValue({
-                ...mockNonOwnerListing,
-                status: 'sold',
-            });
-            renderListingDetail();
+                // Click the button - auth is handled by AuthProvider wrapper
+                await user.click(buyButton);
 
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                // Since auth might redirect to login or create transaction,
+                // we just verify the button is clickable and mock is called if authenticated
+                // The actual behavior depends on AuthProvider mock which wraps the component
+                await waitFor(() => {
+                    // Either createTransaction was called (if authenticated)
+                    // or navigate was called to login (if not authenticated)
+                    expect(
+                        transactionsApi.createTransaction.mock.calls.length > 0 ||
+                        mockNavigate.mock.calls.length > 0
+                    ).toBe(true);
+                });
             });
 
-            const buyButton = screen.getByRole('button', { name: /buy now/i });
-            expect(buyButton).toBeDisabled();
-        });
+            it('should disable buy button when listing is sold', async () => {
+                listingsApi.getListing.mockResolvedValue({
+                    ...mockNonOwnerListing,
+                    status: 'sold',
+                });
+                renderListingDetail();
 
-        it('should handle transaction creation error gracefully', async () => {
-            const user = userEvent.setup();
-            global.alert = vi.fn();
-            listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
-            transactionsApi.createTransaction.mockRejectedValue(new Error('API Error'));
-            renderListingDetail();
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
 
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                const buyButton = screen.getByRole('button', { name: /buy now/i });
+                expect(buyButton).toBeDisabled();
             });
 
-            const buyButton = screen.getByRole('button', { name: /buy now/i });
-            await user.click(buyButton);
+            it('should handle transaction creation error gracefully', async () => {
+                const user = userEvent.setup();
+                global.alert = vi.fn();
+                listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
+                transactionsApi.createTransaction.mockRejectedValue(new Error('API Error'));
+                renderListingDetail();
 
-            // Wait for either alert or navigation (depends on auth state)
-            await waitFor(() => {
-                // If authenticated and transaction fails, alert should be called
-                // If not authenticated, navigate to login will be called
-                expect(
-                    global.alert.mock.calls.length > 0 ||
-                    mockNavigate.mock.calls.length > 0
-                ).toBe(true);
-            });
-        });
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
 
-        it('should redirect to login if not authenticated when buy now is clicked', async () => {
-            const user = userEvent.setup();
-            // Mock unauthenticated state by setting is_owner to false and simulating no auth
-            listingsApi.getListing.mockResolvedValue({
-                ...mockNonOwnerListing,
-                is_owner: false,
-            });
+                const buyButton = screen.getByRole('button', { name: /buy now/i });
+                await user.click(buyButton);
 
-            // Need to render without auth somehow - this test assumes AuthProvider handles this
-            renderListingDetail();
-
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                // Wait for either alert or navigation (depends on auth state)
+                await waitFor(() => {
+                    // If authenticated and transaction fails, alert should be called
+                    // If not authenticated, navigate to login will be called
+                    expect(
+                        global.alert.mock.calls.length > 0 ||
+                        mockNavigate.mock.calls.length > 0
+                    ).toBe(true);
+                });
             });
 
-            const buyButton = screen.getByRole('button', { name: /buy now/i });
-            await user.click(buyButton);
+            it('should redirect to login if not authenticated when buy now is clicked', async () => {
+                const user = userEvent.setup();
+                // Mock unauthenticated state by setting is_owner to false and simulating no auth
+                listingsApi.getListing.mockResolvedValue({
+                    ...mockNonOwnerListing,
+                    is_owner: false,
+                });
 
-            // Should attempt to create transaction (auth is checked in the handler)
-            // This test verifies the button is clickable for non-owners
-            expect(buyButton).toBeInTheDocument();
-        });
+                // Need to render without auth somehow - this test assumes AuthProvider handles this
+                renderListingDetail();
 
-        it('should show alert when transaction creation fails', async () => {
-            const user = userEvent.setup();
-            const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-            
-            // Mock localStorage with a valid token so isAuthenticated returns true
-            // This needs to be done BEFORE rendering the component so AuthContext picks it up
-            const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
-            const originalGetItem = Storage.prototype.getItem;
-            Storage.prototype.getItem = vi.fn((key) => {
-                if (key === 'access_token') return mockToken;
-                return originalGetItem.call(localStorage, key);
-            });
-            
-            listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
-            transactionsApi.createTransaction.mockRejectedValue(new Error('Transaction failed'));
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
 
-            renderListingDetail();
+                const buyButton = screen.getByRole('button', { name: /buy now/i });
+                await user.click(buyButton);
 
-            await waitFor(() => {
-                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                // Should attempt to create transaction (auth is checked in the handler)
+                // This test verifies the button is clickable for non-owners
+                expect(buyButton).toBeInTheDocument();
             });
 
-            const buyButton = screen.getByRole('button', { name: /buy now/i });
-            await user.click(buyButton);
+            it('should show alert when transaction creation fails', async () => {
+                const user = userEvent.setup();
+                const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
-            await waitFor(() => {
-                expect(alertSpy).toHaveBeenCalledWith('Failed to initiate purchase. Please try again.');
+                // Mock localStorage with a valid token so isAuthenticated returns true
+                // This needs to be done BEFORE rendering the component so AuthContext picks it up
+                const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
+                localStorage.setItem('access_token', mockToken);
+                localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));
+
+                listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
+                transactionsApi.createTransaction.mockRejectedValue(new Error('Transaction failed'));
+
+                renderListingDetail();
+
+                await waitFor(() => {
+                    expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+                });
+
+                const buyButton = screen.getByRole('button', { name: /buy now/i });
+                await user.click(buyButton);
+
+                await waitFor(() => {
+                    expect(alertSpy).toHaveBeenCalledWith('Failed to initiate purchase. Please try again.');
+                });
+
+                alertSpy.mockRestore();
+                localStorage.clear();
             });
-
-            alertSpy.mockRestore();
-            Storage.prototype.getItem = originalGetItem;
-        });
         });
     });
 

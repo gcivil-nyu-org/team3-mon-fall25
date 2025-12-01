@@ -1,9 +1,9 @@
 import React from 'react';
-import {Navigate, useLocation} from 'react-router-dom';
-import {useAuth} from '../contexts/AuthContext';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({children}) => {
-    const {isAuthenticated, isLoading} = useAuth();
+const ProtectedRoute = () => {
+    const { isAuthenticated, isLoading } = useAuth();
     const location = useLocation();
 
     // Show loading state while checking authentication
@@ -28,14 +28,12 @@ const ProtectedRoute = ({children}) => {
         return (
             <Navigate
                 to="/login"
-                state={{from: location}}
+                state={{ from: location }}
                 replace
             />
         );
     }
 
-    return children;
+    return <Outlet />;
 };
 export default ProtectedRoute;
-
-

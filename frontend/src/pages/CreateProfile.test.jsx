@@ -357,7 +357,6 @@ describe("CreateProfile page", () => {
   });
 
   it("handles file upload with invalid file type", async () => {
-    const user = userEvent.setup();
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     const { container } = renderComponent();
 
@@ -368,7 +367,15 @@ describe("CreateProfile page", () => {
     
     const invalidFile = new File(["content"], "document.pdf", { type: "application/pdf" });
     
-    await user.upload(fileInput, invalidFile);
+    // Manually trigger the onChange event
+    Object.defineProperty(fileInput, 'files', {
+      value: [invalidFile],
+      writable: false,
+    });
+    
+    // Trigger the change event
+    const changeEvent = new Event('change', { bubbles: true });
+    fileInput.dispatchEvent(changeEvent);
 
     // Wait for the onChange handler to process
     await waitFor(() => {
