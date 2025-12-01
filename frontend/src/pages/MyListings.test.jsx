@@ -411,30 +411,5 @@ describe("MyListings", () => {
     alertSpy.mockRestore();
     confirmSpy.mockRestore();
   });
-
-  render(
-    <MemoryRouter>
-      <MyListings />
-    </MemoryRouter>
-  );
-
-  await waitFor(() => {
-    expect(screen.getByText("Test Laptop")).toBeInTheDocument();
-  });
-
-  // Find the Delete button
-  const deleteButtons = screen.getAllByText(/Delete/i);
-  if (deleteButtons.length > 0) {
-    fireEvent.click(deleteButtons[0]);
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
-      expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2); // Initial load + reload after failure
-    });
-  }
-
-  alertSpy.mockRestore();
-  confirmSpy.mockRestore();
-});
 });
 
