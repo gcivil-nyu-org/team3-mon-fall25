@@ -35,10 +35,11 @@ export default function ConversationItem({ conversation, isActive = false, onCli
   const lastMessageTime = lastMessage?.created_at || lastMessage?.timestamp || conversation.last_message_at;
 
   // Handle deleted users (sender will be null)
-  const isSentByMe = lastMessage?.sender !== null && lastMessage?.sender !== undefined &&
-                     (lastMessage?.sender === conversation.currentUserId ||
-                      lastMessage?.senderId === conversation.currentUserId ||
-                      String(lastMessage?.sender) === String(conversation.currentUserId));
+  // Only check if sender is not null (null means deleted user)
+  const senderId = lastMessage?.sender ?? lastMessage?.senderId;
+  const isSentByMe = senderId !== null && senderId !== undefined &&
+                     (senderId === conversation.currentUserId ||
+                      String(senderId) === String(conversation.currentUserId));
 
   // Get listing image - handle various formats
   const listingImage = conversation.listingImage || 
