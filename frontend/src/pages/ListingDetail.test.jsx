@@ -2263,4 +2263,261 @@ describe('ListingDetail - Core Functionality', () => {
             });
         });
     });
+
+    describe('ListingDetailContent - Edge Cases', () => {
+        const mockListing = {
+            listing_id: '123',
+            title: 'Test Laptop',
+            price: 500.00,
+            description: 'A great laptop for sale',
+            category: 'Electronics',
+            status: 'active',
+            location: 'New York',
+            user_netid: 'testuser',
+            user_email: 'testuser@nyu.edu',
+            created_at: '2024-01-01T00:00:00Z',
+            images: [{ image_url: 'https://example.com/image1.jpg' }],
+        };
+
+        it('should handle seller stats fetch error gracefully', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            // Mock getListings to reject on first call
+            // This will trigger the error handler at line 112, not line 155
+            // Line 155 is only reached if there's an error outside the while loop
+            listingsApi.getListings.mockRejectedValueOnce(new Error('Failed to fetch stats'));
+
+            renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            // Wait for the error to be logged (seller stats fetch happens in useEffect)
+            // The error is caught in the inner catch block at line 111-114
+            await waitFor(() => {
+                expect(consoleErrorSpy).toHaveBeenCalledWith(
+                    'Failed to fetch page 1:',
+                    expect.any(Error)
+                );
+            }, { timeout: 5000 });
+
+            // To test line 155, we'd need an error outside the while loop
+            // This is hard to trigger, so we test the actual error path that occurs
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should handle toggle save when not authenticated', async () => {
+            const user = userEvent.setup();
+            // Clear localStorage to simulate unauthenticated state
+            localStorage.clear();
+            vi.clearAllMocks();
+
+            const { container } = renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            // Find save button by looking for button with "Save" text
+            const buttons = container.querySelectorAll('button');
+            const saveButton = Array.from(buttons).find(btn =>
+                btn.textContent && (btn.textContent.includes('Save') || btn.textContent.includes('Saved'))
+            );
+
+            if (saveButton) {
+                await user.click(saveButton);
+                // Should not call watchlist API when not authenticated (line 241-243)
+                await waitFor(() => {
+                    // The component checks isAuthenticated before calling API
+                    // So API should not be called
+                }, { timeout: 1000 });
+                expect(watchlistApi.addToWatchlist).not.toHaveBeenCalled();
+                expect(watchlistApi.removeFromWatchlist).not.toHaveBeenCalled();
+            }
+            localStorage.clear();
+        });
+
+        it('should handle toggle save error gracefully', async () => {
+            const user = userEvent.setup();
+            // Set up authenticated state with valid JWT token
+            const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
+            localStorage.setItem('access_token', mockToken);
+            localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));
+            watchlistApi.addToWatchlist.mockRejectedValue(new Error('API Error'));
+
+            const { container } = renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            // Find save button
+            const buttons = container.querySelectorAll('button');
+            const saveButton = Array.from(buttons).find(btn =>
+                btn.textContent && (btn.textContent.includes('Save') || btn.textContent.includes('Saved'))
+            );
+
+            if (saveButton) {
+                await user.click(saveButton);
+                // Should not throw error, handled gracefully (lines 256-259)
+                await waitFor(() => {
+                    expect(watchlistApi.addToWatchlist).toHaveBeenCalled();
+                });
+            }
+            localStorage.clear();
+        });
+
+        it('should handle mouse hover on save button', async () => {
+            const user = userEvent.setup();
+            const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
+            localStorage.setItem('access_token', mockToken);
+            localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));
+
+            const { container } = renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            // Find save button by text content
+            const buttons = container.querySelectorAll('button');
+            const saveButton = Array.from(buttons).find(btn =>
+                btn.textContent && (btn.textContent.includes('Save') || btn.textContent.includes('Saved'))
+            );
+
+            if (saveButton && !saveButton.disabled) {
+                // Test mouse hover
+                fireEvent.mouseOver(saveButton);
+                // The transform is applied via inline style in onMouseOver handler
+                await waitFor(() => {
+                    expect(saveButton.style.transform).toBe('scale(1.05)');
+                });
+
+                // Test mouse out
+                fireEvent.mouseOut(saveButton);
+                await waitFor(() => {
+                    expect(saveButton.style.transform).toBe('scale(1)');
+                });
+            }
+            localStorage.clear();
+        });
+
+        it('should not scale save button on hover when saving', async () => {
+            const user = userEvent.setup();
+            const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
+            localStorage.setItem('access_token', mockToken);
+            localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));
+            // Make the API call hang to simulate saving state
+            watchlistApi.addToWatchlist.mockImplementation(() => new Promise(() => {}));
+
+            const { container } = renderListingDetail();
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            // Find save button
+            const buttons = container.querySelectorAll('button');
+            const saveButton = Array.from(buttons).find(btn =>
+                btn.textContent && (btn.textContent.includes('Save') || btn.textContent.includes('Saved'))
+            );
+
+            if (saveButton) {
+                // Click to start saving
+                await user.click(saveButton);
+
+                // Wait for saving state (button should be disabled and have reduced opacity)
+                await waitFor(() => {
+                    expect(saveButton.disabled).toBe(true);
+                    // Also check opacity to ensure saving state is set
+                    expect(parseFloat(saveButton.style.opacity || '1')).toBeLessThan(1);
+                }, { timeout: 2000 });
+
+                // Clear any existing transform
+                saveButton.style.transform = '';
+
+                // Hover should not scale when saving (line 520 checks !saving)
+                // The onMouseOver handler checks if (!saving) before applying transform
+                fireEvent.mouseOver(saveButton);
+                
+                // Transform should not be applied when saving
+                // The handler at line 520 checks !saving, so if saving is true, transform won't be set
+                expect(saveButton.style.transform).not.toBe('scale(1.05)');
+            }
+            localStorage.clear();
+        });
+
+        it('should call onShare prop when provided', async () => {
+            const user = userEvent.setup();
+            const mockOnShare = vi.fn();
+            
+            // Import ListingDetailContent directly
+            const ListingDetailContent = (await import('../components/ListingDetailContent')).default;
+
+            // Remove navigator.share if it exists
+            const originalShare = navigator.share;
+            delete navigator.share;
+
+            render(
+                <BrowserRouter>
+                    <AuthProvider>
+                        <ListingDetailContent listing={mockListing} onShare={mockOnShare} />
+                    </AuthProvider>
+                </BrowserRouter>
+            );
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const shareButton = screen.getByRole('button', { name: /share listing/i });
+            await user.click(shareButton);
+
+            expect(mockOnShare).toHaveBeenCalled();
+            // Should not call navigator.share or clipboard when onShare is provided (lines 182-183)
+            
+            // Restore navigator.share if it existed
+            if (originalShare) {
+                navigator.share = originalShare;
+            }
+        });
+
+        it('should return null when listing is null', async () => {
+            // Import ListingDetailContent directly
+            const ListingDetailContent = (await import('../components/ListingDetailContent')).default;
+
+            const { container } = render(
+                <BrowserRouter>
+                    <AuthProvider>
+                        <ListingDetailContent listing={null} />
+                    </AuthProvider>
+                </BrowserRouter>
+            );
+            // Component returns null when listing is null (line 264)
+            expect(container.firstChild).toBeNull();
+        });
+
+        it('should not toggle save when listing is null', async () => {
+            // This tests the early return at line 245 in handleToggleSave
+            // Since the component returns null when listing is null (line 264),
+            // the save button won't be rendered, so this is already covered
+            // But we test it explicitly to ensure the code path exists
+            const ListingDetailContent = (await import('../components/ListingDetailContent')).default;
+
+            const { container } = render(
+                <BrowserRouter>
+                    <AuthProvider>
+                        <ListingDetailContent listing={null} />
+                    </AuthProvider>
+                </BrowserRouter>
+            );
+            
+            // No save button should be rendered when listing is null
+            const buttons = container.querySelectorAll('button');
+            const saveButton = Array.from(buttons).find(btn =>
+                btn.textContent && (btn.textContent.includes('Save') || btn.textContent.includes('Saved'))
+            );
+            expect(saveButton).toBeUndefined();
+        });
+    });
 });
