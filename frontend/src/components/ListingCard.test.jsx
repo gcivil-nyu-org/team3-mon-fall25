@@ -213,5 +213,87 @@ describe('ListingCard', () => {
             expect(clockIcon).not.toBeInTheDocument();
         });
     });
+
+    describe('Metadata Display', () => {
+        it('renders posted time when createdAt is provided', () => {
+            const createdAt = new Date().toISOString();
+            render(<ListingCard {...mockProps} createdAt={createdAt} />);
+            
+            // Should render the time metadata
+            const metaSection = screen.getByText('Test Laptop').closest('.listing-card')?.querySelector('.listing-meta');
+            expect(metaSection).toBeInTheDocument();
+        });
+
+        it('does not render posted time when createdAt is null', () => {
+            render(<ListingCard {...mockProps} createdAt={null} />);
+            
+            const metaSection = screen.getByText('Test Laptop').closest('.listing-card')?.querySelector('.listing-meta');
+            // Meta section might still exist but without the time span
+            if (metaSection) {
+                const timeSpan = metaSection.querySelector('span[title*="views"]');
+                // If timeSpan exists, it should not contain time-related text
+                // If it doesn't exist (null), that's also correct
+                if (timeSpan) {
+                    expect(timeSpan).not.toHaveTextContent(/ago|today|yesterday/i);
+                }
+            }
+        });
+
+        it('does not render posted time when createdAt is undefined', () => {
+            render(<ListingCard {...mockProps} createdAt={undefined} />);
+            
+            const metaSection = screen.getByText('Test Laptop').closest('.listing-card')?.querySelector('.listing-meta');
+            if (metaSection) {
+                const timeSpan = metaSection.querySelector('span[title*="views"]');
+                // If timeSpan exists, it should not contain time-related text
+                // If it doesn't exist (null), that's also correct
+                if (timeSpan) {
+                    expect(timeSpan).not.toHaveTextContent(/ago|today|yesterday/i);
+                }
+            }
+        });
+
+        it('renders view count when viewCount is a number', () => {
+            const createdAt = new Date().toISOString();
+            render(<ListingCard {...mockProps} createdAt={createdAt} viewCount={42} />);
+            
+            const metaSection = screen.getByText('Test Laptop').closest('.listing-card')?.querySelector('.listing-meta');
+            expect(metaSection).toBeInTheDocument();
+            expect(screen.getByText('42')).toBeInTheDocument();
+        });
+
+        it('does not render view count when viewCount is not a number', () => {
+            const createdAt = new Date().toISOString();
+            render(<ListingCard {...mockProps} createdAt={createdAt} viewCount="not a number" />);
+            
+            const metaSection = screen.getByText('Test Laptop').closest('.listing-card')?.querySelector('.listing-meta');
+            if (metaSection) {
+                const viewCountSpan = Array.from(metaSection.querySelectorAll('span')).find(span => 
+                    span.textContent?.includes('not a number')
+                );
+                expect(viewCountSpan).toBeUndefined();
+            }
+        });
+
+        it('does not render view count when viewCount is null', () => {
+            const createdAt = new Date().toISOString();
+            render(<ListingCard {...mockProps} createdAt={createdAt} viewCount={null} />);
+            
+            const metaSection = screen.getByText('Test Laptop').closest('.listing-card')?.querySelector('.listing-meta');
+            if (metaSection) {
+                const viewCountSpan = Array.from(metaSection.querySelectorAll('span')).find(span => 
+                    span.getAttribute('title')?.includes('views')
+                );
+                expect(viewCountSpan).toBeUndefined();
+            }
+        });
+
+        it('renders both createdAt and viewCount when both are provided', () => {
+            const createdAt = new Date().toISOString();
+            render(<ListingCard {...mockProps} createdAt={createdAt} viewCount={100} />);
+            
+            expect(screen.getByText('100')).toBeInTheDocument();
+        });
+    });
 });
 

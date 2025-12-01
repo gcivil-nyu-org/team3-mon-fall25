@@ -1,61 +1,65 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('access_token'));
-  const [isLoading, setIsLoading] = useState(true);
+// Helper function to validate token
+const validateToken = (token) => {
+  if (!token) return false;
+  try {
+    const decoded = jwtDecode(token);
+    return decoded.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+};
 
-  // Check token validity on mount and when token changes
-  useEffect(() => {
+export const AuthProvider = ({ children }) => {
+  // Initialize token with validation
+  const [token, setToken] = useState(() => {
+    const storedToken = localStorage.getItem('access_token');
+    // Clear invalid token immediately
+    if (storedToken && !validateToken(storedToken)) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      return null;
+    }
+    return storedToken;
+  });
+
+  const [user, setUser] = useState(() => {
     if (token) {
+      const storedUser = localStorage.getItem('user');
       try {
-        const decoded = jwtDecode(token);
-        // Check if token is expired
-        if (decoded.exp * 1000 < Date.now()) {
-          logout();
-        } else {
-          // Token is valid, fetch user data if needed
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-          }
-        }
-      } catch (error) {
-        console.error('Token decode error:', error);
-        logout();
+        return storedUser ? JSON.parse(storedUser) : null;
+      } catch {
+        return null;
       }
     }
-    setIsLoading(false);
-  }, [token]);
+    return null;
+  });
 
-  const login = (accessToken, refreshToken, userData) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setToken(accessToken);
-    setUser(userData);
-  };
+  const isLoading = false; // No longer need loading state since token is validated synchronously
 
-  const logout = () => {
+  // Compute isAuthenticated as a boolean, not a function
+  const isAuthenticated = useMemo(() => validateToken(token), [token]);
+
+  const logout = useCallback(() => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
-  const isAuthenticated = () => {
-    if (!token) return false;
-    try {
-      const decoded = jwtDecode(token);
-      return decoded.exp * 1000 > Date.now();
-    } catch {
-      return false;
-    }
-  };
+  const login = useCallback((accessToken, refreshToken, userData) => {
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setToken(accessToken);
+    setUser(userData);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, isLoading }}>

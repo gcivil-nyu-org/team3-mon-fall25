@@ -53,7 +53,7 @@ export default function ListingDetail() {
         if (!sellerUsername) return;
 
         // If not logged in, send to login and remember intended destination
-        if (!isAuthenticated()) {
+        if (!isAuthenticated) {
             navigate("/login", {
                 replace: false,
                 state: {
@@ -120,7 +120,7 @@ export default function ListingDetail() {
         if (!listing) return;
 
         // Check if user is authenticated
-        if (!isAuthenticated()) {
+        if (!isAuthenticated) {
             navigate("/login", {
                 state: { from: location },
             });
@@ -248,7 +248,7 @@ export default function ListingDetail() {
                                 <button
                                     className="listing-detail-mobile-contact-button"
                                     onClick={() => {
-                                        if (!isAuthenticated()) {
+                                        if (!isAuthenticated) {
                                             navigate("/login", {
                                                 state: { from: location },
                                             });
