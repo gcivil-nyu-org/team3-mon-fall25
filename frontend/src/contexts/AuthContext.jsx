@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
@@ -47,7 +47,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const isAuthenticated = () => {
+  // Compute isAuthenticated as a boolean, not a function
+  const isAuthenticated = useMemo(() => {
     if (!token) return false;
     try {
       const decoded = jwtDecode(token);
@@ -55,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       return false;
     }
-  };
+  }, [token]);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, isLoading }}>

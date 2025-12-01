@@ -524,28 +524,38 @@ describe('EditProfile', () => {
             const user = userEvent.setup();
             // Render with a profile that has an avatar so "Change Photo" button is shown
             const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
-            const { container } = render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
 
-            // Create a file input and trigger file selection
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = 'image/jpeg,image/png,image/gif,image/webp';
-            
             const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
             Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 });
+
+            // Mock document.createElement to intercept input creation
+            const originalCreateElement = document.createElement.bind(document);
+            const mockInput = originalCreateElement('input');
+            document.createElement = vi.fn((tagName) => {
+                if (tagName === 'input') {
+                    return mockInput;
+                }
+                return originalCreateElement(tagName);
+            });
 
             const changePhotoButton = screen.getByText('Change Photo').closest('button');
             await user.click(changePhotoButton);
 
-            // Simulate file selection
-            const input = container.querySelector('input[type="file"]');
-            if (input) {
-                await user.upload(input, largeFile);
-            }
+            // Manually trigger the onchange event with large file
+            const changeEvent = new Event('change', { bubbles: true });
+            Object.defineProperty(changeEvent, 'target', {
+                writable: false,
+                value: { files: [largeFile] }
+            });
+            mockInput.dispatchEvent(changeEvent);
 
             await waitFor(() => {
                 expect(screen.getByText('Image must be less than 10MB')).toBeInTheDocument();
             });
+
+            // Restore original createElement
+            document.createElement = originalCreateElement;
         });
     });
 

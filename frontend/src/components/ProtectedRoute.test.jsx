@@ -131,11 +131,9 @@ describe('ProtectedRoute', () => {
         });
 
         it('renders children when user is authenticated', () => {
-            // Note: ProtectedRoute uses isAuthenticated as a boolean check,
-            // but AuthContext provides it as a function. This test mocks it as boolean
-            // to match how ProtectedRoute currently uses it.
+            // Mock isAuthenticated as a boolean
             useAuth.mockImplementation(() => ({
-                isAuthenticated: true, // Mocked as boolean to match ProtectedRoute usage
+                isAuthenticated: true,
                 isLoading: false,
             }));
 

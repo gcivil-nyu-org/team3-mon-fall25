@@ -238,7 +238,7 @@ export default function ListingDetailContent({
     };
 
     const handleToggleSave = async () => {
-        if (!isAuthenticated()) {
+        if (!isAuthenticated) {
             return;
         }
 
@@ -538,7 +538,7 @@ export default function ListingDetailContent({
                                             <button
                                                 className="listing-detail-contact-button"
                                                 onClick={() => {
-                                                    if (!isAuthenticated()) {
+                                                    if (!isAuthenticated) {
                                                         return;
                                                     }
                                                     setContactModalOpen(true);

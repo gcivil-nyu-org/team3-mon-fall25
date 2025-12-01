@@ -343,6 +343,8 @@ describe("CreateProfile page", () => {
     await waitFor(() => screen.getByLabelText(/Bio/));
 
     const bioInput = screen.getByLabelText(/Bio/);
+    // Remove maxLength attribute to allow typing beyond limit
+    bioInput.removeAttribute('maxLength');
     await user.type(bioInput, "a".repeat(501));
 
     await user.click(
@@ -362,9 +364,13 @@ describe("CreateProfile page", () => {
     await waitFor(() => screen.getByLabelText(/Full Name/));
 
     const fileInput = container.querySelector('input[type="file"]');
+    expect(fileInput).toBeTruthy();
+    
     const invalidFile = new File(["content"], "document.pdf", { type: "application/pdf" });
+    
     await user.upload(fileInput, invalidFile);
 
+    // Wait for the onChange handler to process
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith("Only JPG/PNG/WebP images are allowed");
     });

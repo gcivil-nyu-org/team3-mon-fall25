@@ -2164,6 +2164,16 @@ describe('ListingDetail - Core Functionality', () => {
         it('should show alert when transaction creation fails', async () => {
             const user = userEvent.setup();
             const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+            
+            // Mock localStorage with a valid token so isAuthenticated returns true
+            // This needs to be done BEFORE rendering the component so AuthContext picks it up
+            const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
+            const originalGetItem = Storage.prototype.getItem;
+            Storage.prototype.getItem = vi.fn((key) => {
+                if (key === 'access_token') return mockToken;
+                return originalGetItem.call(localStorage, key);
+            });
+            
             listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
             transactionsApi.createTransaction.mockRejectedValue(new Error('Transaction failed'));
 
@@ -2181,6 +2191,7 @@ describe('ListingDetail - Core Functionality', () => {
             });
 
             alertSpy.mockRestore();
+            Storage.prototype.getItem = originalGetItem;
         });
         });
     });
