@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import RangeSlider from "react-range-slider-input";
 import "react-range-slider-input/dist/style.css";
 import { CATEGORIES, LOCATIONS, DORM_LOCATIONS_GROUPED } from "../../constants/filterOptions";
@@ -195,25 +195,33 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-const PRICE_DEBOUNCE_DELAY = 300;
+const PRICE_DEBOUNCE_DELAY = 1000;
 const PRICE_MIN = 0;
-// TODO: Investigate dynamic PRICE_MAX based on actual listing prices
-// Options:
-// 1. Calculate from listings data already fetched in BrowseListings
-//    - Find max price from current listings results
-//    - Pass as prop to Filters component
-// 2. Add separate price-stats endpoint
-//    - GET /api/v1/listings/price-stats/ returns { min_price, max_price }
-//    - Fetch on mount in BrowseListings and pass to Filters
-const PRICE_MAX = 2000;
-const PRICE_STEP = 10;
+const PRICE_MAX = 2000; // the fallback default value. 
+const PRICE_STEP = 1;
+
+const parsePriceValue = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 export default function Filters({ initial = {}, onChange, options = {} }) {
   // Use hardcoded values as fallback, but prefer provided options if available
   const {
     categories: apiCategories = [],
     dorm_locations: apiDormLocations = null, // Grouped structure: { washington_square: [...], downtown: [...], other: [...] }
+    priceStats = null,
   } = options;
+
+  const priceLimits = useMemo(() => {
+    const statsMax = parsePriceValue(priceStats?.max_price);
+    const upperCandidate = statsMax !== null ? statsMax : PRICE_MAX;
+    const upper = Math.max(PRICE_MIN, upperCandidate);
+    return { min: PRICE_MIN, max: upper };
+  }, [priceStats?.max_price]);
 
   const availableCategories = apiCategories.length > 0 ? apiCategories : CATEGORIES;
   // Use grouped dorm_locations if available, otherwise fallback to grouped structure
@@ -228,20 +236,61 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
     dateRange: initial.dateRange || "",
   });
 
+  // Initialize price inputs with defaults if initial values are empty
+  const getInitialPriceInput = (initialValue, isMin) => {
+    if (initialValue !== "" && initialValue != null) {
+      return initialValue;
+    }
+    // Use current priceLimits for default
+    return String(isMin ? priceLimits.min : priceLimits.max);
+  };
+
   // Local state for immediate UI updates (not debounced)
-  const [priceMinInput, setPriceMinInput] = useState(filters.priceMin);
-  const [priceMaxInput, setPriceMaxInput] = useState(filters.priceMax);
+  const [priceMinInput, setPriceMinInput] = useState(() =>
+    getInitialPriceInput(initial.priceMin, true)
+  );
+  const [priceMaxInput, setPriceMaxInput] = useState(() =>
+    getInitialPriceInput(initial.priceMax, false)
+  );
+
+  // Track if we've initialized with defaults (to avoid pushing defaults to parent on mount)
+  const initializedWithDefaultsRef = useRef({
+    min: initial.priceMin === "" || initial.priceMin == null,
+    max: initial.priceMax === "" || initial.priceMax == null,
+  });
+
+  // When priceLimits change, update inputs if they're at the old limits or out of bounds
+  useEffect(() => {
+    setPriceMinInput((current) => {
+      const value = Number(current);
+      if (!Number.isFinite(value)) return current;
+      // Clamp to new limits
+      if (value < priceLimits.min) return String(priceLimits.min);
+      if (value > priceLimits.max) return String(priceLimits.max);
+      return current;
+    });
+    setPriceMaxInput((current) => {
+      const value = Number(current);
+      if (!Number.isFinite(value)) return current;
+      // Clamp to new limits
+      if (value < priceLimits.min) return String(priceLimits.min);
+      if (value > priceLimits.max) return String(priceLimits.max);
+      return current;
+    });
+  }, [priceLimits.min, priceLimits.max]);
 
   // Helper to get numeric value for slider (defaults to min/max if empty)
   const getSliderValue = (value, isMin) => {
+    const limitMin = priceLimits.min;
+    const limitMax = priceLimits.max;
     if (value === "" || value === null || value === undefined) {
-      return isMin ? PRICE_MIN : PRICE_MAX;
+      return isMin ? limitMin : limitMax;
     }
     const num = Number(value);
     if (isNaN(num)) {
-      return isMin ? PRICE_MIN : PRICE_MAX;
+      return isMin ? limitMin : limitMax;
     }
-    return Math.max(PRICE_MIN, Math.min(PRICE_MAX, num));
+    return Math.max(limitMin, Math.min(limitMax, num));
   };
 
   const minSliderValue = getSliderValue(priceMinInput, true);
@@ -298,6 +347,22 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
 
   // Update filters when debounced values change and trigger onChange (only if valid)
   useEffect(() => {
+    // Skip initial mount if we initialized with defaults
+    if (initializedWithDefaultsRef.current.min || initializedWithDefaultsRef.current.max) {
+      // Check if current values match the defaults we set
+      const minMatchesDefault = debouncedPriceMin === String(priceLimits.min);
+      const maxMatchesDefault = debouncedPriceMax === String(priceLimits.max);
+
+      if (
+        (initializedWithDefaultsRef.current.min && minMatchesDefault) ||
+        (initializedWithDefaultsRef.current.max && maxMatchesDefault)
+      ) {
+        // Clear the flags so subsequent changes will trigger onChange
+        initializedWithDefaultsRef.current = { min: false, max: false };
+        return;
+      }
+    }
+
     // Validate debounced values
     const minError = validatePriceMin(debouncedPriceMin);
     const maxError = validatePriceMax(debouncedPriceMax, debouncedPriceMin);
@@ -320,16 +385,26 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
         return newFilters;
       });
     }
-  }, [debouncedPriceMin, debouncedPriceMax]);
+  }, [debouncedPriceMin, debouncedPriceMax, priceLimits.min, priceLimits.max]);
 
   // Sync input state when initial props change (e.g., from URL)
   useEffect(() => {
-    setPriceMinInput(initial.priceMin ?? "");
-    setPriceMaxInput(initial.priceMax ?? "");
+    const newMin = initial.priceMin ?? "";
+    const newMax = initial.priceMax ?? "";
+
+    setPriceMinInput(newMin !== "" ? newMin : String(priceLimits.min));
+    setPriceMaxInput(newMax !== "" ? newMax : String(priceLimits.max));
+
+    // Update the initialized flags
+    initializedWithDefaultsRef.current = {
+      min: newMin === "",
+      max: newMax === "",
+    };
+
     // Clear validation errors when syncing from initial props
     setPriceMinError("");
     setPriceMaxError("");
-  }, [initial.priceMin, initial.priceMax]);
+  }, [initial.priceMin, initial.priceMax, priceLimits.min, priceLimits.max]);
 
   const handleCheckbox = (type, value) => {
     // Support both single value toggle and batch array update
@@ -510,10 +585,14 @@ export default function Filters({ initial = {}, onChange, options = {} }) {
         </h4>
 
         {/* Double Range Slider */}
-        <div style={{ marginBottom: 20, padding: "12px 0" }}>
+        <div
+          style={{ marginBottom: 20, padding: "12px 0" }}
+          data-slider-min={priceLimits.min}
+          data-slider-max={priceLimits.max}
+        >
           <RangeSlider
-            min={PRICE_MIN}
-            max={PRICE_MAX}
+            min={priceLimits.min}
+            max={priceLimits.max}
             step={PRICE_STEP}
             value={[minSliderValue, maxSliderValue]}
             onInput={handleSliderChange}

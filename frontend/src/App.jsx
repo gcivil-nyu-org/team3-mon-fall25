@@ -1,16 +1,14 @@
-import React, { useEffect } from "react";
+import React, {useEffect, useRef} from "react";
 import { Outlet, Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { useChat } from "./contexts/ChatContext";
 import ProfileDropdown from "./components/ProfileDropdown";
-
-// --- CHANGE 1: Import the new GlobalChat we created ---
-// Make sure this path matches where you saved the file from my previous message
+import {useNotifications} from "./contexts/NotificationContext";
 import GlobalChat from "./components/chat/GlobalChat";
-// -----------------------------------------------------
-
 import { FaComments } from "react-icons/fa";
 import { ToastContainer } from "react-toastify";
+import NotificationPanel from "./components/NotificationPanel";
+import {Bell} from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
@@ -19,6 +17,17 @@ export default function App() {
     const { user } = useAuth();
     const { openChat } = useChat();
     const location = useLocation();
+    const {
+        notifications,
+        unreadCount,
+        isDropdownOpen,
+        toggleDropdown,
+        closeDropdown,
+        markAsRead,
+        markAllAsRead,
+        handleNotificationClick,
+    } = useNotifications();
+    const notificationRef = useRef(null);
 
     // Track previous path for chat background
     useEffect(() => {
@@ -26,6 +35,27 @@ export default function App() {
             sessionStorage.setItem('previousPath', location.pathname);
         }
     }, [location.pathname]);
+
+    // Close notification dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                closeDropdown();
+            }
+        };
+
+        if (isDropdownOpen) {
+            // Use setTimeout to ensure the event listener is added after the current click event
+            const timeoutId = setTimeout(() => {
+                document.addEventListener("mousedown", handleClickOutside);
+            }, 0);
+
+            return () => {
+                clearTimeout(timeoutId);
+                document.removeEventListener("mousedown", handleClickOutside);
+            };
+        }
+    }, [isDropdownOpen, closeDropdown]);
 
     return (
         <div
@@ -107,6 +137,65 @@ export default function App() {
                                 <FaComments style={{fontSize: "16px"}}/>
                                 Messages
                             </button>
+                        )}
+
+                        {/* Notification Bell */}
+                        {user && (
+                            <div className="nav__notification-wrapper" ref={notificationRef}>
+                                <button
+                                    onClick={toggleDropdown}
+                                    className="nav__link"
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: "6px 0",
+                                        color: "inherit",
+                                        font: "inherit",
+                                        position: "relative",
+                                    }}
+                                    aria-label="Notifications"
+                                >
+                                    <Bell style={{fontSize: "20px", width: "20px", height: "20px"}}/>
+                                    {unreadCount > 0 && (
+                                        <span
+                                            style={{
+                                                position: "absolute",
+                                                top: "-2px",
+                                                right: "-2px",
+                                                backgroundColor: "#ef4444",
+                                                color: "white",
+                                                borderRadius: "50%",
+                                                width: "20px",
+                                                height: "20px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: "11px",
+                                                fontWeight: "600",
+                                                border: "2px solid #56018D",
+                                                minWidth: "20px",
+                                            }}
+                                        >
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Notification Panel */}
+                                {isDropdownOpen && (
+                                    <NotificationPanel
+                                        notifications={notifications}
+                                        onMarkAsRead={markAsRead}
+                                        onMarkAllAsRead={markAllAsRead}
+                                        onNotificationClick={handleNotificationClick}
+                                        onClose={closeDropdown}
+                                    />
+                                )}
+                            </div>
                         )}
 
                         {user ? (

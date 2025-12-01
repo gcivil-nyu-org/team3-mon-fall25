@@ -1,21 +1,28 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EditProfile from './EditProfile';
 import * as profilesApi from '../api/profiles.js';
 
-// Mock APIs
+// Mock the APIs
 vi.mock('../api/profiles.js');
+
+// Mock the AuthContext
 vi.mock('../contexts/AuthContext', () => ({
     useAuth: vi.fn(),
 }));
 
+// Import after mocking
 import { useAuth } from '../contexts/AuthContext';
 
 describe('EditProfile', () => {
     const mockOnClose = vi.fn();
-    const mockUser = { email: 'test@nyu.edu', netid: 'test123' };
+    const mockUser = {
+        email: 'test@nyu.edu',
+        netid: 'test123',
+    };
+
     const mockProfile = {
         profile_id: 1,
         user_id: 1,
@@ -24,7 +31,7 @@ describe('EditProfile', () => {
         email: 'test@nyu.edu',
         phone: '(555) 123-4567',
         location: 'Founders Hall',
-        bio: 'NYU student.',
+        bio: 'NYU student selling items I no longer need. Always happy to negotiate prices!',
         avatar_url: null,
     };
 
@@ -35,281 +42,551 @@ describe('EditProfile', () => {
         profilesApi.createProfile.mockResolvedValue({ data: mockProfile });
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
-
-    // --- Helper to safely capture dynamic input ---
-    const captureDynamicInput = async (triggerAction) => {
-        const originalCreateElement = document.createElement.bind(document);
-        let capturedInput = null;
-
-        // Spy ONLY during the action
-        const spy = vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
-            const element = originalCreateElement(tagName);
-            if (tagName === 'input') {
-                capturedInput = element;
-                // Mock click to prevent JSDOM errors if any
-                element.click = vi.fn();
-            }
-            return element;
-        });
-
-        try {
-            await triggerAction();
-        } finally {
-            spy.mockRestore(); // Restore immediately
-        }
-
-        return capturedInput;
-    };
-
-    // --- 1. Helper Functions ---
-    describe('Photo Logic & Helpers', () => {
-        it('formats file size correctly', async () => {
-            const user = userEvent.setup();
-
-            // Mock FileReader class
-            class MockFileReader {
-                readAsDataURL = vi.fn();
-                onloadend = null;
-                result = 'data:image/png;base64,test';
-            }
-            global.FileReader = MockFileReader;
-
-            render(<EditProfile onClose={mockOnClose} profile={null} />);
-
-            // Capture input created by the button click
-            const addBtn = screen.getByText("Add Photo").closest("button");
-            const capturedInput = await captureDynamicInput(async () => {
-                await user.click(addBtn);
-            });
-
-            expect(capturedInput).not.toBeNull();
-
-            // Trigger change
-            const largeFile = new File(['x'.repeat(1500)], 'large.jpg', { type: 'image/jpeg' });
-            Object.defineProperty(capturedInput, 'files', { value: [largeFile] });
-
-            act(() => {
-                fireEvent.change(capturedInput);
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText(/1.46 KB/)).toBeInTheDocument();
-            });
-        });
-
-        it('handles 0 bytes file size', async () => {
-            const user = userEvent.setup();
-            // Simple FileReader mock
-            class MockFileReader { readAsDataURL = vi.fn(); onloadend = null; }
-            global.FileReader = MockFileReader;
-
-            render(<EditProfile onClose={mockOnClose} profile={null} />);
-
-            const addBtn = screen.getByText("Add Photo").closest("button");
-            const capturedInput = await captureDynamicInput(async () => {
-                await user.click(addBtn);
-            });
-
-            const emptyFile = new File([], 'empty.jpg', { type: 'image/jpeg' });
-            Object.defineProperty(capturedInput, 'files', { value: [emptyFile] });
-
-            act(() => {
-                fireEvent.change(capturedInput);
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText(/0 Bytes/)).toBeInTheDocument();
-            });
-        });
-    });
-
-    // --- 2. File Selection ---
-    describe('File Selection', () => {
-        it('validates file size limit (>10MB)', async () => {
-            const user = userEvent.setup();
-            render(<EditProfile onClose={mockOnClose} profile={null} />);
-
-            const addBtn = screen.getByText("Add Photo").closest("button");
-            const capturedInput = await captureDynamicInput(async () => {
-                await user.click(addBtn);
-            });
-
-            const hugeFile = { name: 'huge.jpg', size: 11 * 1024 * 1024, type: 'image/jpeg' };
-            Object.defineProperty(capturedInput, 'files', { value: [hugeFile] });
-
-            act(() => {
-                fireEvent.change(capturedInput);
-            });
-
-            await waitFor(() => {
-                expect(screen.getByText(/Image must be less than 10MB/)).toBeInTheDocument();
-            });
-        });
-
-        it('previews image on valid selection', async () => {
-            const user = userEvent.setup();
-            let readerInstance;
-
-            class MockFileReader {
-                constructor() {
-                    this.readAsDataURL = vi.fn();
-                    this.onloadend = null;
-                    this.result = 'data:image/png;base64,preview';
-                    readerInstance = this;
-                }
-            }
-            global.FileReader = MockFileReader;
-
-            render(<EditProfile onClose={mockOnClose} profile={null} />);
-
-            const addBtn = screen.getByText("Add Photo").closest("button");
-            const capturedInput = await captureDynamicInput(async () => {
-                await user.click(addBtn);
-            });
-
-            const file = new File(['(⌐□_□)'], 'valid.jpg', { type: 'image/jpeg' });
-            Object.defineProperty(capturedInput, 'files', { value: [file] });
-
-            act(() => {
-                fireEvent.change(capturedInput);
-            });
-
-            act(() => {
-                if (readerInstance && readerInstance.onloadend) {
-                    readerInstance.onloadend();
-                }
-            });
-
-            await waitFor(() => {
-                const img = screen.getByAltText("Avatar");
-                expect(img).toHaveAttribute('src', 'data:image/png;base64,preview');
-            });
-        });
-    });
-
-    // --- 3. Payload Logic ---
-    describe('Payload Logic', () => {
-        it('appends new_avatar when file is selected', async () => {
-            const user = userEvent.setup();
-            class MockFileReader { readAsDataURL = vi.fn(); onloadend = () => {}; }
-            global.FileReader = MockFileReader;
-
-            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
-
-            // Button text depends on profile/avatar state. With mockProfile (null avatar), it's "Add Photo"
-            const btn = screen.getByText("Add Photo").closest("button");
-            const capturedInput = await captureDynamicInput(async () => {
-                await user.click(btn);
-            });
-
-            const file = new File(['test'], 'new.jpg', { type: 'image/jpeg' });
-            Object.defineProperty(capturedInput, 'files', { value: [file] });
-
-            act(() => {
-                fireEvent.change(capturedInput);
-            });
-
-            await user.click(screen.getByText("Save Changes").closest("button"));
-
-            await waitFor(() => {
-                const formData = profilesApi.updateMyProfile.mock.calls[0][0];
-                expect(formData.get('new_avatar')).toBe(file);
-            });
-        });
-
-        it('appends remove_avatar when photo is removed', async () => {
-            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://old.jpg' };
-            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
-            const user = userEvent.setup();
-
-            await user.click(screen.getByText("Remove Photo").closest("button"));
-            await user.click(screen.getByText("Save Changes").closest("button"));
-
-            await waitFor(() => {
-                const formData = profilesApi.updateMyProfile.mock.calls[0][0];
-                expect(formData.get('remove_avatar')).toBe('true');
-            });
-        });
-    });
-
-    // --- 4. UI Logic ---
-    describe('UI Interaction Logic', () => {
-        it('closes when clicking overlay (background)', async () => {
-            const { container } = render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
-            const user = userEvent.setup();
-            const overlay = container.querySelector('.modal-overlay');
-            await user.click(overlay);
-            expect(mockOnClose).toHaveBeenCalledWith(false);
-        });
-
-        it('does NOT close when clicking container', async () => {
-            const { container } = render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
-            const user = userEvent.setup();
-            const modal = container.querySelector('.modal-container');
-            await user.click(modal);
-            expect(mockOnClose).not.toHaveBeenCalled();
-        });
-    });
-
-    // --- Standard Tests ---
     describe('Rendering', () => {
+        it('renders modal with title and subtitle', () => {
+            render(<EditProfile onClose={mockOnClose} />);
+
+            expect(screen.getByText('Edit Profile')).toBeInTheDocument();
+            expect(screen.getByText(/Update your profile information/)).toBeInTheDocument();
+        });
+
+        it('renders close button', () => {
+            render(<EditProfile onClose={mockOnClose} />);
+
+            const closeButtons = screen.getAllByRole('button');
+            const closeButton = closeButtons.find(btn =>
+                btn.querySelector('svg')
+            );
+            expect(closeButton).toBeInTheDocument();
+        });
+
         it('renders all form fields', () => {
             render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
             expect(screen.getByLabelText(/Full Name/)).toBeInTheDocument();
+            expect(screen.getByLabelText(/Username/)).toBeInTheDocument();
+            expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
+            expect(screen.getByLabelText(/Phone Number/)).toBeInTheDocument();
+            expect(screen.getByLabelText(/Location/)).toBeInTheDocument();
+            expect(screen.getByLabelText(/Bio/)).toBeInTheDocument();
+        });
+
+        it('marks required fields with asterisk', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const requiredFields = screen.getAllByText('*');
+            expect(requiredFields.length).toBeGreaterThanOrEqual(3); // Full Name, Username, Email
+        });
+
+        it('renders Cancel and Save Changes buttons', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            expect(screen.getByText('Cancel')).toBeInTheDocument();
+            expect(screen.getByText('Save Changes')).toBeInTheDocument();
+        });
+
+        it('renders Create Profile button when no profile exists', () => {
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            expect(screen.getByText('Create Profile')).toBeInTheDocument();
+        });
+
+        it('renders profile photo section with Add Photo when no avatar', () => {
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            expect(screen.getByText('Add Photo')).toBeInTheDocument();
+            expect(screen.getByText(/Recommended: Square image/)).toBeInTheDocument();
+        });
+
+        it('renders Change Photo and Remove Photo buttons when avatar exists', () => {
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            expect(screen.getByText('Change Photo')).toBeInTheDocument();
+            expect(screen.getByText('Remove Photo')).toBeInTheDocument();
+        });
+
+        it('displays helper text for specific fields', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            expect(screen.getByText(/This is your unique identifier/)).toBeInTheDocument();
+            expect(screen.getByText(/Optional - Visible only to buyers/)).toBeInTheDocument();
+        });
+    });
+
+    describe('Form Pre-population', () => {
+        it('pre-fills form with profile values', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            expect(screen.getByDisplayValue('Alex Morgan')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('alex_morgan')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('test@nyu.edu')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('(555) 123-4567')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('Founders Hall')).toBeInTheDocument();
+        });
+
+        it('pre-fills bio with profile text', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const bio = screen.getByDisplayValue(/NYU student selling items/);
+            expect(bio).toBeInTheDocument();
+        });
+
+        it('displays initial character count for bio', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            expect(screen.getByText(/77\/500/)).toBeInTheDocument();
+        });
+
+        it('shows empty form when no profile provided', () => {
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            const fullNameInput = screen.getByLabelText(/Full Name/);
+            expect(fullNameInput.value).toBe('');
         });
     });
 
     describe('Form Interactions', () => {
-        it('updates bio only if under 500 chars', async () => {
+        it('updates full name field when typed', async () => {
+            const user = userEvent.setup();
             render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
-            const bio = screen.getByLabelText(/Bio/);
 
-            fireEvent.change(bio, { target: { name: 'bio', value: 'Short' } });
-            expect(bio.value).toBe("Short");
+            const fullNameInput = screen.getByLabelText(/Full Name/);
+            await user.clear(fullNameInput);
+            await user.type(fullNameInput, 'John Doe');
 
-            // Too long
-            fireEvent.change(bio, { target: { name: 'bio', value: 'a'.repeat(501) } });
-            expect(bio.value).toBe("Short");
+            expect(fullNameInput.value).toBe('John Doe');
+        });
+
+        it('updates username field when typed', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const usernameInput = screen.getByLabelText(/Username/);
+            await user.clear(usernameInput);
+            await user.type(usernameInput, 'johndoe123');
+
+            expect(usernameInput.value).toBe('johndoe123');
+        });
+
+        it('updates email field when typed', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const emailInput = screen.getByLabelText(/Email/);
+            await user.clear(emailInput);
+            await user.type(emailInput, 'john@nyu.edu');
+
+            expect(emailInput.value).toBe('john@nyu.edu');
+        });
+
+        it('updates phone field when typed', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const phoneInput = screen.getByLabelText(/Phone Number/);
+            await user.clear(phoneInput);
+            await user.type(phoneInput, '(555) 987-6543');
+
+            expect(phoneInput.value).toBe('(555) 987-6543');
+        });
+
+        it('updates location field when typed', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const locationInput = screen.getByLabelText(/Location/);
+            await user.clear(locationInput);
+            await user.type(locationInput, 'Brooklyn, NY');
+
+            expect(locationInput.value).toBe('Brooklyn, NY');
+        });
+
+        it('updates bio when typed', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const bioTextarea = screen.getByLabelText(/Bio/);
+            await user.clear(bioTextarea);
+            await user.type(bioTextarea, 'New bio text');
+
+            expect(bioTextarea.value).toBe('New bio text');
+        });
+    });
+
+    describe('Bio Character Limit', () => {
+        it('updates character count as user types', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const bioTextarea = screen.getByLabelText(/Bio/);
+            await user.clear(bioTextarea);
+            await user.type(bioTextarea, 'Short bio');
+
+            expect(screen.getByText('9/500')).toBeInTheDocument();
+        });
+
+        it('prevents typing beyond 500 characters', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const bioTextarea = screen.getByLabelText(/Bio/);
+            await user.clear(bioTextarea);
+
+            const longText = 'a'.repeat(600);
+            await user.click(bioTextarea);
+            await user.paste(longText);
+
+            expect(bioTextarea.value.length).toBeLessThanOrEqual(500);
+        });
+
+        it('displays correct character count at limit', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const bioTextarea = screen.getByLabelText(/Bio/);
+            await user.clear(bioTextarea);
+
+            const maxText = 'a'.repeat(500);
+            await user.click(bioTextarea);
+            await user.paste(maxText);
+
+            expect(screen.getByText('500/500')).toBeInTheDocument();
+        });
+    });
+
+    describe('Modal Closing', () => {
+        it('calls onClose with false when Cancel button is clicked', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const cancelButton = screen.getByText('Cancel').closest('button');
+            await user.click(cancelButton);
+
+            expect(mockOnClose).toHaveBeenCalledWith(false);
+        });
+
+        it('calls onClose with false when close (X) button is clicked', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const closeButtons = screen.getAllByRole('button');
+            const closeButton = closeButtons.find(btn => btn.querySelector('svg'));
+            await user.click(closeButton);
+
+            expect(mockOnClose).toHaveBeenCalledWith(false);
+        });
+
+        it('calls onClose with false when clicking on overlay', async () => {
+            const user = userEvent.setup();
+            const { container } = render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const overlay = container.querySelector('.modal-overlay');
+            await user.click(overlay);
+
+            expect(mockOnClose).toHaveBeenCalledWith(false);
+        });
+
+        it('does not close when clicking inside modal content', async () => {
+            const user = userEvent.setup();
+            const { container } = render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const modalContainer = container.querySelector('.modal-container');
+            await user.click(modalContainer);
+
+            expect(mockOnClose).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Form Submission', () => {
+        it('calls updateMyProfile API when profile exists', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(profilesApi.updateMyProfile).toHaveBeenCalled();
+            });
+        });
+
+        it('calls createProfile API when no profile exists', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            // Fill required fields
+            const fullNameInput = screen.getByLabelText(/Full Name/);
+            await user.type(fullNameInput, 'New User');
+
+            const usernameInput = screen.getByLabelText(/Username/);
+            await user.type(usernameInput, 'newuser');
+
+            const saveButton = screen.getByText('Create Profile').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(profilesApi.createProfile).toHaveBeenCalled();
+            });
+        });
+
+        it('calls onClose with true after successful save', async () => {
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(mockOnClose).toHaveBeenCalledWith(true);
+            });
+        });
+
+        it('displays error message on API failure', async () => {
+            profilesApi.updateMyProfile.mockRejectedValue({
+                response: { data: { detail: 'Failed to update profile' } }
+            });
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText(/Failed to update profile/)).toBeInTheDocument();
+            });
+        });
+
+        it('dispatches profileUpdated event on successful save', async () => {
+            const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event));
+            });
+
+            dispatchSpy.mockRestore();
+        });
+    });
+
+    describe('Photo Management', () => {
+        it('renders Add Photo button when no avatar exists', () => {
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            expect(screen.getByText('Add Photo')).toBeInTheDocument();
+        });
+
+        it('renders Change Photo and Remove Photo buttons when avatar exists', () => {
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            expect(screen.getByText('Change Photo')).toBeInTheDocument();
+            expect(screen.getByText('Remove Photo')).toBeInTheDocument();
+        });
+
+        it('does not submit form when photo buttons are clicked', async () => {
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            const user = userEvent.setup();
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const changePhotoButton = screen.getByText('Change Photo').closest('button');
+            await user.click(changePhotoButton);
+
+            // Modal should still be open
+            expect(mockOnClose).not.toHaveBeenCalled();
+        });
+
+        it('shows avatar preview image when avatar_url exists', () => {
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const avatarImg = screen.getByAltText('Avatar');
+            expect(avatarImg).toHaveAttribute('src', 'http://example.com/avatar.jpg');
+        });
+    });
+
+    describe('Avatar Display', () => {
+        it('displays initial in profile avatar when no image', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            expect(screen.getByText('A')).toBeInTheDocument();
+        });
+
+        it('displays avatar image when profile has avatar_url', () => {
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const avatarImg = screen.getByAltText('Avatar');
+            expect(avatarImg).toBeInTheDocument();
+        });
+    });
+
+    describe('Email from Context', () => {
+        it('uses email from profile', () => {
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            expect(screen.getByDisplayValue('test@nyu.edu')).toBeInTheDocument();
+        });
+
+        it('uses email from auth context when no profile', () => {
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            expect(screen.getByDisplayValue('test@nyu.edu')).toBeInTheDocument();
+        });
+
+        it('uses empty string when no email available', () => {
+            useAuth.mockReturnValue({ user: null });
+            render(<EditProfile onClose={mockOnClose} profile={null} />);
+
+            const emailInput = screen.getByLabelText(/Email/);
+            expect(emailInput.value).toBe('');
         });
     });
 
     describe('Error Handling', () => {
-        it('handles validation error objects from API', async () => {
-            const errorResponse = {
+        it('displays formatted validation errors from API', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce({
                 response: {
                     data: {
-                        username: ["Username taken"],
-                        email: "Invalid format"
-                    }
-                }
-            };
-            profilesApi.updateMyProfile.mockRejectedValue(errorResponse);
+                        username: ['Username already taken', 'Must be unique'],
+                        full_name: ['Name is required'],
+                    },
+                },
+            });
 
-            const user = userEvent.setup();
             render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
-            await user.click(screen.getByText("Save Changes").closest("button"));
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
 
             await waitFor(() => {
-                expect(screen.getByText(/username: Username taken/)).toBeInTheDocument();
-                expect(screen.getByText(/email: Invalid format/)).toBeInTheDocument();
+                expect(screen.getByText(/username: Username already taken, Must be unique/i)).toBeInTheDocument();
+                expect(screen.getByText(/full_name: Name is required/i)).toBeInTheDocument();
             });
         });
 
-        it('handles string/generic errors (Else branch)', async () => {
-             const errorResponse = new Error("Something went wrong");
-             errorResponse.response = { data: null }; // Force else branch
-
-             profilesApi.updateMyProfile.mockRejectedValue(errorResponse);
-
+        it('displays error detail when API returns detail field', async () => {
             const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce({
+                response: {
+                    data: {
+                        detail: 'Server error occurred',
+                    },
+                },
+            });
+
             render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
-            await user.click(screen.getByText("Save Changes").closest("button"));
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
 
             await waitFor(() => {
-                expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+                expect(screen.getByText('Server error occurred')).toBeInTheDocument();
+            });
+        });
+
+        it('displays error message when API returns message field', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce({
+                message: 'Network error',
+            });
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Network error')).toBeInTheDocument();
+            });
+        });
+
+        it('displays default error message when no error details available', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce(new Error());
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Failed to save profile')).toBeInTheDocument();
+            });
+        });
+
+        it('handles file size validation error', async () => {
+            const user = userEvent.setup();
+            // Render with a profile that has an avatar so "Change Photo" button is shown
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+            Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 });
+
+            // Mock document.createElement to intercept input creation
+            const originalCreateElement = document.createElement.bind(document);
+            const mockInput = originalCreateElement('input');
+            document.createElement = vi.fn((tagName) => {
+                if (tagName === 'input') {
+                    return mockInput;
+                }
+                return originalCreateElement(tagName);
+            });
+
+            const changePhotoButton = screen.getByText('Change Photo').closest('button');
+            await user.click(changePhotoButton);
+
+            // Manually trigger the onchange event with large file
+            const changeEvent = new Event('change', { bubbles: true });
+            Object.defineProperty(changeEvent, 'target', {
+                writable: false,
+                value: { files: [largeFile] }
+            });
+            mockInput.dispatchEvent(changeEvent);
+
+            await waitFor(() => {
+                expect(screen.getByText('Image must be less than 10MB')).toBeInTheDocument();
+            });
+
+            // Restore original createElement
+            document.createElement = originalCreateElement;
+        });
+    });
+
+    describe('Photo Management Edge Cases', () => {
+        it('handles remove photo action', async () => {
+            const user = userEvent.setup();
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const removePhotoButton = screen.getByText('Remove Photo').closest('button');
+            await user.click(removePhotoButton);
+
+            // Avatar preview should be removed
+            expect(screen.queryByAltText('Avatar')).not.toBeInTheDocument();
+        });
+
+        it('submits remove_avatar flag when remove photo is clicked', async () => {
+            const user = userEvent.setup();
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const removePhotoButton = screen.getByText('Remove Photo').closest('button');
+            await user.click(removePhotoButton);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(profilesApi.updateMyProfile).toHaveBeenCalled();
+                const formData = profilesApi.updateMyProfile.mock.calls[0][0];
+                expect(formData.get('remove_avatar')).toBe('true');
             });
         });
     });

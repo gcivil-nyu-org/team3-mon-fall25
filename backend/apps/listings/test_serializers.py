@@ -492,6 +492,48 @@ class TestListingUpdateSerializer:
 
 
 @pytest.mark.django_db
+class TestListingDetailSerializer:
+    def test_get_is_owner_returns_true_for_owner(self):
+        """Test that is_owner returns True when user is the listing owner"""
+        user = UserFactory()
+        listing = ListingFactory(user=user)
+        factory = APIRequestFactory()
+        request = factory.get(f"/api/v1/listings/{listing.listing_id}/")
+        request.user = user
+
+        from apps.listings.serializers import ListingDetailSerializer
+
+        serializer = ListingDetailSerializer(listing, context={"request": request})
+        assert serializer.data["is_owner"] is True
+
+    def test_get_is_owner_returns_false_for_non_owner(self):
+        """Test that is_owner returns False when user is not the owner"""
+        owner = UserFactory()
+        other_user = UserFactory()
+        listing = ListingFactory(user=owner)
+        factory = APIRequestFactory()
+        request = factory.get(f"/api/v1/listings/{listing.listing_id}/")
+        request.user = other_user
+
+        from apps.listings.serializers import ListingDetailSerializer
+
+        serializer = ListingDetailSerializer(listing, context={"request": request})
+        assert serializer.data["is_owner"] is False
+
+    def test_get_is_owner_returns_false_for_unauthenticated(self):
+        """Test that is_owner returns False when user is not authenticated"""
+        listing = ListingFactory()
+        factory = APIRequestFactory()
+        request = factory.get(f"/api/v1/listings/{listing.listing_id}/")
+        request.user = MagicMock(is_authenticated=False)
+
+        from apps.listings.serializers import ListingDetailSerializer
+
+        serializer = ListingDetailSerializer(listing, context={"request": request})
+        assert serializer.data["is_owner"] is False
+
+
+@pytest.mark.django_db
 class TestCompactListingSerializer:
     def test_get_primary_image_no_images(self):
         """Test that get_primary_image returns None when no images exist"""
