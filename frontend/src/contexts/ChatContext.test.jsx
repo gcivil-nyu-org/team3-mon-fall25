@@ -139,7 +139,7 @@ describe('ChatContext', () => {
     describe('useChat hook', () => {
         it('throws error when used outside ChatProvider', () => {
             // Suppress console.error for this test
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
             expect(() => {
                 render(<TestComponent />);
