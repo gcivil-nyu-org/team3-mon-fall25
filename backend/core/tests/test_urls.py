@@ -116,3 +116,4 @@ class TestDebugStaticFiles:
         # This is tested implicitly by the fact that the code path exists
         pass
 
+

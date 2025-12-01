@@ -84,20 +84,20 @@ describe('CreateListing', () => {
         });
 
         it('handles error when loading filter options and falls back to hardcoded values', async () => {
-            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
             listingsApi.getFilterOptions.mockRejectedValue(new Error('API Error'));
             renderWithRouter(<CreateListing />);
-            
+
             // Should still render with fallback values
             await waitFor(() => {
                 expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
             });
-            
+
             // Verify console.error was called
             await waitFor(() => {
                 expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading filter options:', expect.any(Error));
             });
-            
+
             consoleErrorSpy.mockRestore();
         });
 
@@ -108,19 +108,19 @@ describe('CreateListing', () => {
                 locations: ['Othmer Hall', 'Clark Hall'],
                 dorm_locations: null // Explicitly null to test fallback path
             };
-            
+
             listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
             renderWithRouter(<CreateListing />);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
             });
-            
+
             // Wait for API call to complete and state to update
             await waitFor(() => {
                 expect(listingsApi.getFilterOptions).toHaveBeenCalled();
             });
-            
+
             // Verify that locations are rendered from the flat list (line 335 fallback)
             await waitFor(() => {
                 expect(screen.getByText('Othmer Hall')).toBeInTheDocument();
@@ -135,19 +135,19 @@ describe('CreateListing', () => {
                 locations: [], // Empty array
                 dorm_locations: { washington_square: ['Othmer Hall'], downtown: [], other: [] }
             };
-            
+
             listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
             renderWithRouter(<CreateListing />);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
             });
-            
+
             // Wait for API call to complete
             await waitFor(() => {
                 expect(listingsApi.getFilterOptions).toHaveBeenCalled();
             });
-            
+
             // Should still render locations (from hardcoded fallback)
             const locationSelect = screen.getByLabelText(/location/i);
             expect(locationSelect).toBeInTheDocument();
@@ -160,19 +160,19 @@ describe('CreateListing', () => {
                 locations: ['Custom Location 1', 'Custom Location 2'],
                 dorm_locations: { washington_square: ['Custom Dorm'], downtown: [], other: [] }
             };
-            
+
             listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
             renderWithRouter(<CreateListing />);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
             });
-            
+
             // Wait for API call to complete
             await waitFor(() => {
                 expect(listingsApi.getFilterOptions).toHaveBeenCalled();
             });
-            
+
             // Verify that custom categories and locations are used (not fallbacks)
             await waitFor(() => {
                 expect(screen.getByText('Custom Category 1')).toBeInTheDocument();
@@ -320,7 +320,7 @@ describe('CreateListing', () => {
             await waitFor(() => {
                 expect(screen.getByText('large.png')).toBeInTheDocument();
             });
-            
+
             // The file should be displayed with warning styling (isLarge = true)
             // This tests lines 453-456 where isLarge is true
             const fileDisplay = screen.getByText('large.png').closest('div');
