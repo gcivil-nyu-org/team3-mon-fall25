@@ -1,21 +1,26 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const mockOpenDropdown = vi.fn();
+const mockUseNotifications = vi.fn(() => ({
+    unreadCount: 0,
+    openDropdown: mockOpenDropdown,
+}));
+
+const mockUseAuth = vi.fn(() => ({
+    user: { id: '123', email: 'test@nyu.edu' },
+    isAuthenticated: true,
+    isLoading: false,
+}));
 
 vi.mock('../contexts/AuthContext', () => ({
-    useAuth: () => ({
-        user: { id: '123', email: 'test@nyu.edu' },
-        isAuthenticated: true,
-        isLoading: false,
-    }),
+    useAuth: () => mockUseAuth(),
 }));
 
 vi.mock('../contexts/NotificationContext', () => ({
-    useNotifications: () => ({
-        unreadCount: 0,
-        openDropdown: vi.fn(),
-    }),
+    useNotifications: () => mockUseNotifications(),
 }));
 
 import Home from './Home';
@@ -28,6 +33,14 @@ const renderHome = () =>
     );
 
 describe('Home', () => {
+    beforeEach(() => {
+        // Reset mocks to default before each test
+        mockUseAuth.mockReturnValue({
+            user: { id: '123', email: 'test@nyu.edu' },
+            isAuthenticated: true,
+            isLoading: false,
+        });
+    });
     // it('renders the home page hero content for any user (public route)', () => {
     //     renderHome();
     //
@@ -157,5 +170,107 @@ describe('Home', () => {
 
         const createLink = screen.getByRole('link', { name: /create listing/i });
         expect(createLink.textContent).toContain('➕');
+    });
+
+    it('renders Sign up to start selling link when not logged in (isAuthenticated as function)', () => {
+        mockUseAuth.mockReturnValue({
+            user: null,
+            isAuthenticated: () => false,
+            isLoading: false,
+        });
+
+        renderHome();
+
+        const signUpLink = screen.getByRole('link', { name: /sign up to start selling/i });
+        expect(signUpLink).toBeInTheDocument();
+        expect(signUpLink).toHaveAttribute('href', '/login');
+    });
+
+    it('renders Sign up to start selling link when not logged in (isAuthenticated as boolean false)', () => {
+        mockUseAuth.mockReturnValue({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+        });
+
+        renderHome();
+
+        const signUpLink = screen.getByRole('link', { name: /sign up to start selling/i });
+        expect(signUpLink).toBeInTheDocument();
+        expect(signUpLink).toHaveAttribute('href', '/login');
+    });
+
+    it('renders Create Listing link when logged in (isAuthenticated as function)', () => {
+        mockUseAuth.mockReturnValue({
+            user: { id: '123', email: 'test@nyu.edu' },
+            isAuthenticated: () => true,
+            isLoading: false,
+        });
+
+        renderHome();
+
+        const createLink = screen.getByRole('link', { name: /create listing/i });
+        expect(createLink).toBeInTheDocument();
+    });
+
+    it('renders Create Listing link when logged in (isAuthenticated as boolean true)', () => {
+        mockUseAuth.mockReturnValue({
+            user: { id: '123', email: 'test@nyu.edu' },
+            isAuthenticated: true,
+            isLoading: false,
+        });
+
+        renderHome();
+
+        const createLink = screen.getByRole('link', { name: /create listing/i });
+        expect(createLink).toBeInTheDocument();
+    });
+
+    describe('handleViewNotifications', () => {
+        let mockScrollTo;
+
+        beforeEach(() => {
+            vi.useFakeTimers();
+            mockOpenDropdown.mockClear();
+            mockScrollTo = vi.fn();
+            window.scrollTo = mockScrollTo;
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+            vi.clearAllMocks();
+            // Reset mock to default
+            mockUseNotifications.mockReturnValue({
+                unreadCount: 0,
+                openDropdown: mockOpenDropdown,
+            });
+        });
+
+        it('scrolls to top and opens notifications dropdown when View Notifications is clicked', () => {
+            // Override the mock to return unreadCount > 0 so NotificationAlert is rendered
+            mockUseNotifications.mockReturnValue({
+                unreadCount: 3,
+                openDropdown: mockOpenDropdown,
+            });
+
+            render(
+                <BrowserRouter>
+                    <Home />
+                </BrowserRouter>
+            );
+
+            // Find and click the View Notifications button
+            const viewNotificationsButton = screen.getByRole('button', { name: /view notifications/i });
+            fireEvent.click(viewNotificationsButton);
+
+            // Verify window.scrollTo was called
+            expect(mockScrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+
+            // Fast-forward time by 500ms
+            vi.advanceTimersByTime(500);
+
+            // Verify openDropdown was called after the timeout
+            expect(mockOpenDropdown).toHaveBeenCalledTimes(1);
+        });
     });
 });

@@ -15,7 +15,7 @@ const TestComponent = () => {
         <div>
             <div data-testid="user">{user ? JSON.stringify(user) : 'null'}</div>
             <div data-testid="token">{token || 'null'}</div>
-            <div data-testid="isAuthenticated">{isAuthenticated().toString()}</div>
+            <div data-testid="isAuthenticated">{isAuthenticated.toString()}</div>
             <div data-testid="isLoading">{isLoading.toString()}</div>
             <button onClick={() => login('access123', 'refresh123', { id: 1, email: 'test@nyu.edu' })}>
                 Login
@@ -247,7 +247,7 @@ describe('AuthContext', () => {
         });
     });
 
-    describe('isAuthenticated function', () => {
+    describe('isAuthenticated boolean', () => {
         it('returns true for valid non-expired token', async () => {
             const mockToken = 'valid_token';
             const mockDecoded = { exp: Math.floor(Date.now() / 1000) + 3600 }; // Expires in 1 hour

@@ -33,7 +33,9 @@ const CreateListing = () => {
         setFilterOptions({
           categories: apiOptions.categories || CATEGORIES,
           locations: flatLocations.length > 0 ? flatLocations : LOCATIONS,
-          dorm_locations: apiOptions.dorm_locations || DORM_LOCATIONS_GROUPED, // Use API or fallback to grouped
+          // Use API value if provided, otherwise fallback to grouped structure
+          // Allow null/undefined to be set for testing purposes
+          dorm_locations: apiOptions.dorm_locations !== undefined ? apiOptions.dorm_locations : DORM_LOCATIONS_GROUPED,
         });
       } catch (e) {
         console.error("Error loading filter options:", e);

@@ -1,10 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import ProtectedRoute from './ProtectedRoute';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
-// Mock the AuthContext
+// Mock the AuthContext BEFORE importing ProtectedRoute
 vi.mock('../contexts/AuthContext', async () => {
     const actual = await vi.importActual('../contexts/AuthContext');
     return {
@@ -15,15 +14,16 @@ vi.mock('../contexts/AuthContext', async () => {
 
 // Import after mocking
 import { useAuth } from '../contexts/AuthContext';
+import ProtectedRoute from './ProtectedRoute';
 
 // Helper components for testing
 const TestContent = () => <div>Protected Content</div>;
 const LoginPage = () => <div>Login Page</div>;
 
 // Helper to render with router and the ProtectedRoute using Outlet pattern
-const renderWithRouter = () => {
+const renderWithRouter = (initialEntries = ['/']) => {
     return render(
-        <BrowserRouter>
+        <MemoryRouter initialEntries={initialEntries}>
             <Routes>
                 {/* Protected route wrapper */}
                 <Route element={<ProtectedRoute />}>
@@ -33,22 +33,22 @@ const renderWithRouter = () => {
                 {/* Public login route */}
                 <Route path="/login" element={<LoginPage />} />
             </Routes>
-        </BrowserRouter>
+        </MemoryRouter>
     );
 };
 
 describe('ProtectedRoute', () => {
     beforeEach(() => {
-        // Reset mock implementation before each test
-        useAuth.mockReset();
+        // Clear all mocks before each test
+        vi.clearAllMocks();
     });
 
     describe('Loading State', () => {
         it('displays loading message when isLoading is true', () => {
-            useAuth.mockImplementation(() => ({
+            useAuth.mockReturnValue({
                 isAuthenticated: false,
                 isLoading: true,
-            }));
+            });
 
             renderWithRouter();
 
@@ -58,10 +58,10 @@ describe('ProtectedRoute', () => {
         });
 
         it('displays loading state with correct structure', () => {
-            useAuth.mockImplementation(() => ({
+            useAuth.mockReturnValue({
                 isAuthenticated: false,
                 isLoading: true,
-            }));
+            });
 
             renderWithRouter();
 
@@ -73,24 +73,11 @@ describe('ProtectedRoute', () => {
     });
 
     describe('Authentication Check', () => {
-        // it('renders children when user is authenticated', () => {
-        //     useAuth.mockImplementation(() => ({
-        //         isAuthenticated: true,
-        //         isLoading: false,
-        //     }));
-        //
-        //     renderWithRouter();
-        //
-        //     expect(screen.getByText('Protected Content')).toBeInTheDocument();
-        //     expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
-        //     expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
-        // });
-
         it('redirects to login page when user is not authenticated', () => {
-            useAuth.mockImplementation(() => ({
+            useAuth.mockReturnValue({
                 isAuthenticated: false,
                 isLoading: false,
-            }));
+            });
 
             renderWithRouter();
 
@@ -103,10 +90,10 @@ describe('ProtectedRoute', () => {
     describe('Component Behavior', () => {
 
         it('does not render children when not authenticated', () => {
-            useAuth.mockImplementation(() => ({
+            useAuth.mockReturnValue({
                 isAuthenticated: false,
                 isLoading: false,
-            }));
+            });
 
             renderWithRouter();
 
@@ -118,16 +105,30 @@ describe('ProtectedRoute', () => {
     describe('State Transitions', () => {
         it('redirects when loading completes for unauthenticated users', () => {
             // When not loading and not authenticated, should redirect
-            useAuth.mockImplementation(() => ({
+            useAuth.mockReturnValue({
                 isAuthenticated: false,
                 isLoading: false,
-            }));
+            });
 
             renderWithRouter();
 
             expect(screen.getByText('Login Page')).toBeInTheDocument();
             expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
             expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+        });
+
+        it('renders children when user is authenticated', () => {
+            // Mock isAuthenticated as a boolean
+            useAuth.mockReturnValue({
+                isAuthenticated: true,
+                isLoading: false,
+            });
+
+            renderWithRouter();
+
+            expect(screen.getByText('Protected Content')).toBeInTheDocument();
+            expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+            expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
         });
     });
 });
