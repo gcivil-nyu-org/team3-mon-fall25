@@ -33,6 +33,10 @@ vi.mock('react-router-dom', async () => {
 // Mock window.alert
 global.alert = vi.fn();
 
+// Mock window.location
+delete window.location;
+window.location = { href: '' };
+
 const renderWithRouter = (component) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
@@ -62,6 +66,7 @@ describe('Profile - Delete Account Functionality', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.location.href = '';
     useAuth.mockReturnValue({ user: mockUser, logout: mockLogout });
     listingsApi.getMyListings.mockResolvedValue(mockListings);
     profilesApi.getMyProfile.mockResolvedValue({ data: mockProfile });
@@ -271,7 +276,7 @@ describe('Profile - Delete Account Functionality', () => {
       await user.click(confirmButton);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/');
+        expect(window.location.href).toBe('/');
       });
     });
 
