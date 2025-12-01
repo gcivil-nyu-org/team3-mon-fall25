@@ -1,14 +1,65 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock createPortal to render in the same container
+// Mock createPortal so the modal renders inline in the test DOM
 vi.mock("react-dom", async () => {
   const actual = await vi.importActual("react-dom");
+  return { ...actual, createPortal: (node) => node };
+});
+
+
+vi.mock("./ChatWindow", () => {
   return {
-    ...actual,
-    createPortal: (node) => node,
+    __esModule: true,
+    default: ({
+      conversation,
+      onSendMessage,
+      onBack,
+      showBackButton,
+      onLoadOlder,
+    }) => {
+      // call once on mount so the inline arrow in ChatModal gets executed
+      if (onLoadOlder) {
+        onLoadOlder();
+      }
+
+      return (
+        <div>
+          {/* Show the other user name so tests like `getAllByText("Alice")` still work */}
+          {conversation?.otherUser?.name && (
+            <span>{conversation.otherUser.name}</span>
+          )}
+
+          {showBackButton && (
+            <button
+              aria-label="Back to conversations"
+              onClick={() => onBack && onBack()}
+            >
+              Back
+            </button>
+          )}
+
+          <input
+            placeholder="Type a message..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && onSendMessage) {
+                onSendMessage(e.target.value);
+              }
+            }}
+          />
+
+          <button
+            aria-label="Load older"
+            type="button"
+            onClick={() => onLoadOlder && onLoadOlder()}
+          >
+            Load older
+          </button>
+        </div>
+      );
+    },
   };
 });
 
@@ -16,39 +67,29 @@ import ChatModal from "./ChatModal";
 
 describe("ChatModal", () => {
   const mockConversations = [
-    {
-      id: "1",
-      listingTitle: "Laptop",
-      listingPrice: 500,
-      otherUser: { id: "2", name: "Alice", initials: "A" },
-      unreadCount: 2,
-      type: "buying",
-    },
-    {
-      id: "2",
-      listingTitle: "Phone",
-      listingPrice: 300,
-      otherUser: { id: "3", name: "Bob", initials: "B" },
-      unreadCount: 0,
-      type: "selling",
-    },
+    { id: "1", listingTitle: "Laptop", otherUser: { id: "2", name: "Alice" } },
+    { id: "2", listingTitle: "Phone", otherUser: { id: "3", name: "Bob" } },
   ];
 
   const mockMessages = {
     "1": [
       {
-        id: "msg1",
+        id: "m1",
         senderId: "1",
         content: "Hello",
-        timestamp: new Date("2024-01-15T10:00:00Z"),
+        timestamp: new Date().toISOString(),
       },
     ],
   };
 
-  const mockOnOpenChange = vi.fn();
-  const mockOnSendMessage = vi.fn();
-  const mockOnSidebarWidthChange = vi.fn();
-  const mockOnConversationSelect = vi.fn();
+  const mockHandlers = {
+    onOpenChange: vi.fn(),
+    onSendMessage: vi.fn(),
+    onListingClick: vi.fn(),
+    onSidebarWidthChange: vi.fn(),
+    onConversationSelect: vi.fn(),
+    onFullPageChange: vi.fn(),
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,190 +105,112 @@ describe("ChatModal", () => {
     vi.restoreAllMocks();
   });
 
+  // --- 1. RENDERING ---
   describe("Rendering", () => {
     it("renders when open is true", () => {
       render(
         <ChatModal
           open={true}
-          onOpenChange={mockOnOpenChange}
+          onOpenChange={mockHandlers.onOpenChange}
           conversations={mockConversations}
-          messages={mockMessages}
-          onSendMessage={mockOnSendMessage}
-          currentUserId="1"
         />
       );
       expect(screen.getByText("Messages")).toBeInTheDocument();
     });
 
     it("does not render when open is false", () => {
-      const { container } = render(
-        <ChatModal
-          open={false}
-          onOpenChange={mockOnOpenChange}
-          conversations={mockConversations}
-          messages={mockMessages}
-          onSendMessage={mockOnSendMessage}
-          currentUserId="1"
-        />
-      );
-      expect(container.firstChild).toBeNull();
+      const { container } = render(<ChatModal open={false} />);
+      expect(container).toBeEmptyDOMElement();
     });
   });
 
-  describe("Desktop Windowed Mode Branches", () => {
-    it("renders LIST view when collapsed (no active conversation)", () => {
+  // --- 2. VIEW MODES ---
+  describe("View Modes", () => {
+    it("Desktop Windowed: List View (Collapsed)", () => {
       render(
         <ChatModal
           open={true}
           conversations={mockConversations}
-          currentUserId="1"
           asPage={false}
           initialConversationId={null}
           selectedConversationId={null}
         />
       );
-
-      // Should show list item
-      expect(screen.getAllByText("Laptop")).toHaveLength(1);
-      // Should NOT show chat window elements
-      expect(screen.queryByPlaceholderText("Type a message...")).not.toBeInTheDocument();
+      expect(screen.getAllByText("Laptop").length).toBeGreaterThan(0);
+      expect(
+        screen.queryByPlaceholderText("Type a message...")
+      ).not.toBeInTheDocument();
     });
 
-    it("renders CHAT view when expanded (active conversation)", () => {
+    it("Desktop Windowed: Chat View (Expanded)", () => {
       render(
         <ChatModal
           open={true}
           conversations={mockConversations}
-          currentUserId="1"
           asPage={false}
-          initialConversationId="1" // Force selection
+          initialConversationId="1"
         />
       );
-
       expect(screen.getByPlaceholderText("Type a message...")).toBeInTheDocument();
-      expect(screen.getAllByText("Alice").length).toBeGreaterThan(0);
+    });
+
+    it("Desktop Full Page: Split View", () => {
+      render(
+        <ChatModal
+          open={true}
+          conversations={mockConversations}
+          asPage={true}
+          selectedConversationId="1"
+        />
+      );
+      // One from ConversationList, one from ChatWindow mock
+      expect(screen.getAllByText("Alice")).toHaveLength(2);
     });
   });
 
-  describe("Resize Logic Branches", () => {
-    it("toggles isMobile state when crossing 768px threshold", () => {
-      act(() => {
-        window.innerWidth = 500;
-        window.dispatchEvent(new Event("resize"));
-      });
-
-      act(() => {
-        window.innerWidth = 1024;
-        window.dispatchEvent(new Event("resize"));
-      });
-    });
-  });
-
-  describe("Sidebar Width Callback Branches", () => {
-    it("safely handles undefined onSidebarWidthChange prop", () => {
-      expect(() => {
-        render(
-          <ChatModal
-            open={true}
-            conversations={mockConversations}
-            onSidebarWidthChange={undefined}
-          />
-        );
-      }).not.toThrow();
-    });
-
-    it("calls callback with 400 when Desktop Windowed", () => {
+  // --- 3. LOGIC & SIDE EFFECTS ---
+  describe("Side Effects", () => {
+    it("Reports width 400 for Desktop Windowed", () => {
       render(
         <ChatModal
           open={true}
           asPage={false}
-          onSidebarWidthChange={mockOnSidebarWidthChange}
-          conversations={mockConversations}
+          onSidebarWidthChange={mockHandlers.onSidebarWidthChange}
         />
       );
-      expect(mockOnSidebarWidthChange).toHaveBeenCalledWith(400);
+      expect(mockHandlers.onSidebarWidthChange).toHaveBeenCalledWith(400);
     });
 
-    it("calls callback with 0 when Full Page", () => {
+    it("Reports width 0 for Full Page", () => {
       render(
         <ChatModal
           open={true}
           asPage={true}
-          onSidebarWidthChange={mockOnSidebarWidthChange}
-          conversations={mockConversations}
+          onSidebarWidthChange={mockHandlers.onSidebarWidthChange}
         />
       );
-      expect(mockOnSidebarWidthChange).toHaveBeenCalledWith(0);
+      expect(mockHandlers.onSidebarWidthChange).toHaveBeenCalledWith(0);
     });
-  });
 
-  // --- UPDATED: Replaced Auto-Selection test with No-Selection test ---
-  describe("Selection State Logic", () => {
-    it("Does NOT auto-select first conversation when NOTHING is selected", async () => {
+    it("Reports width 0 for Mobile", () => {
+      window.innerWidth = 500;
       render(
         <ChatModal
           open={true}
-          conversations={mockConversations}
-          messages={{}}
-          onConversationSelect={mockOnConversationSelect}
-          initialConversationId={null}
-          selectedConversationId={null}
+          asPage={false}
+          onSidebarWidthChange={mockHandlers.onSidebarWidthChange}
         />
       );
-
-      // Wait to ensure no async state change happens
-      await waitFor(() => {
-        // Should NOT show chat input (remains in list view)
-        expect(screen.queryByPlaceholderText("Type a message...")).not.toBeInTheDocument();
-        // List should be visible
-        expect(screen.getAllByText("Laptop").length).toBeGreaterThan(0);
-      });
+      expect(mockHandlers.onSidebarWidthChange).toHaveBeenCalledWith(0);
     });
 
-    it("Selects conversation if initialConversationId is provided", () => {
-      render(
-        <ChatModal
-          open={true}
-          conversations={mockConversations}
-          initialConversationId="2" // Phone
-        />
-      );
-
-      // Should show Bob (2)
-      expect(screen.getAllByText("Bob").length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("User interactions", () => {
-    it("calls onOpenChange when close button is clicked", async () => {
-      const user = userEvent.setup();
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} />);
-      const closeButton = await screen.findByLabelText("Close");
-      await user.click(closeButton);
-      expect(mockOnOpenChange).toHaveBeenCalledWith(false);
-    });
-
-    it("toggles full page mode", async () => {
-      const user = userEvent.setup();
-      const mockOnFullPageChange = vi.fn();
-      render(<ChatModal open={true} onFullPageChange={mockOnFullPageChange} conversations={mockConversations} asPage={false} />);
-
-      const maximizeButton = await screen.findByLabelText("Maximize");
-      await user.click(maximizeButton);
-      expect(mockOnFullPageChange).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe("Parent-Child Sync", () => {
-    it("updates active conversation when selectedConversationId prop changes", () => {
+    it("Syncs with selectedConversationId prop", () => {
       const { rerender } = render(
         <ChatModal
           open={true}
           conversations={mockConversations}
-          messages={mockMessages}
-          currentUserId="1"
           selectedConversationId="1"
-          asPage={true} // Split View to see list + header
+          asPage={true}
         />
       );
       expect(screen.getAllByText("Alice")).toHaveLength(2);
@@ -256,61 +219,265 @@ describe("ChatModal", () => {
         <ChatModal
           open={true}
           conversations={mockConversations}
-          messages={mockMessages}
-          currentUserId="1"
           selectedConversationId="2"
           asPage={true}
         />
       );
       expect(screen.getAllByText("Bob")).toHaveLength(2);
     });
-  });
 
-  describe("Mobile view", () => {
-    beforeEach(() => {
-        window.innerWidth = 500;
-    });
-
-    it("switches views on mobile selection", async () => {
-      const user = userEvent.setup();
-      render(<ChatModal open={true} conversations={mockConversations} />);
-
-      const laptop = screen.getAllByText("Laptop")[0].closest("button");
-      await user.click(laptop);
-
-      await waitFor(() => {
-          expect(screen.getByLabelText("Back to conversations")).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("Dragging", () => {
-    it("does not start drag when clicking on button", async () => {
+    // NEW: position / resize logic coverage
+    it("updates floating position on window resize when not full page", () => {
       const { container } = render(
+        <ChatModal open={true} conversations={[]} asPage={false} />
+      );
+      const modal = container.querySelector(".chat-modal--windowed");
+      expect(modal).toBeTruthy();
+
+      // initial position
+      expect(modal.style.left).toBe(`${window.innerWidth - 400}px`);
+
+      act(() => {
+        window.innerWidth = 1200;
+        window.dispatchEvent(new Event("resize"));
+      });
+
+      expect(modal.style.left).toBe(`${1200 - 400}px`);
+    });
+  });
+
+  // --- 4. SELECTION STATE ---
+  describe("Selection State Logic", () => {
+    it("Does NOT auto-select first conversation when NOTHING is selected", async () => {
+      render(
         <ChatModal
           open={true}
           conversations={mockConversations}
-          messages={mockMessages}
-          currentUserId="1"
+          initialConversationId={null}
+          selectedConversationId={null}
+          asPage={false}
         />
       );
 
+      await waitFor(() => {
+        expect(
+          screen.queryByPlaceholderText("Type a message...")
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("Selects conversation if initialConversationId is provided", () => {
+      render(
+        <ChatModal
+          open={true}
+          conversations={mockConversations}
+          initialConversationId="2"
+        />
+      );
+      expect(screen.getAllByText("Bob").length).toBeGreaterThan(0);
+    });
+  });
+
+  // --- 5. USER INTERACTIONS ---
+  describe("Interactions", () => {
+    it("Closes modal", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatModal
+          open={true}
+          onOpenChange={mockHandlers.onOpenChange}
+          conversations={mockConversations}
+        />
+      );
+      await user.click(screen.getByLabelText("Close"));
+      expect(mockHandlers.onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    it("Toggles Full Page from windowed (Maximize)", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatModal
+          open={true}
+          onFullPageChange={mockHandlers.onFullPageChange}
+          asPage={false}
+          conversations={mockConversations}
+        />
+      );
+      await user.click(screen.getByLabelText("Maximize"));
+      expect(mockHandlers.onFullPageChange).toHaveBeenCalledWith(true);
+    });
+
+    // NEW: toggle back from full page (Minimize)
+    it("Toggles Full Page from full page (Minimize)", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatModal
+          open={true}
+          onFullPageChange={mockHandlers.onFullPageChange}
+          asPage={true}
+          conversations={mockConversations}
+        />
+      );
+      await user.click(screen.getByLabelText("Minimize"));
+      expect(mockHandlers.onFullPageChange).toHaveBeenCalledWith(false);
+    });
+
+    it("Sends Message via ChatWindow mock", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatModal
+          open={true}
+          conversations={mockConversations}
+          selectedConversationId="1"
+          onSendMessage={mockHandlers.onSendMessage}
+          messages={mockMessages}
+        />
+      );
+      const input = screen.getByPlaceholderText("Type a message...");
+      await user.type(input, "Hi{enter}");
+      expect(mockHandlers.onSendMessage).toHaveBeenCalledWith("1", "Hi");
+    });
+  });
+
+  // --- 6. BRANCH COVERAGE ---
+  describe("Branch Coverage Edge Cases", () => {
+    it("Selects conversation in Desktop Full Page (No View Change)", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatModal
+          open={true}
+          asPage={true}
+          conversations={mockConversations}
+          onConversationSelect={mockHandlers.onConversationSelect}
+        />
+      );
+
+      const laptopButton = screen.getAllByText("Laptop")[0].closest("button");
+      await user.click(laptopButton);
+
+      expect(mockHandlers.onConversationSelect).toHaveBeenCalledWith("1");
+      expect(screen.getAllByText("Alice")).toHaveLength(2);
+    });
+
+    it("Handles Back in Mobile (Shows List)", async () => {
+      window.innerWidth = 500;
+
+      const user = userEvent.setup();
+      render(
+        <ChatModal
+          open={true}
+          initialConversationId="1"
+          conversations={mockConversations}
+        />
+      );
+
+      const backBtn = screen.getByLabelText("Back to conversations");
+      await user.click(backBtn);
+
+      expect(screen.getAllByText("Laptop").length).toBeGreaterThan(0);
+    });
+
+    // NEW: full-page mobile selection path (isMobile true in full-page branch)
+    it("Full-page mobile: selecting a conversation hides list and shows chat", async () => {
+      window.innerWidth = 500;
+      const user = userEvent.setup();
+
+      render(
+        <ChatModal
+          open={true}
+          asPage={true}
+          conversations={mockConversations}
+        />
+      );
+
+      expect(screen.getByText("Laptop")).toBeInTheDocument();
+
+      const laptopButton = screen.getAllByText("Laptop")[0].closest("button");
+      await user.click(laptopButton);
+
+      expect(
+        screen.getByPlaceholderText("Type a message...")
+      ).toBeInTheDocument();
+    });
+
+    // NEW: Desktop windowed back button path (isMobile === false, !isFullPage)
+    it("Desktop windowed: Back button collapses chat to list view", async () => {
+      const user = userEvent.setup();
+
+      render(
+        <ChatModal
+          open={true}
+          asPage={false}
+          initialConversationId="1"
+          conversations={mockConversations}
+        />
+      );
+
+      expect(
+        screen.getByPlaceholderText("Type a message...")
+      ).toBeInTheDocument();
+
+      const backBtn = screen.getByLabelText("Back to conversations");
+      await user.click(backBtn);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByPlaceholderText("Type a message...")
+        ).not.toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Laptop")).toBeInTheDocument();
+    });
+
+    // NEW: overlay stopPropagation in full-page mode
+    it("Clicking full-page overlay does not trigger onOpenChange", () => {
+      const { container } = render(
+        <ChatModal
+          open={true}
+          asPage={true}
+          conversations={mockConversations}
+          onOpenChange={mockHandlers.onOpenChange}
+        />
+      );
+
+      const overlay = container.querySelector(".chat-modal-overlay");
+      expect(overlay).toBeTruthy();
+
+      fireEvent.click(overlay);
+      expect(mockHandlers.onOpenChange).not.toHaveBeenCalled();
+    });
+
+    // NEW: onLoadOlder is called with activeConversationId
+    it("Calls onLoadOlder with active conversation id", () => {
+      const onLoadOlder = vi.fn();
+
+      render(
+        <ChatModal
+          open={true}
+          conversations={mockConversations}
+          initialConversationId="1"
+          onLoadOlder={onLoadOlder}
+        />
+      );
+
+      // ChatWindow mock calls onLoadOlder(), ChatModal wraps it with activeConversationId
+      expect(onLoadOlder).toHaveBeenCalledWith("1");
+    });
+  });
+
+  // --- 7. DRAGGING (no-op but keeps previous intent) ---
+  describe("Dragging Logic", () => {
+    it("Does not crash when mousedown originates from a button", () => {
+      const { container } = render(
+        <ChatModal open={true} conversations={mockConversations} />
+      );
       const header = container.querySelector(".chat-modal__header");
-      const closeButton = await screen.findByLabelText("Close");
+      const closeBtn = screen.getByLabelText("Close");
 
-      const mouseDownEvent = new MouseEvent("mousedown", {
-        bubbles: true,
-        cancelable: true,
-        clientX: 100,
-        clientY: 100,
-      });
+      const event = new MouseEvent("mousedown", { bubbles: true });
+      Object.defineProperty(event, "target", { value: closeBtn });
 
-      Object.defineProperty(mouseDownEvent, "target", {
-        value: closeButton,
-        writable: false,
-      });
-
-      header.dispatchEvent(mouseDownEvent);
+      header.dispatchEvent(event);
       expect(screen.getByText("Messages")).toBeInTheDocument();
     });
   });

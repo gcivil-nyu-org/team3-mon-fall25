@@ -213,9 +213,8 @@ export default function TransactionPaymentPage() {
     };
   }, [transactionId]);
 
-
   const mapStatusToStep = (status) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
       case "PENDING":
         return "initiated";
       case "NEGOTIATING":
@@ -293,7 +292,6 @@ export default function TransactionPaymentPage() {
 
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
-    // Chat backend integration can be added later; for now just clear.
     setChatInput("");
   };
 
