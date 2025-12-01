@@ -119,9 +119,8 @@ describe('AuthContext', () => {
             expect(screen.getByTestId('token')).toHaveTextContent('null');
         });
 
-        it('handles invalid token format gracefully', async () => {
+        it('handles invalid token format gracefully', () => {
             const mockToken = 'invalid_token';
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
             jwtDecode.mockImplementation(() => {
                 throw new Error('Invalid token');
@@ -134,18 +133,12 @@ describe('AuthContext', () => {
                 </AuthProvider>
             );
 
-            await waitFor(() => {
-                expect(screen.getByTestId('isLoading')).toHaveTextContent('false');
-            });
-
-            await waitFor(() => {
-                expect(consoleSpy).toHaveBeenCalled();
-            });
-
+            // Should immediately clear invalid token during initialization
+            expect(localStorage.getItem('access_token')).toBeNull();
             expect(screen.getByTestId('user')).toHaveTextContent('null');
             expect(screen.getByTestId('token')).toHaveTextContent('null');
-
-            consoleSpy.mockRestore();
+            expect(screen.getByTestId('isAuthenticated')).toHaveTextContent('false');
+            expect(screen.getByTestId('isLoading')).toHaveTextContent('false');
         });
     });
 

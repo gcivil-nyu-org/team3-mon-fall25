@@ -20,15 +20,20 @@ import ProtectedRoute from './ProtectedRoute';
 const TestContent = () => <div>Protected Content</div>;
 const LoginPage = () => <div>Login Page</div>;
 
-// Helper to render with router and the ProtectedRoute using Outlet pattern
+// Helper to render with router and the ProtectedRoute using children pattern
 const renderWithRouter = (initialEntries = ['/']) => {
     return render(
         <MemoryRouter initialEntries={initialEntries}>
             <Routes>
-                {/* Protected route wrapper */}
-                <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<TestContent />} />
-                </Route>
+                {/* Protected route with children */}
+                <Route
+                    path="/"
+                    element={
+                        <ProtectedRoute>
+                            <TestContent />
+                        </ProtectedRoute>
+                    }
+                />
 
                 {/* Public login route */}
                 <Route path="/login" element={<LoginPage />} />

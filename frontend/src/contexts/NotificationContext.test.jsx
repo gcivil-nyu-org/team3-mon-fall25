@@ -74,8 +74,8 @@ describe('NotificationContext', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset to return true by default
-    mockIsAuthenticated = vi.fn(() => true);
+    // Reset to true by default - isAuthenticated is now a boolean, not a function
+    mockIsAuthenticated = true;
     useAuth.mockReturnValue({
       isAuthenticated: mockIsAuthenticated,
     });
@@ -125,7 +125,9 @@ describe('NotificationContext', () => {
 
   describe('Initial State', () => {
     it('initializes with empty notifications and zero unread count', async () => {
-      mockIsAuthenticated.mockReturnValue(false);
+      useAuth.mockReturnValue({
+        isAuthenticated: false,
+      });
       renderWithProvider();
 
       await waitFor(() => {
@@ -147,7 +149,9 @@ describe('NotificationContext', () => {
     });
 
     it('clears notifications when not authenticated', async () => {
-      mockIsAuthenticated.mockReturnValue(false);
+      useAuth.mockReturnValue({
+        isAuthenticated: false,
+      });
 
       renderWithProvider();
 
@@ -465,7 +469,9 @@ describe('NotificationContext', () => {
     });
 
     it('does not fetch when not authenticated', async () => {
-      mockIsAuthenticated.mockReturnValue(false);
+      useAuth.mockReturnValue({
+        isAuthenticated: false,
+      });
 
       renderWithProvider();
 
@@ -506,7 +512,9 @@ describe('NotificationContext', () => {
     });
 
     it('does not fetch when not authenticated', async () => {
-      mockIsAuthenticated.mockReturnValue(false);
+      useAuth.mockReturnValue({
+        isAuthenticated: false,
+      });
 
       renderWithProvider();
 
