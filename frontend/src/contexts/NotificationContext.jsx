@@ -101,7 +101,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Fetch notifications list
   const fetchNotifications = useCallback(async () => {
-    if (!isAuthenticated()) return;
+    if (!isAuthenticated) return;
 
     // Use mock data if enabled
     if (getUseMockData()) {
@@ -140,7 +140,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Fetch unread count only (lightweight)
   const fetchUnreadCount = useCallback(async () => {
-    if (!isAuthenticated()) return;
+    if (!isAuthenticated) return;
 
     // Use mock data if enabled
     if (getUseMockData()) {
@@ -258,7 +258,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Set up polling for unread count (every 45 seconds)
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated) {
       // Clear notifications if not authenticated
       setNotifications([]);
       setUnreadCount(0);

@@ -172,21 +172,7 @@ describe('Home', () => {
         expect(createLink.textContent).toContain('➕');
     });
 
-    it('renders Sign up to start selling link when not logged in (isAuthenticated as function)', () => {
-        mockUseAuth.mockReturnValue({
-            user: null,
-            isAuthenticated: () => false,
-            isLoading: false,
-        });
-
-        renderHome();
-
-        const signUpLink = screen.getByRole('link', { name: /sign up to start selling/i });
-        expect(signUpLink).toBeInTheDocument();
-        expect(signUpLink).toHaveAttribute('href', '/login');
-    });
-
-    it('renders Sign up to start selling link when not logged in (isAuthenticated as boolean false)', () => {
+    it('renders Sign up to start selling link when not logged in', () => {
         mockUseAuth.mockReturnValue({
             user: null,
             isAuthenticated: false,
@@ -200,20 +186,7 @@ describe('Home', () => {
         expect(signUpLink).toHaveAttribute('href', '/login');
     });
 
-    it('renders Create Listing link when logged in (isAuthenticated as function)', () => {
-        mockUseAuth.mockReturnValue({
-            user: { id: '123', email: 'test@nyu.edu' },
-            isAuthenticated: () => true,
-            isLoading: false,
-        });
-
-        renderHome();
-
-        const createLink = screen.getByRole('link', { name: /create listing/i });
-        expect(createLink).toBeInTheDocument();
-    });
-
-    it('renders Create Listing link when logged in (isAuthenticated as boolean true)', () => {
+    it('renders Create Listing link when logged in', () => {
         mockUseAuth.mockReturnValue({
             user: { id: '123', email: 'test@nyu.edu' },
             isAuthenticated: true,
