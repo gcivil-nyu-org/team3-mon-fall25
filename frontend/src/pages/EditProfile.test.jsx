@@ -446,4 +446,148 @@ describe('EditProfile', () => {
             expect(emailInput.value).toBe('');
         });
     });
+
+    describe('Error Handling', () => {
+        it('displays formatted validation errors from API', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce({
+                response: {
+                    data: {
+                        username: ['Username already taken', 'Must be unique'],
+                        full_name: ['Name is required'],
+                    },
+                },
+            });
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText(/username: Username already taken, Must be unique/i)).toBeInTheDocument();
+                expect(screen.getByText(/full_name: Name is required/i)).toBeInTheDocument();
+            });
+        });
+
+        it('displays error detail when API returns detail field', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce({
+                response: {
+                    data: {
+                        detail: 'Server error occurred',
+                    },
+                },
+            });
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Server error occurred')).toBeInTheDocument();
+            });
+        });
+
+        it('displays error message when API returns message field', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce({
+                message: 'Network error',
+            });
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Network error')).toBeInTheDocument();
+            });
+        });
+
+        it('displays default error message when no error details available', async () => {
+            const user = userEvent.setup();
+            profilesApi.updateMyProfile.mockRejectedValueOnce(new Error());
+
+            render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Failed to save profile')).toBeInTheDocument();
+            });
+        });
+
+        it('handles file size validation error', async () => {
+            const user = userEvent.setup();
+            // Render with a profile that has an avatar so "Change Photo" button is shown
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+            Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 });
+
+            // Mock document.createElement to intercept input creation
+            const originalCreateElement = document.createElement.bind(document);
+            const mockInput = originalCreateElement('input');
+            document.createElement = vi.fn((tagName) => {
+                if (tagName === 'input') {
+                    return mockInput;
+                }
+                return originalCreateElement(tagName);
+            });
+
+            const changePhotoButton = screen.getByText('Change Photo').closest('button');
+            await user.click(changePhotoButton);
+
+            // Manually trigger the onchange event with large file
+            const changeEvent = new Event('change', { bubbles: true });
+            Object.defineProperty(changeEvent, 'target', {
+                writable: false,
+                value: { files: [largeFile] }
+            });
+            mockInput.dispatchEvent(changeEvent);
+
+            await waitFor(() => {
+                expect(screen.getByText('Image must be less than 10MB')).toBeInTheDocument();
+            });
+
+            // Restore original createElement
+            document.createElement = originalCreateElement;
+        });
+    });
+
+    describe('Photo Management Edge Cases', () => {
+        it('handles remove photo action', async () => {
+            const user = userEvent.setup();
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const removePhotoButton = screen.getByText('Remove Photo').closest('button');
+            await user.click(removePhotoButton);
+
+            // Avatar preview should be removed
+            expect(screen.queryByAltText('Avatar')).not.toBeInTheDocument();
+        });
+
+        it('submits remove_avatar flag when remove photo is clicked', async () => {
+            const user = userEvent.setup();
+            const profileWithAvatar = { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' };
+            render(<EditProfile onClose={mockOnClose} profile={profileWithAvatar} />);
+
+            const removePhotoButton = screen.getByText('Remove Photo').closest('button');
+            await user.click(removePhotoButton);
+
+            const saveButton = screen.getByText('Save Changes').closest('button');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(profilesApi.updateMyProfile).toHaveBeenCalled();
+                const formData = profilesApi.updateMyProfile.mock.calls[0][0];
+                expect(formData.get('remove_avatar')).toBe('true');
+            });
+        });
+    });
 });

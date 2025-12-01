@@ -93,3 +93,91 @@ class TestIsConversationMember:
         assert not permission.has_object_permission(
             anon_request, MockView(), conversation
         )
+
+    def test_object_with_conversation_id_attribute(self, conversation, two_users):
+        """Test permission check with object that has conversation_id attribute"""
+        user1, user2 = two_users
+        permission = IsConversationMember()
+
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        class MockView:
+            pass
+
+        class MockObject:
+            def __init__(self, conv_id):
+                self.conversation_id = conv_id
+
+        mock_obj = MockObject(conversation.id)
+        user1_request = MockRequest(user1)
+
+        assert permission.has_object_permission(user1_request, MockView(), mock_obj)
+
+    def test_object_with_conversation_attribute(self, conversation, two_users):
+        """Test permission check with object that has conversation attribute"""
+        user1, user2 = two_users
+        permission = IsConversationMember()
+
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        class MockView:
+            pass
+
+        class MockConversation:
+            def __init__(self, pk):
+                self.pk = pk
+
+        class MockObject:
+            def __init__(self, conv):
+                self.conversation = conv
+
+        mock_conv = MockConversation(conversation.id)
+        mock_obj = MockObject(mock_conv)
+        user1_request = MockRequest(user1)
+
+        assert permission.has_object_permission(user1_request, MockView(), mock_obj)
+
+    def test_object_with_none_conversation_attribute(self, two_users):
+        """Test permission check with object that has None conversation attribute"""
+        user1, user2 = two_users
+        permission = IsConversationMember()
+
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        class MockView:
+            pass
+
+        class MockObject:
+            def __init__(self):
+                self.conversation = None
+
+        mock_obj = MockObject()
+        user1_request = MockRequest(user1)
+
+        assert not permission.has_object_permission(user1_request, MockView(), mock_obj)
+
+    def test_object_with_no_conversation_info(self, two_users):
+        """Test permission check with object that has no conversation attributes"""
+        user1, user2 = two_users
+        permission = IsConversationMember()
+
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        class MockView:
+            pass
+
+        class MockObject:
+            pass
+
+        mock_obj = MockObject()
+        user1_request = MockRequest(user1)
+
+        assert not permission.has_object_permission(user1_request, MockView(), mock_obj)

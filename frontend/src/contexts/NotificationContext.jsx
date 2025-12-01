@@ -83,7 +83,12 @@ const MOCK_NOTIFICATIONS = [
 ];
 
 // Flag to enable/disable mock data (set to true for testing)
-const USE_MOCK_DATA = true;
+// Can be overridden in tests via window.__USE_MOCK_DATA__
+const getUseMockData = () => {
+  return typeof window !== 'undefined' && window.__USE_MOCK_DATA__ !== undefined
+    ? window.__USE_MOCK_DATA__
+    : true;
+};
 
 export const NotificationProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -96,10 +101,10 @@ export const NotificationProvider = ({ children }) => {
 
   // Fetch notifications list
   const fetchNotifications = useCallback(async () => {
-    if (!isAuthenticated()) return;
-    
+    if (!isAuthenticated) return;
+
     // Use mock data if enabled
-    if (USE_MOCK_DATA) {
+    if (getUseMockData()) {
       setIsLoading(true);
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -109,21 +114,21 @@ export const NotificationProvider = ({ children }) => {
       setIsLoading(false);
       return;
     }
-    
+
     try {
       setIsLoading(true);
       const response = await notificationAPI.getNotifications();
       // Handle paginated response - adjust based on actual API structure
       const notificationList = response.results || response.data || response || [];
       setNotifications(notificationList);
-      
+
       // Update unread count from the list
       const unread = notificationList.filter(n => !n.is_read).length;
       setUnreadCount(unread);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       // Fallback to mock data on error if enabled
-      if (USE_MOCK_DATA) {
+      if (getUseMockData()) {
         setNotifications([...MOCK_NOTIFICATIONS]);
         const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
         setUnreadCount(unread);
@@ -135,15 +140,15 @@ export const NotificationProvider = ({ children }) => {
 
   // Fetch unread count only (lightweight)
   const fetchUnreadCount = useCallback(async () => {
-    if (!isAuthenticated()) return;
-    
+    if (!isAuthenticated) return;
+
     // Use mock data if enabled
-    if (USE_MOCK_DATA) {
+    if (getUseMockData()) {
       const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
       setUnreadCount(unread);
       return;
     }
-    
+
     try {
       const response = await notificationAPI.getUnreadCount();
       // Adjust based on actual API response structure
@@ -152,7 +157,7 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('Error fetching unread count:', error);
       // Fallback to mock data on error if enabled
-      if (USE_MOCK_DATA) {
+      if (getUseMockData()) {
         const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
         setUnreadCount(unread);
       }
@@ -162,13 +167,13 @@ export const NotificationProvider = ({ children }) => {
   // Mark single notification as read
   const markAsRead = useCallback(async (id) => {
     // Update local state immediately for better UX
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, is_read: true } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
-    
+
     // Use mock data if enabled
-    if (USE_MOCK_DATA) {
+    if (getUseMockData()) {
       // Update mock data for consistency
       const notification = MOCK_NOTIFICATIONS.find(n => n.id === id);
       if (notification) {
@@ -176,7 +181,7 @@ export const NotificationProvider = ({ children }) => {
       }
       return;
     }
-    
+
     try {
       await notificationAPI.markNotificationAsRead(id);
     } catch (error) {
@@ -190,16 +195,16 @@ export const NotificationProvider = ({ children }) => {
     // Update local state immediately for better UX
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     setUnreadCount(0);
-    
+
     // Use mock data if enabled
-    if (USE_MOCK_DATA) {
+    if (getUseMockData()) {
       // Update mock data for consistency
       MOCK_NOTIFICATIONS.forEach(n => {
         n.is_read = true;
       });
       return;
     }
-    
+
     try {
       await notificationAPI.markAllNotificationsAsRead();
     } catch (error) {
@@ -213,7 +218,7 @@ export const NotificationProvider = ({ children }) => {
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
-    
+
     // Navigate to redirect_url if available
     if (notification.redirect_url) {
       // Use navigate for internal routes, window.location for external URLs
@@ -223,7 +228,7 @@ export const NotificationProvider = ({ children }) => {
         navigate(notification.redirect_url);
       }
     }
-    
+
     // Close dropdown
     setIsDropdownOpen(false);
   }, [markAsRead, navigate]);
@@ -253,7 +258,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Set up polling for unread count (every 45 seconds)
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated) {
       // Clear notifications if not authenticated
       setNotifications([]);
       setUnreadCount(0);
