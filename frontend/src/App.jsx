@@ -1,21 +1,21 @@
 import React, {useEffect, useRef} from "react";
-import {Outlet, Link, NavLink, useLocation} from "react-router-dom";
-import {useAuth} from "./contexts/AuthContext";
-import {useChat} from "./contexts/ChatContext";
-import {useNotifications} from "./contexts/NotificationContext";
+import { Outlet, Link, NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
+import { useChat } from "./contexts/ChatContext";
 import ProfileDropdown from "./components/ProfileDropdown";
-import GlobalChatWindow from "./components/GlobalChatWindow";
+import {useNotifications} from "./contexts/NotificationContext";
+import GlobalChat from "./components/chat/GlobalChat";
+import { FaComments } from "react-icons/fa";
+import { ToastContainer } from "react-toastify";
 import NotificationPanel from "./components/NotificationPanel";
-import {FaComments} from "react-icons/fa";
 import {Bell} from "lucide-react";
-import {ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
 export default function App() {
-    const {user} = useAuth();
-    const {openChat} = useChat();
+    const { user } = useAuth();
+    const { openChat } = useChat();
     const location = useLocation();
     const {
         notifications,
@@ -61,8 +61,8 @@ export default function App() {
         <div
             style={{
                 minHeight: "100vh",
-                background: "var(--bg)",      // light page background
-                color: "#111",                 // normal text; nav sets its own color
+                background: "var(--bg)",
+                color: "#111",
                 fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
                 display: "flex",
                 flexDirection: "column",
@@ -83,7 +83,7 @@ export default function App() {
                                 marginRight: "12px",
                                 borderRadius: "10px",
                                 padding: "4px",
-                                background: "#ffffff20",  // semi-transparent white for a subtle highlight
+                                background: "#ffffff20",
                                 backdropFilter: "blur(5px)"
                             }}
                         />
@@ -212,12 +212,12 @@ export default function App() {
 
 
             {/* Page content */}
-            <div style={{flex: 1, paddingTop: '64px' /* Account for fixed header */}}>
+            <div style={{flex: 1, paddingTop: '64px' }}>
                 <Outlet/>
             </div>
 
-            {/* Global Chat Window - persists across all routes */}
-            <GlobalChatWindow/>
+
+            <GlobalChat />
 
             {/* Toast notifications */}
             <ToastContainer

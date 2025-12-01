@@ -1,11 +1,17 @@
 import os
-
 from .settings_base import *  # noqa: F403, F401
 
 DEBUG = False
 
-# Avoid cache issues
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+if "daphne" not in INSTALLED_APPS:
+    INSTALLED_APPS.insert(0, "daphne")
+try:
+    index = MIDDLEWARE.index("django.middleware.security.SecurityMiddleware")
+    MIDDLEWARE.insert(index + 1, "whitenoise.middleware.WhiteNoiseMiddleware")
+except ValueError:
+    MIDDLEWARE.insert(0, "whitenoise.middleware.WhiteNoiseMiddleware")
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ALLOWED_HOSTS = [
     "nyumarketplace.me",
@@ -13,6 +19,8 @@ ALLOWED_HOSTS = [
     "nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
     ".elasticbeanstalk.com",  # allow any EB CNAME
     ".elb.amazonaws.com",  # allow the ALB health checker hostname
+    "localhost",  # useful for local prod testing
+    "127.0.0.1",
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -44,13 +52,18 @@ DATABASES = {
     }
 }
 
-SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+# Production Security Settings
+SECURE_SSL_REDIRECT = True  # RECOMMENDED: Force HTTPS in Prod
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # AWS S3 Configuration
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "us-east-1")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

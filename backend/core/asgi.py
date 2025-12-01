@@ -1,18 +1,18 @@
-# backend/core/asgi.py
 import os
-from channels.routing import ProtocolTypeRouter, URLRouter
+import django
 from django.core.asgi import get_asgi_application
-from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+from core.channels_jwt import JWTAuthMiddlewareStack
+from apps.chat.routing import websocket_urlpatterns
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings_ci")
 
-django_asgi_app = get_asgi_application()
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings_local")
+django.setup()
 
-from apps.chat.routing import websocket_urlpatterns  # noqa: E402
 
 application = ProtocolTypeRouter(
     {
-        "http": django_asgi_app,
-        "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
+        "http": get_asgi_application(),
+        "websocket": JWTAuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
     }
 )

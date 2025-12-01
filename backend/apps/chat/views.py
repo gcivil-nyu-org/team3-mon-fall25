@@ -1,11 +1,12 @@
 import uuid
-
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from .models import Conversation, ConversationParticipant, Message
 from .permissions import IsConversationMember
 from .serializers import (
@@ -31,7 +32,6 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsConversationMember]
     queryset = Conversation.objects.all().order_by("-last_message_at")
 
-    # ---- serializers per action ----
     def get_serializer_class(self):
         if self.action == "list":
             return ConversationListSerializer
@@ -143,6 +143,7 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="send")
     def send(self, request, pk=None):
+        print(f"DEBUG: Send request received for conversation {pk}")  # <--- DEBUG 1
         conv = self.get_object()
         ser = MessageCreateSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
@@ -153,6 +154,28 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             text=ser.validated_data["text"].strip(),
         )
         Conversation.objects.filter(pk=conv.pk).update(last_message_at=m.created_at)
+
+        # --- REAL-TIME BROADCAST START ---
+        group_name = f"chat.{conv.pk}"
+        print(f"DEBUG: Attempting to broadcast to group: {group_name}")  # <--- DEBUG 2
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                "type": "message.new",
+                "message": {
+                    "id": str(m.id),
+                    "conversation": str(conv.pk),
+                    "sender": m.sender.id,
+                    "text": m.text,
+                    "created_at": m.created_at.isoformat(),
+                },
+            },
+        )
+        print("DEBUG: Broadcast sent successfully")  # <--- DEBUG 3
+        # --- REAL-TIME BROADCAST END ---
+
         return Response(MessageSerializer(m).data, status=201)
 
     @action(detail=True, methods=["post"], url_path="read")
@@ -165,12 +188,26 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "Invalid message_id"}, status=400)
 
         part = ConversationParticipant.objects.get(conversation=conv, user=request.user)
+
+        updated = False
         if (not part.last_read_message) or (
             part.last_read_message.created_at < msg.created_at
         ):
             part.last_read_message = msg
             part.last_read_at = timezone.now()
             part.save(update_fields=["last_read_message", "last_read_at"])
+            updated = True
+        if updated:
+            group_name = f"chat.{conv.pk}"
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    "type": "read.broadcast",
+                    "message_id": str(msg.id),
+                    "reader_id": request.user.id,
+                },
+            )
 
         return Response(
             {"ok": True, "last_read_message": str(part.last_read_message_id)}
