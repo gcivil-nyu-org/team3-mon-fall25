@@ -313,5 +313,100 @@ describe("MyListings", () => {
     alertSpy.mockRestore();
     confirmSpy.mockRestore();
   });
+
+  it("handles error with response.data.detail", async () => {
+    listingsApi.getMyListings.mockRejectedValue({
+      response: { data: { detail: "Custom error message" } },
+    });
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Custom error message")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with response.data.detail and message", async () => {
+    listingsApi.getMyListings.mockRejectedValue({
+      response: { data: { detail: "API error" } },
+      message: "Network error",
+    });
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("API error")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with only message property", async () => {
+    listingsApi.getMyListings.mockRejectedValue({
+      message: "Network error",
+    });
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Network error")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with default message when no error details", async () => {
+    listingsApi.getMyListings.mockRejectedValue(new Error());
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load your listings/i)).toBeInTheDocument();
+    });
+  });
+
+  it("reloads listings when delete fails and returns false", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    listingsApi.deleteListingAPI.mockResolvedValue(false);
+    listingsApi.getMyListings.mockResolvedValue(mockListings);
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Laptop")).toBeInTheDocument();
+    });
+
+    // Find the Delete button
+    const deleteButtons = screen.getAllByText(/Delete/i);
+    if (deleteButtons.length > 0) {
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
+        // Should reload listings
+        expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2);
+      });
+    }
+
+    alertSpy.mockRestore();
+    confirmSpy.mockRestore();
+  });
 });
 

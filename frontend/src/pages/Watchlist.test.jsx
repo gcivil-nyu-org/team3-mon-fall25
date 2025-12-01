@@ -171,6 +171,7 @@ describe("Watchlist", () => {
   it("handles error when remove from watchlist fails", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     watchlistApi.removeFromWatchlist.mockRejectedValue(new Error("Failed to remove"));
+    watchlistApi.getWatchlist.mockResolvedValue(mockListings);
 
     render(
       <MemoryRouter>
@@ -182,14 +183,18 @@ describe("Watchlist", () => {
       expect(screen.getByText("Test Laptop")).toBeInTheDocument();
     });
 
-    // Try to remove - the component should reload the watchlist on error
-    // We'll trigger the remove function directly through the component
-    // Since we can't easily access the internal function, we'll verify the error handling
-    // by checking that getWatchlist is called again after a failed remove
+    // Find the remove button and click it
+    const removeButtons = screen.getAllByTitle("Remove from watchlist");
+    if (removeButtons.length > 0) {
+      fireEvent.click(removeButtons[0]);
 
-    // Simulate a remove failure scenario
-    // The component should call loadWatchlist() which calls getWatchlist()
-    // This is tested indirectly through the component's error handling
+      await waitFor(() => {
+        expect(watchlistApi.removeFromWatchlist).toHaveBeenCalledWith(1);
+        // Should reload watchlist on error
+        expect(watchlistApi.getWatchlist).toHaveBeenCalledTimes(2); // Once initially, once on error
+        expect(alertSpy).toHaveBeenCalledWith("Failed to remove from watchlist. Please try again.");
+      });
+    }
 
     alertSpy.mockRestore();
   });
@@ -203,6 +208,47 @@ describe("Watchlist", () => {
     ];
 
     watchlistApi.getWatchlist.mockResolvedValue(listingsWithNullStatus);
+
+    render(
+      <MemoryRouter>
+        <Watchlist />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Laptop")).toBeInTheDocument();
+    });
+  });
+
+  it("navigates to browse when empty state button is clicked", async () => {
+    watchlistApi.getWatchlist.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <Watchlist />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/You haven't saved any listings yet/i)).toBeInTheDocument();
+    });
+
+    const browseButton = screen.getByText("Browse Listings");
+    fireEvent.click(browseButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/browse");
+  });
+
+  it("handles listings with dorm_location preference over location", async () => {
+    const listingsWithDormLocation = [
+      {
+        ...mockListings[0],
+        dorm_location: "Founders Hall",
+        location: "NYU",
+      },
+    ];
+
+    watchlistApi.getWatchlist.mockResolvedValue(listingsWithDormLocation);
 
     render(
       <MemoryRouter>

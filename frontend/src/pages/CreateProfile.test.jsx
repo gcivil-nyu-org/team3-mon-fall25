@@ -179,4 +179,216 @@ describe("CreateProfile page", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("shows API validation error for full_name field", async () => {
+    const user = userEvent.setup();
+    mockCreateProfile.mockRejectedValueOnce({
+      response: { data: { full_name: ["Invalid name"] } },
+    });
+
+    renderComponent();
+    await waitFor(() => screen.getByLabelText(/Full Name/));
+
+    await user.type(screen.getByLabelText(/Full Name/), "Alex Morgan");
+    await user.type(screen.getByLabelText(/Username/), "alexm");
+    await user.selectOptions(screen.getByLabelText(/Location \(Dorm\)/), [
+      "Founders Hall",
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid name")).toBeInTheDocument();
+    });
+  });
+
+  it("shows API validation error for dorm_location field", async () => {
+    const user = userEvent.setup();
+    mockCreateProfile.mockRejectedValueOnce({
+      response: { data: { dorm_location: ["Invalid location"] } },
+    });
+
+    renderComponent();
+    await waitFor(() => screen.getByLabelText(/Full Name/));
+
+    await user.type(screen.getByLabelText(/Full Name/), "Alex Morgan");
+    await user.type(screen.getByLabelText(/Username/), "alexm");
+    await user.selectOptions(screen.getByLabelText(/Location \(Dorm\)/), [
+      "Founders Hall",
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid location")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error detail when API returns detail field", async () => {
+    const user = userEvent.setup();
+    mockCreateProfile.mockRejectedValueOnce({
+      response: { data: { detail: "Server error occurred" } },
+    });
+
+    renderComponent();
+    await waitFor(() => screen.getByLabelText(/Full Name/));
+
+    await user.type(screen.getByLabelText(/Full Name/), "Alex Morgan");
+    await user.type(screen.getByLabelText(/Username/), "alexm");
+    await user.selectOptions(screen.getByLabelText(/Location \(Dorm\)/), [
+      "Founders Hall",
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Server error occurred")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error when API returns error field", async () => {
+    const user = userEvent.setup();
+    mockCreateProfile.mockRejectedValueOnce({
+      response: { data: { error: "Custom error message" } },
+    });
+
+    renderComponent();
+    await waitFor(() => screen.getByLabelText(/Full Name/));
+
+    await user.type(screen.getByLabelText(/Full Name/), "Alex Morgan");
+    await user.type(screen.getByLabelText(/Username/), "alexm");
+    await user.selectOptions(screen.getByLabelText(/Location \(Dorm\)/), [
+      "Founders Hall",
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Custom error message")).toBeInTheDocument();
+    });
+  });
+
+  it("handles non-404 errors when checking existing profile", async () => {
+    mockGetMyProfile.mockRejectedValueOnce({
+      response: { status: 500 },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Unable to load profile information/i)).toBeInTheDocument();
+    });
+  });
+
+  it("handles error when getMyProfile returns data without profile_id", async () => {
+    mockGetMyProfile.mockResolvedValueOnce({
+      data: { email: "test@nyu.edu" },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Full Name/)).toBeInTheDocument();
+    });
+  });
+
+  it("validates username length exceeds 30 characters", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Username/));
+
+    const usernameInput = screen.getByLabelText(/Username/);
+    await user.type(usernameInput, "a".repeat(31));
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Max 30 characters")).toBeInTheDocument();
+    });
+  });
+
+  it("validates username with invalid characters", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Username/));
+
+    const usernameInput = screen.getByLabelText(/Username/);
+    await user.type(usernameInput, "user@name");
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Only letters, numbers, _ and . are allowed/i)).toBeInTheDocument();
+    });
+  });
+
+  it("validates bio length exceeds maximum", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Bio/));
+
+    const bioInput = screen.getByLabelText(/Bio/);
+    await user.type(bioInput, "a".repeat(501));
+
+    await user.click(
+      screen.getByRole("button", { name: /complete setup/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Max 500 characters/i)).toBeInTheDocument();
+    });
+  });
+
+  it("handles file upload with invalid file type", async () => {
+    const user = userEvent.setup();
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const { container } = renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Full Name/));
+
+    const fileInput = container.querySelector('input[type="file"]');
+    const invalidFile = new File(["content"], "document.pdf", { type: "application/pdf" });
+    await user.upload(fileInput, invalidFile);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Only JPG/PNG/WebP images are allowed");
+    });
+
+    alertSpy.mockRestore();
+  });
+
+  it("handles file upload with file size exceeding 5MB", async () => {
+    const user = userEvent.setup();
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const { container } = renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Full Name/));
+
+    const fileInput = container.querySelector('input[type="file"]');
+    // Create a mock file that appears to be > 5MB
+    const largeFile = new File(["x".repeat(6 * 1024 * 1024)], "large.jpg", { type: "image/jpeg" });
+    Object.defineProperty(largeFile, "size", { value: 6 * 1024 * 1024 });
+    await user.upload(fileInput, largeFile);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Image must be smaller than 5MB");
+    });
+
+    alertSpy.mockRestore();
+  });
 });

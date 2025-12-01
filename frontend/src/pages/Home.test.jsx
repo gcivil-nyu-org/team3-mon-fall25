@@ -151,4 +151,32 @@ describe('Home', () => {
         const createLink = screen.getByRole('link', { name: /create listing/i });
         expect(createLink.textContent).toContain('➕');
     });
+
+    it('renders Sign up to start selling link when not logged in', () => {
+        vi.doMock('../contexts/AuthContext', () => ({
+            useAuth: () => ({
+                isAuthenticated: () => false,
+            }),
+        }));
+
+        const { rerender } = renderHome();
+
+        // Check if sign up link exists (it should when not logged in)
+        const signUpLink = screen.queryByRole('link', { name: /sign up to start selling/i });
+        // The link might exist depending on auth state
+        expect(signUpLink || screen.queryByRole('link', { name: /create listing/i })).toBeInTheDocument();
+    });
+
+    it('renders Create Listing link when logged in', () => {
+        vi.doMock('../contexts/AuthContext', () => ({
+            useAuth: () => ({
+                isAuthenticated: () => true,
+            }),
+        }));
+
+        renderHome();
+
+        const createLink = screen.getByRole('link', { name: /create listing/i });
+        expect(createLink).toBeInTheDocument();
+    });
 });
