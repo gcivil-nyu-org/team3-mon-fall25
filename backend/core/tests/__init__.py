@@ -1,5 +1,3 @@
 """
 Tests for core app.
 """
-
-

@@ -10,7 +10,6 @@ from django.test import RequestFactory
 from apps.users.admin import (
     OTPAttemptAdmin,
     OTPAuditLogAdmin,
-    UserAdmin,
     UserChangeForm,
     UserCreationForm,
 )
@@ -177,4 +176,3 @@ class TestOTPAuditLogAdmin:
 
         assert admin.has_change_permission(request, audit_log) is False
         assert admin.has_change_permission(request, None) is False
-

@@ -76,5 +76,3 @@ class TestOTPRateThrottle:
             throttle.throttle_failure()
 
         assert "You can only request 5 OTP per hour" in str(exc_info.value.detail)
-
-

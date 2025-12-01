@@ -118,5 +118,3 @@ class TestIsEmailVerified:
         permission = IsEmailVerified()
         assert "Email verification required" in permission.message
         assert "verify your email address" in permission.message
-
-

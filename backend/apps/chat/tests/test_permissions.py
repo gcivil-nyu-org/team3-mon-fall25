@@ -163,7 +163,7 @@ class TestIsConversationMember:
         assert not permission.has_object_permission(user1_request, MockView(), mock_obj)
 
     def test_object_with_no_conversation_info(self, two_users):
-        """Test permission check with object that has no conversation-related attributes"""
+        """Test permission check with object that has no conversation attributes"""
         user1, user2 = two_users
         permission = IsConversationMember()
 

@@ -2423,7 +2423,6 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         it('should return early when handleMarkAsSold is called with null listing', async () => {
-            const user = userEvent.setup();
             listingsApi.getListing.mockResolvedValue(mockOwnerListing);
             renderListingDetail();
 
@@ -2442,7 +2441,6 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         it('should return early when handleDeleteListing is called with null listing', async () => {
-            const user = userEvent.setup();
             listingsApi.getListing.mockResolvedValue(mockOwnerListing);
             renderListingDetail();
 
@@ -2456,7 +2454,6 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         it('should return early when handleBuyNow is called with null listing', async () => {
-            const user = userEvent.setup();
             listingsApi.getListing.mockResolvedValue(mockNonOwnerListing);
             renderListingDetail();
 
@@ -2874,7 +2871,6 @@ describe('ListingDetail - Core Functionality', () => {
         });
 
         it('should handle mouse hover on save button', async () => {
-            const user = userEvent.setup();
             const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
             localStorage.setItem('access_token', mockToken);
             localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));

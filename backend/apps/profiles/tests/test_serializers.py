@@ -473,7 +473,9 @@ def test_profile_update_serializer_upload_new_avatar(user_with_profile):
     data = {"new_avatar": avatar_file}
 
     with patch("apps.profiles.serializers.s3_service") as mock_s3:
-        mock_s3.upload_image.return_value = "https://s3.amazonaws.com/bucket/new-avatar.jpg"
+        mock_s3.upload_image.return_value = (
+            "https://s3.amazonaws.com/bucket/new-avatar.jpg"
+        )
 
         serializer = ProfileUpdateSerializer(
             profile, data=data, partial=True, context={"request": request}
@@ -481,7 +483,10 @@ def test_profile_update_serializer_upload_new_avatar(user_with_profile):
         assert serializer.is_valid(), serializer.errors
         updated_profile = serializer.save()
 
-        assert updated_profile.avatar_url == "https://s3.amazonaws.com/bucket/new-avatar.jpg"
+        assert (
+            updated_profile.avatar_url
+            == "https://s3.amazonaws.com/bucket/new-avatar.jpg"
+        )
         mock_s3.delete_image.assert_called_once_with(
             "https://s3.amazonaws.com/bucket/old-avatar.jpg"
         )

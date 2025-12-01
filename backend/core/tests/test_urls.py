@@ -2,15 +2,11 @@
 Tests for core URL configuration.
 """
 
-import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
-from django.conf import settings
 from django.test import Client, override_settings
-from django.urls import reverse
 
 
 @pytest.mark.django_db
@@ -97,7 +93,6 @@ class TestDebugStaticFiles:
     def test_debug_static_files_configuration(self):
         """Test that static files are configured when DEBUG=True"""
         # Import urls to trigger the DEBUG static files configuration
-        import importlib
         from django.conf import settings
 
         # Force reload of urls module to test DEBUG branch
@@ -115,5 +110,3 @@ class TestDebugStaticFiles:
         # When DEBUG=False, the static() call should not be added
         # This is tested implicitly by the fact that the code path exists
         pass
-
-
