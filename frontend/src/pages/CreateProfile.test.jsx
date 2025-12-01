@@ -11,6 +11,7 @@ const mockCreateProfile = vi.fn();
 const mockGetLastAuthEmail = vi.fn();
 const mockClearLastAuthEmail = vi.fn();
 const mockUseAuth = vi.fn();
+const mockLoadDormOptions = vi.fn();
 
 vi.mock("../contexts/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
@@ -34,6 +35,10 @@ vi.mock("../utils/authEmailStorage", () => ({
   clearLastAuthEmail: (...args) => mockClearLastAuthEmail(...args),
 }));
 
+vi.mock("../utils/dormOptions", () => ({
+  loadDormOptionas: (...args) => mockLoadDormOptions(...args),
+}));
+
 describe("CreateProfile page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,6 +49,13 @@ describe("CreateProfile page", () => {
       response: { status: 404 },
     });
     mockCreateProfile.mockResolvedValue({ data: { profile_id: 1 } });
+    mockLoadDormOptions.mockResolvedValue({
+      dorm_locations: {
+        washington_square: ["Founders Hall"],
+        downtown: ["Brooklyn Heights"],
+        other: ["Off-Campus"],
+      },
+    });
     window.alert = vi.fn();
     if (URL.createObjectURL) {
       vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
@@ -403,5 +415,166 @@ describe("CreateProfile page", () => {
     });
 
     alertSpy.mockRestore();
+  });
+
+  it("handles error when fetchMeStatus fails", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetchMeStatus.mockRejectedValueOnce(new Error("Network error"));
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to fetch profile status",
+        expect.any(Error)
+      );
+    });
+
+    // Should still show the form after error
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Full Name/)).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("redirects home when getMyProfile returns profile_id", async () => {
+    mockGetMyProfile.mockResolvedValueOnce({
+      data: { profile_id: 123, email: "test@nyu.edu" },
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true });
+    });
+  });
+
+  it("handles phone number input focus and blur events", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Phone Number/));
+
+    const phoneInput = screen.getByLabelText(/Phone Number/);
+    
+    // Test focus event
+    await user.click(phoneInput);
+    expect(phoneInput.style.borderColor).toBe("rgb(86, 1, 141)"); // #56018D
+
+    // Test blur event
+    await user.tab();
+    expect(phoneInput.style.borderColor).toBe("rgb(229, 231, 235)"); // #E5E7EB
+  });
+
+  it("handles submit button mouse out event", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByRole("button", { name: /complete setup/i }));
+
+    const submitButton = screen.getByRole("button", { name: /complete setup/i });
+    
+    // Test mouse over
+    await user.hover(submitButton);
+    expect(submitButton.style.filter).toBe("brightness(1.1)");
+
+    // Test mouse out
+    await user.unhover(submitButton);
+    expect(submitButton.style.filter).toBe("brightness(1)");
+  });
+
+  it("handles dorm select focus and blur events", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Location \(Dorm\)/));
+
+    const dormSelect = screen.getByLabelText(/Location \(Dorm\)/);
+    
+    // Test focus event
+    await user.click(dormSelect);
+    expect(dormSelect.style.borderColor).toBe("rgb(86, 1, 141)"); // #56018D
+
+    // Test blur event without error
+    await user.tab();
+    expect(dormSelect.style.borderColor).toBe("rgb(229, 231, 235)"); // #E5E7EB
+  });
+
+  it("handles dorm select blur event with error", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Location \(Dorm\)/));
+
+    const dormSelect = screen.getByLabelText(/Location \(Dorm\)/);
+    
+    // Try to submit without selecting dorm to trigger error
+    await user.click(screen.getByRole("button", { name: /complete setup/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText("Please select your dorm or residence")).toBeInTheDocument();
+    });
+
+    // Test blur event with error
+    await user.click(dormSelect);
+    await user.tab();
+    expect(dormSelect.style.borderColor).toBe("rgb(220, 38, 38)"); // #DC2626
+  });
+
+  it("handles bio textarea focus and blur events", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Bio/));
+
+    const bioTextarea = screen.getByLabelText(/Bio/);
+    
+    // Test focus event
+    await user.click(bioTextarea);
+    expect(bioTextarea.style.borderColor).toBe("rgb(86, 1, 141)"); // #56018D
+
+    // Test blur event without error
+    await user.tab();
+    expect(bioTextarea.style.borderColor).toBe("rgb(229, 231, 235)"); // #E5E7EB
+  });
+
+  it("handles bio textarea blur event with error", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    await waitFor(() => screen.getByLabelText(/Bio/));
+
+    const bioTextarea = screen.getByLabelText(/Bio/);
+    
+    // Type bio that exceeds max length
+    bioTextarea.removeAttribute('maxLength');
+    await user.type(bioTextarea, "a".repeat(501));
+    
+    // Submit to trigger validation error
+    await user.click(screen.getByRole("button", { name: /complete setup/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Max 500 characters/i)).toBeInTheDocument();
+    });
+
+    // Test blur event with error
+    await user.click(bioTextarea);
+    await user.tab();
+    expect(bioTextarea.style.borderColor).toBe("rgb(220, 38, 38)"); // #DC2626
+  });
+
+  it("handles component unmount cleanup for dorm options", async () => {
+    const { unmount } = renderComponent();
+    
+    await waitFor(() => {
+      expect(mockLoadDormOptions).toHaveBeenCalled();
+    });
+
+    // Unmount component to trigger cleanup
+    unmount();
+    
+    // Cleanup function should have been called (line 55: active = false)
+    // This is tested implicitly by ensuring no errors occur
   });
 });
