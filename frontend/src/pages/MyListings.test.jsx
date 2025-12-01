@@ -57,7 +57,7 @@ describe("MyListings", () => {
     );
 
     expect(screen.getByText("Loading your listings...")).toBeInTheDocument();
-    
+
     await waitFor(() => {
       expect(screen.queryByText("Loading your listings...")).not.toBeInTheDocument();
     });
@@ -259,7 +259,7 @@ describe("MyListings", () => {
   });
 
   it("handles error when marking as sold fails", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => { });
     listingsApi.patchListing.mockRejectedValue(new Error("Failed to update"));
 
     render(
@@ -286,7 +286,7 @@ describe("MyListings", () => {
   });
 
   it("handles error when delete fails", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => { });
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     listingsApi.deleteListingAPI.mockRejectedValue(new Error("Failed to delete"));
 
@@ -315,9 +315,14 @@ describe("MyListings", () => {
   });
 
   it("handles error with response.data.detail", async () => {
-    listingsApi.getMyListings.mockRejectedValue({
-      response: { data: { detail: "Custom error message" } },
-    });
+    const errorWithDetail = {
+      response: {
+        data: {
+          detail: "Custom error message",
+        },
+      },
+    };
+    listingsApi.getMyListings.mockRejectedValue(errorWithDetail);
 
     render(
       <MemoryRouter>
@@ -378,7 +383,7 @@ describe("MyListings", () => {
   });
 
   it("reloads listings when delete fails and returns false", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => { });
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     listingsApi.deleteListingAPI.mockResolvedValue(false);
     listingsApi.getMyListings.mockResolvedValue(mockListings);
@@ -393,20 +398,43 @@ describe("MyListings", () => {
       expect(screen.getByText("Test Laptop")).toBeInTheDocument();
     });
 
-    // Find the Delete button
     const deleteButtons = screen.getAllByText(/Delete/i);
     if (deleteButtons.length > 0) {
       fireEvent.click(deleteButtons[0]);
 
       await waitFor(() => {
         expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
-        // Should reload listings
-        expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2);
+        expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2); // Initial load + reload after failure
       });
     }
 
     alertSpy.mockRestore();
     confirmSpy.mockRestore();
   });
+
+  render(
+    <MemoryRouter>
+      <MyListings />
+    </MemoryRouter>
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText("Test Laptop")).toBeInTheDocument();
+  });
+
+  // Find the Delete button
+  const deleteButtons = screen.getAllByText(/Delete/i);
+  if (deleteButtons.length > 0) {
+    fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
+      expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2); // Initial load + reload after failure
+    });
+  }
+
+  alertSpy.mockRestore();
+  confirmSpy.mockRestore();
+});
 });
 

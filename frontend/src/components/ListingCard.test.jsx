@@ -164,6 +164,54 @@ describe('ListingCard', () => {
                 rerender(<></>);
             });
         });
+
+        it('handles missing createdAt and viewCount', () => {
+            const { container } = render(<ListingCard {...mockProps} />);
+            
+            // Should not render createdAt or viewCount when missing
+            const meta = container.querySelector('.listing-meta');
+            expect(meta).toBeInTheDocument();
+            // Should not have clock or eye icons when data is missing
+            const spans = meta.querySelectorAll('span');
+            expect(spans.length).toBe(0);
+        });
+
+        it('handles viewCount that is not a number', () => {
+            const { container } = render(
+                <ListingCard
+                    {...mockProps}
+                    createdAt={new Date().toISOString()}
+                    viewCount="not-a-number"
+                />
+            );
+            
+            // Should render createdAt but not viewCount when viewCount is not a number
+            const meta = container.querySelector('.listing-meta');
+            expect(meta).toBeInTheDocument();
+            // Should have clock icon but not eye icon
+            const clockIcon = meta.querySelector('span[title*=":"]');
+            expect(clockIcon).toBeInTheDocument();
+            const eyeIcon = meta.querySelector('span[title*="views"]');
+            expect(eyeIcon).not.toBeInTheDocument();
+        });
+
+        it('handles createdAt when it is null or undefined', () => {
+            const { container } = render(
+                <ListingCard
+                    {...mockProps}
+                    createdAt={null}
+                    viewCount={10}
+                />
+            );
+            
+            // Should render viewCount but not createdAt when createdAt is null
+            const meta = container.querySelector('.listing-meta');
+            expect(meta).toBeInTheDocument();
+            const eyeIcon = meta.querySelector('span[title*="views"]');
+            expect(eyeIcon).toBeInTheDocument();
+            const clockIcon = meta.querySelector('span[title*=":"]');
+            expect(clockIcon).not.toBeInTheDocument();
+        });
     });
 
     describe('Metadata Display', () => {

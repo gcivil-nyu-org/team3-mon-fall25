@@ -50,6 +50,7 @@ nav {
 .nav__btn{ background:transparent; border:2px solid #fff; color:#fff; padding:8px 14px; border-radius:10px; font-weight:600; cursor:pointer; }
 .nav__btn:hover{ background:#fff; color:var(--purple); }
 .nav__btn--invert{ text-decoration:none; background:#fff; color:var(--purple); }
+.nav__notification-wrapper{ position:relative; }
 
 /* CTAs + features (hero section) */
 .cta{ display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:12px; font-weight:700; text-decoration:none; border:1.5px solid var(--purple); transition:.15s; }

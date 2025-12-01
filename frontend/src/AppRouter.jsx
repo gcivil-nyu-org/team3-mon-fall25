@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ChatProvider } from "./contexts/ChatContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfileGate from "./components/ProfileGate";
@@ -30,6 +31,7 @@ export default function AppRouter() {
         <AuthProvider>
             <ChatProvider>
                 <BrowserRouter>
+                    <NotificationProvider>
                     <Routes>
                         {/* Public login + OTP routes */}
                         <Route path={ROUTES.LOGIN} element={<Login/>}/>
@@ -134,6 +136,7 @@ export default function AppRouter() {
                         {/* Fallback → home */}
                         <Route path="*" element={<Navigate to={ROUTES.HOME} replace/>}/>
                     </Routes>
+                    </NotificationProvider>
                 </BrowserRouter>
             </ChatProvider>
         </AuthProvider>

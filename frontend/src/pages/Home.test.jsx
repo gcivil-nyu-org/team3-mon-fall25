@@ -11,6 +11,13 @@ vi.mock('../contexts/AuthContext', () => ({
     }),
 }));
 
+vi.mock('../contexts/NotificationContext', () => ({
+    useNotifications: () => ({
+        unreadCount: 0,
+        openDropdown: vi.fn(),
+    }),
+}));
+
 import Home from './Home';
 
 const renderHome = () =>

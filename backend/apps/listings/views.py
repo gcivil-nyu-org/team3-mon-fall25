@@ -1,7 +1,8 @@
 import logging
+from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Q, F
+from django.db.models import F, Max, Min, Q
 from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, pagination, status, viewsets
@@ -98,6 +99,9 @@ class ListingViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
+        # All APIs filter out the listings that has been deleted by Admins
+        queryset = queryset.filter(is_deleted=False)
 
         # Only public list/search should be restricted to active listings
         if self.action in ["list", "search"]:
@@ -249,7 +253,8 @@ class ListingViewSet(
         Get all listings for the authenticated user.
         Endpoint: GET /api/v1/listings/user/
         """
-        user_listings = Listing.objects.filter(user=request.user)
+        # Use get_queryset() to assure is_deleted=False
+        user_listings = self.get_queryset().filter(user=request.user)
         serializer = self.get_serializer(user_listings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -355,7 +360,7 @@ class ListingViewSet(
         """
         # Get distinct categories from active listings (non-empty, sorted)
         available_categories = set(
-            Listing.objects.filter(status="active")
+            Listing.objects.filter(status="active", is_deleted=False)
             .exclude(Q(category__isnull=True) | Q(category=""))
             .values_list("category", flat=True)
             .distinct()
@@ -367,7 +372,7 @@ class ListingViewSet(
         # Get distinct dorm locations from active listings
         # (non-empty, non-null, sorted)
         available_locations = set(
-            Listing.objects.filter(status="active")
+            Listing.objects.filter(status="active", is_deleted=False)
             .exclude(Q(dorm_location__isnull=True) | Q(dorm_location=""))
             .values_list("dorm_location", flat=True)
             .distinct()
@@ -405,6 +410,23 @@ class ListingViewSet(
                 "dorm_locations": grouped_dorm_locations,
                 "locations": flat_locations,  # Backward compatibility
             },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], url_path="price-stats")
+    def price_stats(self, request):
+        """
+        Return the minimum and maximum price across all active listings.
+        Endpoint: GET /api/v1/listings/price-stats/
+        Response: {"min_price": "<decimal>", "max_price": "<decimal>"}
+        """
+        stats = Listing.objects.filter(status="active").aggregate(
+            min_price=Min("price"), max_price=Max("price")
+        )
+        min_price = stats.get("min_price") or Decimal("0")
+        max_price = stats.get("max_price") or Decimal("0")
+        return Response(
+            {"min_price": str(min_price), "max_price": str(max_price)},
             status=status.HTTP_200_OK,
         )
 
