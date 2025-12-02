@@ -72,3 +72,25 @@ export function validateImageFiles(
   return { valid: true, error: null };
 }
 
+/**
+ * Validate listing title
+ * Ensures title contains at least one alphanumeric character
+ * @param {string} title - Title to validate
+ * @returns {Object} { valid: boolean, error: string | null }
+ */
+export function validateListingTitle(title) {
+  if (!title || !title.trim()) {
+    return { valid: false, error: "Title is required" };
+  }
+  
+  // Check if title contains at least one alphanumeric character
+  // This ensures the title is meaningful and not just special characters
+  if (!/[a-zA-Z0-9]/.test(title)) {
+    return {
+      valid: false,
+      error: "Listing title must contain at least one letter or number. Only special characters are not allowed.",
+    };
+  }
+  
+  return { valid: true, error: null };
+}
