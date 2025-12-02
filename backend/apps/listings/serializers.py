@@ -85,15 +85,15 @@ class ListingCreateSerializer(serializers.ModelSerializer):
         """Validate that title contains meaningful characters"""
         if not value or not value.strip():
             raise serializers.ValidationError("Title is required.")
-        
+
         # Check if title contains at least one alphanumeric character
         # This ensures the title is meaningful and not just special characters
-        if not re.search(r'[a-zA-Z0-9]', value):
+        if not re.search(r"[a-zA-Z0-9]", value):
             raise serializers.ValidationError(
                 "Listing title must contain at least one letter or number. "
                 "Only special characters are not allowed."
             )
-        
+
         return value.strip()
 
     def validate_price(self, value):
@@ -260,15 +260,15 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
         """Validate that title contains meaningful characters"""
         if not value or not value.strip():
             raise serializers.ValidationError("Title is required.")
-        
+
         # Check if title contains at least one alphanumeric character
         # This ensures the title is meaningful and not just special characters
-        if not re.search(r'[a-zA-Z0-9]', value):
+        if not re.search(r"[a-zA-Z0-9]", value):
             raise serializers.ValidationError(
                 "Listing title must contain at least one letter or number. "
                 "Only special characters are not allowed."
             )
-        
+
         return value.strip()
 
     def validate_price(self, value):
