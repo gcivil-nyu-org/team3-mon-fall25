@@ -18,7 +18,8 @@ exclude =
     migrations,
     staticfiles,
     frontend_build,
-    node_modules
+    node_modules,
+    core
 
 per-file-ignores =
     backend/apps/chat/urls.py:E501
