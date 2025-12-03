@@ -17,7 +17,7 @@ urlpatterns = router.urls
     3. GET       Y       /api/v1/profiles/<id>/                 retrieve a single profile    profile_id, user_id, full_name, username, email, phone, location, bio, avatar_url, active_listings, sold_items, member_since, created_at, updated_at
     4. GET       Y       /api/v1/profiles/me/                   get current user's profile   profile_id, user_id, full_name, username, email, phone, location, bio, avatar_url, active_listings, sold_items, member_since, created_at, updated_at
     5. PUT/PATCH Y*      /api/v1/profiles/me/                   update user's own profile    full_name, username, phone, location, bio, new_avatar (optional), remove_avatar (optional)
-    6. DELETE    Y*      /api/v1/profiles/me/                   delete user's own profile    (deletes profile and avatar from S3)
+    6. DELETE    Y*      /api/v1/profiles/me/                   delete user's entire account (deletes user, profile, listings, listing images, transactions, watchlist, chat participants, and all S3 assets; sets conversation.created_by and message.sender to NULL)
 
     * AUTH Y with OWNERSHIP CHECK: User must be authenticated AND own the profile
 

@@ -254,7 +254,8 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
                 else {
                     "id": str(lm.id),
                     "text": lm.text,
-                    "sender": lm.sender_id,
+                    # Handle deleted user
+                    "sender": lm.sender_id if lm.sender_id else None,
                     "created_at": lm.created_at,
                 }
             )

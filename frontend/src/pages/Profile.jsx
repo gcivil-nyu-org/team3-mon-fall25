@@ -2,25 +2,29 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getMyListings } from "../api/listings.js";
-import { getMyProfile } from "../api/profiles.js";
-import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen } from "react-icons/fa";
+import { getMyProfile, deleteMyProfile } from "../api/profiles.js";
+import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen, FaExclamationTriangle, FaTrash } from "react-icons/fa";
 import EditProfile from "./EditProfile";
+import DeleteAccountModal from "../components/DeleteAccountModal";
 import "./Profile.css";
 import SEO from "../components/SEO";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [profile, setProfile] = useState(null);
 
   // Load user's profile
   const loadProfile = async () => {
+    if (isDeleting) return; // Don't load if account is being deleted
     try {
       const response = await getMyProfile();
       setProfile(response.data);
@@ -32,6 +36,7 @@ export default function Profile() {
 
   // Load user's listings
   const loadListings = async () => {
+    if (isDeleting) return; // Don't load if account is being deleted
     setLoading(true);
     setError(null);
     try {
@@ -49,6 +54,7 @@ export default function Profile() {
   useEffect(() => {
     loadProfile();
     loadListings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleBack = () => {
@@ -63,6 +69,47 @@ export default function Profile() {
     setIsEditModalOpen(false);
     if (shouldRefresh) {
       loadProfile();
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    // Set deleting flag immediately to prevent any API calls
+    setIsDeleting(true);
+
+    try {
+      // Call the API to delete the profile and user account
+      await deleteMyProfile();
+
+      // Logout the user and clear local storage
+      // This prevents any interceptors from redirecting to /login
+      logout();
+
+      // Close the modal
+      setIsDeleteModalOpen(false);
+
+      // Force a full page reload to home to prevent any pending requests
+      // Using window.location instead of navigate to completely unmount the app
+      window.location.href = '/';
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      console.error("Error response:", err.response);
+
+      const errorMessage = err.response?.data?.detail ||
+                          err.response?.data?.message ||
+                          err.message ||
+                          "Failed to delete account. Please try again.";
+
+      alert(`Error: ${errorMessage}`);
+      setIsDeleteModalOpen(false);
+      setIsDeleting(false); // Reset flag on error
     }
   };
 
@@ -259,11 +306,38 @@ export default function Profile() {
           )}
         </div>
 
+        {/* Danger Zone */}
+        <div className="danger-zone">
+          <div className="danger-zone-content">
+            <div className="danger-zone-left">
+              <FaExclamationTriangle className="danger-icon" />
+            </div>
+            <div className="danger-zone-right">
+              <h3 className="danger-zone-heading">Danger Zone</h3>
+              <p className="danger-zone-text">
+                Once you delete your account, there is no going back. All your listings, messages, and profile information will be permanently deleted.
+              </p>
+              <button className="delete-account-button" onClick={handleDeleteAccount}>
+                <FaTrash />
+                <span>Delete Account</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Edit Profile Modal */}
         {isEditModalOpen && (
           <EditProfile
             onClose={handleCloseEditModal}
             profile={profile}
+          />
+        )}
+
+        {/* Delete Account Modal */}
+        {isDeleteModalOpen && (
+          <DeleteAccountModal
+            onClose={handleCloseDeleteModal}
+            onConfirm={handleConfirmDelete}
           />
         )}
       </div>

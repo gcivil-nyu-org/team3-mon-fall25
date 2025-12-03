@@ -13,7 +13,7 @@ class Conversation(models.Model):
     direct_key = models.CharField(max_length=255, unique=True, db_index=True)
 
     created_by = models.ForeignKey(
-        User, on_delete=models.PROTECT, related_name="created_conversations"
+        User, on_delete=models.SET_NULL, null=True, related_name="created_conversations"
     )
     last_message_at = models.DateTimeField(db_index=True, null=True, blank=True)
 
@@ -49,7 +49,11 @@ class Message(models.Model):
         Conversation, on_delete=models.CASCADE, related_name="messages", db_index=True
     )
     sender = models.ForeignKey(
-        User, on_delete=models.PROTECT, related_name="sent_messages", db_index=True
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="sent_messages",
+        db_index=True,
     )
     text = models.TextField()
 
