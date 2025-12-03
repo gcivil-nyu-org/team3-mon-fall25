@@ -33,7 +33,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
         return {
             "id": str(m.id),
             "text": m.text,
-            "sender": m.sender_id,
+            "sender": m.sender_id if m.sender_id else None,  # Handle deleted user
             "created_at": m.created_at,
         }
 

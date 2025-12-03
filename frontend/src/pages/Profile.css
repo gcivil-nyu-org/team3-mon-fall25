@@ -354,3 +354,86 @@
     text-align: center;
   }
 }
+
+/* Danger Zone Styles */
+.danger-zone {
+  background: white;
+  border-radius: 12px;
+  padding: 24px 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 32px;
+  border: 1px solid #fecaca;
+  background-color: #fef2f2;
+}
+
+.danger-zone-content {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.danger-zone-left {
+  flex-shrink: 0;
+}
+
+.danger-icon {
+  font-size: 24px;
+  color: #dc2626;
+}
+
+.danger-zone-right {
+  flex: 1;
+}
+
+.danger-zone-heading {
+  font-size: 18px;
+  font-weight: 600;
+  color: #dc2626;
+  margin: 0 0 8px 0;
+}
+
+.danger-zone-text {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+
+.delete-account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: #dc2626;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.delete-account-button:hover {
+  background-color: #b91c1c;
+}
+
+.delete-account-button svg {
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .danger-zone-content {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .danger-zone-heading {
+    text-align: center;
+  }
+
+  .danger-zone-text {
+    text-align: center;
+  }
+}
