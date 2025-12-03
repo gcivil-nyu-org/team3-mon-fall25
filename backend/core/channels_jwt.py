@@ -1,16 +1,18 @@
 from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
-from rest_framework_simplejwt.tokens import UntypedToken
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.backends import TokenBackend
-from rest_framework_simplejwt.settings import api_settings
 
 
 @database_sync_to_async
 def get_user(token_key):
+    # LAZY IMPORTS (Crucial for Daphne/ASGI)
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import AnonymousUser
+    from rest_framework_simplejwt.tokens import UntypedToken
+    from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+    from rest_framework_simplejwt.backends import TokenBackend
+    from rest_framework_simplejwt.settings import api_settings
+
     try:
         UntypedToken(token_key)
 
@@ -40,6 +42,11 @@ class JWTAuthMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        # --- LAZY IMPORT ---
+        from django.contrib.auth.models import AnonymousUser
+
+        # -------------------
+
         await database_sync_to_async(close_old_connections)()
 
         try:
