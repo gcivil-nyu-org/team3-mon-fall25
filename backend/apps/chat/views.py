@@ -155,6 +155,19 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
         )
         Conversation.objects.filter(pk=conv.pk).update(last_message_at=m.created_at)
 
+        # Update sender's last_read_message to this message (sending = viewing)
+        # This ensures unread count only counts messages received after user
+        # last opened/sent
+        part, _ = ConversationParticipant.objects.get_or_create(
+            conversation=conv, user=request.user
+        )
+        if (not part.last_read_message) or (
+            part.last_read_message.created_at < m.created_at
+        ):
+            part.last_read_message = m
+            part.last_read_at = timezone.now()
+            part.save(update_fields=["last_read_message", "last_read_at"])
+
         # --- REAL-TIME BROADCAST START ---
         group_name = f"chat.{conv.pk}"
         print(f"DEBUG: Attempting to broadcast to group: {group_name}")  # <--- DEBUG 2
@@ -238,13 +251,28 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             part = parts.get(c.id)
             unread = 0
             if lm and part:
-                if part.last_read_message_id is None:
-                    unread = Message.objects.filter(conversation=c).count()
+                # Use last_read_message timestamp as cutoff
+                # This represents when user last opened/viewed the chat
+                # (updated when they open chat or send a message)
+                if part.last_read_message_id:
+                    # Count messages from other users created after last_read_message
+                    unread = (
+                        Message.objects.filter(
+                            conversation=c,
+                            created_at__gt=part.last_read_message.created_at,
+                        )
+                        .exclude(sender=user)
+                        .count()
+                    )
                 else:
-                    unread = Message.objects.filter(
-                        conversation=c,
-                        created_at__gt=part.last_read_message.created_at,
-                    ).count()
+                    # No last_read_message: count all messages from other users
+                    unread = (
+                        Message.objects.filter(
+                            conversation=c,
+                        )
+                        .exclude(sender=user)
+                        .count()
+                    )
 
             serializer = ConversationListSerializer(c, context={"request": request})
             item = serializer.data

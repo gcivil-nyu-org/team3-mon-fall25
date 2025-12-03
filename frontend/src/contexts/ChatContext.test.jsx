@@ -2,6 +2,23 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ChatProvider, useChat } from './ChatContext';
+import { AuthProvider } from './AuthContext';
+
+// Mock AuthContext to control authentication state
+vi.mock('./AuthContext', async () => {
+    const actual = await vi.importActual('./AuthContext');
+    return {
+        ...actual,
+        useAuth: () => ({
+            user: { id: 1, email: 'test@nyu.edu' },
+            token: 'mock-token',
+            login: vi.fn(),
+            logout: vi.fn(),
+            isAuthenticated: true, // Mock as authenticated for tests
+            isLoading: false,
+        }),
+    };
+});
 
 // Test component that uses the chat context
 const TestComponent = () => {
@@ -12,6 +29,15 @@ const TestComponent = () => {
             <button onClick={openChat}>Open Chat</button>
             <button onClick={closeChat}>Close Chat</button>
         </div>
+    );
+};
+
+// Helper to wrap components with ChatProvider
+const renderWithProviders = (ui) => {
+    return render(
+        <ChatProvider>
+            {ui}
+        </ChatProvider>
     );
 };
 
@@ -26,21 +52,13 @@ describe('ChatContext', () => {
 
     describe('ChatProvider', () => {
         it('provides chat context to children', () => {
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             expect(screen.getByTestId('chat-state')).toBeInTheDocument();
         });
 
         it('initializes with closed state when no sessionStorage value', () => {
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             expect(screen.getByTestId('chat-state')).toHaveTextContent('closed');
         });
@@ -48,11 +66,7 @@ describe('ChatContext', () => {
         it('initializes with open state when sessionStorage has true', () => {
             sessionStorage.setItem('chatOpen', 'true');
 
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             expect(screen.getByTestId('chat-state')).toHaveTextContent('open');
         });
@@ -60,21 +74,13 @@ describe('ChatContext', () => {
         it('initializes with closed state when sessionStorage has false', () => {
             sessionStorage.setItem('chatOpen', 'false');
 
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             expect(screen.getByTestId('chat-state')).toHaveTextContent('closed');
         });
 
         it('opens chat when openChat is called', () => {
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             expect(screen.getByTestId('chat-state')).toHaveTextContent('closed');
 
@@ -89,11 +95,7 @@ describe('ChatContext', () => {
         it('closes chat when closeChat is called', () => {
             sessionStorage.setItem('chatOpen', 'true');
 
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             expect(screen.getByTestId('chat-state')).toHaveTextContent('open');
 
@@ -106,11 +108,7 @@ describe('ChatContext', () => {
         });
 
         it('persists chat state to sessionStorage when opened', () => {
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             act(() => {
                 screen.getByText('Open Chat').click();
@@ -122,11 +120,7 @@ describe('ChatContext', () => {
         it('persists chat state to sessionStorage when closed', () => {
             sessionStorage.setItem('chatOpen', 'true');
 
-            render(
-                <ChatProvider>
-                    <TestComponent />
-                </ChatProvider>
-            );
+            renderWithProviders(<TestComponent />);
 
             act(() => {
                 screen.getByText('Close Chat').click();
