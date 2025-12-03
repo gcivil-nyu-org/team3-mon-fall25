@@ -1,11 +1,12 @@
 from urllib.parse import parse_qs
+
 from channels.db import database_sync_to_async
 from django.db import close_old_connections
 
 
 @database_sync_to_async
 def get_user(token_key):
-    # LAZY IMPORTS (Crucial for Daphne/ASGI)
+    # Lazily import all Django/DRF JWT bits so this module can be imported
     from django.contrib.auth import get_user_model
     from django.contrib.auth.models import AnonymousUser
     from rest_framework_simplejwt.tokens import UntypedToken
@@ -14,6 +15,7 @@ def get_user(token_key):
     from rest_framework_simplejwt.settings import api_settings
 
     try:
+        # This will raise if token is malformed / invalid
         UntypedToken(token_key)
 
         tb = TokenBackend(
@@ -34,19 +36,27 @@ def get_user(token_key):
         return User.objects.get(pk=user_id)
 
     except (InvalidToken, TokenError, Exception):
+        # On any failure, return anonymous user instead of blowing up
+        from django.contrib.auth.models import AnonymousUser
+
         return AnonymousUser()
 
 
 class JWTAuthMiddleware:
+    """
+    Custom JWT auth middleware for Django Channels.
+
+    Expects the JWT in the websocket query string as ?token=<JWT>.
+    Sets scope["user"] to the authenticated user or AnonymousUser.
+    """
+
     def __init__(self, app):
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        # --- LAZY IMPORT ---
         from django.contrib.auth.models import AnonymousUser
 
-        # -------------------
-
+        # Make sure we don't reuse DB connections across events
         await database_sync_to_async(close_old_connections)()
 
         try:
@@ -58,7 +68,6 @@ class JWTAuthMiddleware:
                 scope["user"] = await get_user(token)
             else:
                 scope["user"] = AnonymousUser()
-
         except Exception:
             scope["user"] = AnonymousUser()
 
@@ -66,4 +75,7 @@ class JWTAuthMiddleware:
 
 
 def JWTAuthMiddlewareStack(inner):
+    """
+    Convenience wrapper so we can plug this in like AuthMiddlewareStack.
+    """
     return JWTAuthMiddleware(inner)
