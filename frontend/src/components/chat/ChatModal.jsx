@@ -13,6 +13,7 @@ export default function ChatModal({
   onSendMessage,
   onListingClick,
   onConversationSelect: externalOnConversationSelect,
+  onConversationDeselect,
   initialConversationId,
   selectedConversationId,
   currentUserId,
@@ -111,6 +112,10 @@ export default function ChatModal({
   const handleBack = () => {
     if (isMobile) setShowConversationList(true);
     else if (!isFullPage) setIsExpanded(false);
+
+    // Notify parent that user is no longer viewing a specific conversation
+    // This prevents auto-marking messages as read when viewing the list
+    if (onConversationDeselect) onConversationDeselect();
   };
 
   const handleSend = (content) => {
