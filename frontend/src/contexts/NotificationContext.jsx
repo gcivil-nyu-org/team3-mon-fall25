@@ -119,7 +119,10 @@ export const NotificationProvider = ({ children }) => {
       setIsLoading(true);
       const response = await notificationAPI.getNotifications();
       // Handle paginated response - adjust based on actual API structure
-      const notificationList = response.results || response.data || response || [];
+      // Use Array.isArray check to properly handle both paginated and non-paginated responses
+      const notificationList = Array.isArray(response)
+        ? response
+        : (response?.results ?? response?.data ?? []);
       setNotifications(notificationList);
 
       // Update unread count from the list
@@ -152,7 +155,10 @@ export const NotificationProvider = ({ children }) => {
     try {
       const response = await notificationAPI.getUnreadCount();
       // Adjust based on actual API response structure
-      const count = response.count || response.unread_count || response || 0;
+      // Use nullish coalescing (??) instead of || to handle count=0 correctly
+      const count = typeof response === 'number'
+        ? response
+        : (response?.count ?? response?.unread_count ?? 0);
       setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
