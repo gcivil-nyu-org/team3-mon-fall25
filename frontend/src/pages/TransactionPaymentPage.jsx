@@ -4,6 +4,7 @@ import "./TransactionPaymentPage.css";
 
 import client from "../api/client";
 import { getListing } from "../api/listings";
+import { getTransaction } from "../api/transactions";
 
 import {
   Clock,
@@ -41,7 +42,7 @@ const Header = ({ status = "PENDING" }) => (
     <div className="header-status-row">
       <div className="header-status-spacer" />
       <div className={`status-badge status-${status.toLowerCase()}`}>
-        STATUS: {status}
+        STATUS: {status.toUpperCase()}
       </div>
     </div>
   </div>
@@ -56,10 +57,23 @@ const TransactionDetailsCard = ({ listing, status }) => {
     listing?.images?.[0] ||
     listing?.thumbnail_url;
 
+  const sellerLabel =
+    listing?.user_netid ||
+    listing?.user_email?.split("@")[0] ||
+    "Seller";
+
+  const formattedPrice =
+    listing?.price != null
+      ? `$${Number(listing.price).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : "--";
+
   return (
     <div className="card card-padding details-card-inner">
       <div className="pending-badge">
-        {status === "PENDING" ? "Pending" : status?.toUpperCase() || "Pending"}
+        {status ? status.toUpperCase() : "PENDING"}
       </div>
 
       <div className="item-image-container">
@@ -79,13 +93,10 @@ const TransactionDetailsCard = ({ listing, status }) => {
         )}
 
         <div className="item-price-row">
-          <span className="price-tag">
-            {listing?.price != null ? `$${listing.price}` : "--"}
-          </span>
+          <span className="price-tag">{formattedPrice}</span>
           <div className="participants-info">
             <p>
-              <span>Seller:</span>{" "}
-              {listing?.seller_username || "Seller"}
+              <span>Seller:</span> {sellerLabel}
             </p>
             <p>
               <span>Buyer:</span> You
@@ -156,62 +167,98 @@ export default function TransactionPaymentPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  const isMeetingTimeTooSoon = () => {
+    if (!meetingTime) return true;
+
+    const selected = new Date(meetingTime);
+    if (isNaN(selected.getTime())) return true;
+
+    const min = new Date();
+    min.setHours(min.getHours() + 1);
+
+    return selected < min;
+  };
+
+  const [minMeetingTime] = useState(() => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
 
   // ---- Load transaction + listing ----
   useEffect(() => {
-    let cancelled = false;
+  let cancelled = false;
 
-    async function fetchData() {
-      try {
-        setLoading(true);
-        setError("");
+  async function fetchData() {
+    try {
+      setLoading(true);
+      setError("");
 
-        // 1) Transaction details
-        const txRes = await client.get(`/transactions/${transactionId}/`);
-        if (cancelled) return;
-        const tx = txRes.data;
-        setTransaction(tx);
+      // 1) Transaction details (use shared API helper)
+      const tx = await getTransaction(transactionId);
+      if (cancelled) return;
 
-        setPaymentMethod(tx.payment_method || "venmo");
-        setDeliveryType(tx.delivery_method || "meetup");
-        setLocation(tx.meet_location || "");
+      setTransaction(tx);
 
-        if (tx.meet_time) {
-          setMeetingTime(tx.meet_time.slice(0, 16));
-        } else {
-          setMeetingTime("");
-        }
+      const normalizedStatus = (tx.status || "").toUpperCase();
+      if (normalizedStatus !== "PENDING") {
+        setIsConfirmed(true);
+      }
 
-        if (tx.listing) {
-          try {
-            const listingData = await getListing(tx.listing);
-            if (!cancelled) setListing(listingData);
-          } catch (err) {
-            if (!cancelled) {
-              console.error("Failed to load listing", err);
-            }
+      setPaymentMethod(tx.payment_method || "venmo");
+      setDeliveryType(tx.delivery_method || "meetup");
+      setLocation(tx.meet_location || "");
+
+      if (tx.meet_time) {
+        setMeetingTime(tx.meet_time.slice(0, 16));
+      } else {
+        setMeetingTime("");
+      }
+
+      // 2) Listing details
+      const listingId = tx.listing;
+      if (listingId) {
+        try {
+          const listingData = await getListing(listingId);
+          if (!cancelled) setListing(listingData);
+        } catch (err) {
+          if (!cancelled) {
+            console.error("Failed to load listing", err);
           }
         }
-      } catch (e) {
-        if (!cancelled) {
-          console.error(e);
-          setError("Failed to load transaction.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      }
+    } catch (e) {
+      if (!cancelled) {
+        console.error(e);
+        setError("Failed to load transaction.");
+      }
+    } finally {
+      if (!cancelled) {
+        setLoading(false);
       }
     }
+  }
 
-    if (transactionId) {
-      fetchData();
-    }
+  if (transactionId) {
+    fetchData();
+  } else {
+    setLoading(false);
+    setError("Missing transaction id.");
+  }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [transactionId]);
+  return () => {
+    cancelled = true;
+  };
+}, [transactionId]);
 
   const mapStatusToStep = (status) => {
     switch (status?.toUpperCase()) {
@@ -243,20 +290,31 @@ export default function TransactionPaymentPage() {
   const handleSave = async () => {
     if (!transaction) return;
 
-    if (deliveryType === "meetup" && (!location || !meetingTime)) {
+    if (isConfirmed) return;
+
+    if (!location || !meetingTime) {
       setError("Please choose a location and meeting time for a meetup.");
       return;
     }
 
+    // Only allowed to pick the time after "now + 1hr"
+    if (isMeetingTimeTooSoon()) {
+      setError("Meeting time must be at least 1 hour from now.");
+      return;
+    }
+    
     setIsSaving(true);
     setError("");
 
+    // 從 transaction 物件安全取得 id
+    const txId =
+      transaction.transaction_id || transaction.id || transactionId;
+
     try {
       // Update payment method
-      await client.patch(
-        `/transactions/${transaction.transaction_id}/payment-method/`,
-        { payment_method: paymentMethod }
-      );
+      await client.patch(`/transactions/${txId}/payment-method/`, {
+        payment_method: paymentMethod,
+      });
 
       // Update delivery details
       const payload = {
@@ -274,10 +332,11 @@ export default function TransactionPaymentPage() {
       }
 
       const res = await client.patch(
-        `/transactions/${transaction.transaction_id}/delivery-details/`,
+        `/transactions/${txId}/delivery-details/`,
         payload
       );
       setTransaction(res.data);
+      setIsConfirmed(true);
     } catch (e) {
       console.error(e);
       const apiError =
@@ -292,13 +351,17 @@ export default function TransactionPaymentPage() {
 
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
+    // TODO: Connect chat APIs
     setChatInput("");
   };
 
   const isSaveDisabled =
     isSaving ||
     !transaction ||
-    (deliveryType === "meetup" && (!location || !meetingTime));
+    isConfirmed ||
+    !location ||
+    !meetingTime ||
+    isMeetingTimeTooSoon();
 
   const status = transaction?.status || "PENDING";
 
@@ -471,8 +534,17 @@ export default function TransactionPaymentPage() {
                     type="datetime-local"
                     className="input-field"
                     value={meetingTime}
-                    onChange={(e) => setMeetingTime(e.target.value)}
+                    onChange={(e) => {
+                      setMeetingTime(e.target.value);
+                      setError("");
+                    }}
+                    min={minMeetingTime}
                   />
+
+                  <div className="helper-text">
+                    <Info size={12} />
+                    <span>Meeting time must be at least 1 hour from now.</span>
+                  </div>
                 </div>
 
                 {/* Save Button */}
@@ -481,13 +553,15 @@ export default function TransactionPaymentPage() {
                   disabled={isSaveDisabled}
                   className="save-btn"
                 >
-                  {isSaving ? (
+                  {isConfirmed ? (
+                    "Details confirmed"
+                  ) : isSaving ? (
                     <>
                       <div className="spinner" />
                       Saving...
                     </>
                   ) : (
-                    "Save Changes"
+                    "Confirm Details"
                   )}
                 </button>
               </div>
