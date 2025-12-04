@@ -5,89 +5,30 @@ import * as notificationAPI from '../api/notifications';
 
 const NotificationContext = createContext();
 
-// Mock data for testing when backend is not available
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    title: 'New message from Sarah Chen',
-    body: 'Is the MacBook still available? I\'m interested in purchasing it.',
-    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
-    is_read: false,
-    notification_type: 'message',
-    icon_type: 'avatar',
-    redirect_url: '/chat/1',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-  },
-  {
-    id: '2',
-    title: 'New offer received',
-    body: 'Alex Rodriguez offered $100 for your Desk Lamp',
-    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 minutes ago
-    is_read: false,
-    notification_type: 'offer',
-    icon_type: 'dollar',
-    redirect_url: '/listing/5',
-  },
-  {
-    id: '3',
-    title: 'Item sold!',
-    body: 'Your iPhone 13 has been marked as sold',
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-    is_read: false,
-    notification_type: 'sale',
-    icon_type: 'shopping-bag',
-    redirect_url: '/my-listings',
-  },
-  {
-    id: '4',
-    title: 'New message from Mike Johnson',
-    body: 'Can we meet tomorrow at 3 PM?',
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-    is_read: true,
-    notification_type: 'message',
-    icon_type: 'avatar',
-    redirect_url: '/chat/2',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
-  },
-  {
-    id: '5',
-    title: 'Someone viewed your listing',
-    body: 'Your Wireless Mouse listing has 15 new views',
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    is_read: true,
-    notification_type: 'listing',
-    icon_type: 'info',
-    redirect_url: '/listing/7',
-  },
-  {
-    id: '6',
-    title: 'Welcome to NYU Marketplace!',
-    body: 'Your profile has been successfully created. Start browsing listings now!',
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-    is_read: true,
-    notification_type: 'system',
-    icon_type: 'info',
-    redirect_url: '/browse',
-  },
-  {
-    id: '7',
-    title: 'New message from Emma Davis',
-    body: 'Thanks for the quick response!',
-    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-    is_read: true,
-    notification_type: 'message',
-    icon_type: 'avatar',
-    redirect_url: '/chat/3',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
-  },
-];
+/**
+ * Normalizes a notification from the backend API to match frontend component expectations.
+ * Maps backend field names to frontend field names:
+ * - notification_id → id
+ * - actor_avatar → avatar
+ * - redirect_url is already correct
+ */
+const normalizeNotification = (apiNotification) => {
+  return {
+    ...apiNotification,
+    id: apiNotification.notification_id, // Map backend's notification_id to frontend's id
+    avatar: apiNotification.actor_avatar || null, // Map actor_avatar to avatar
+    // Keep redirect_url as-is (backend already returns it)
+  };
+};
 
-// Flag to enable/disable mock data (set to true for testing)
-// Can be overridden in tests via window.__USE_MOCK_DATA__
-const getUseMockData = () => {
-  return typeof window !== 'undefined' && window.__USE_MOCK_DATA__ !== undefined
-    ? window.__USE_MOCK_DATA__
-    : true;
+/**
+ * Normalizes an array of notifications from the API
+ */
+const normalizeNotifications = (apiNotifications) => {
+  if (!Array.isArray(apiNotifications)) {
+    return [];
+  }
+  return apiNotifications.map(normalizeNotification);
 };
 
 export const NotificationProvider = ({ children }) => {
@@ -97,42 +38,42 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const pollingIntervalRef = useRef(null);
 
   // Fetch notifications list
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
 
-    // Use mock data if enabled
-    if (getUseMockData()) {
-      setIsLoading(true);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setNotifications([...MOCK_NOTIFICATIONS]);
-      const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
-      setUnreadCount(unread);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
+      setError(null);
       const response = await notificationAPI.getNotifications();
-      // Handle paginated response - adjust based on actual API structure
-      const notificationList = response.results || response.data || response || [];
-      setNotifications(notificationList);
+      
+      // Handle paginated response (DRF pagination returns { results: [], count: N, ... })
+      // or direct array response
+      let notificationList = [];
+      if (Array.isArray(response)) {
+        notificationList = response;
+      } else if (response && typeof response === 'object' && 'results' in response) {
+        notificationList = response.results || [];
+      } else if (response && typeof response === 'object' && 'data' in response) {
+        notificationList = response.data || [];
+      }
+
+      // Normalize notifications (map notification_id → id, actor_avatar → avatar)
+      const normalized = normalizeNotifications(notificationList);
+      setNotifications(normalized);
 
       // Update unread count from the list
-      const unread = notificationList.filter(n => !n.is_read).length;
+      const unread = normalized.filter(n => !n.is_read).length;
       setUnreadCount(unread);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      // Fallback to mock data on error if enabled
-      if (getUseMockData()) {
-        setNotifications([...MOCK_NOTIFICATIONS]);
-        const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
-        setUnreadCount(unread);
-      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to load notifications');
+      // Set empty list on error (no fallback to mock data)
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -142,81 +83,60 @@ export const NotificationProvider = ({ children }) => {
   const fetchUnreadCount = useCallback(async () => {
     if (!isAuthenticated) return;
 
-    // Use mock data if enabled
-    if (getUseMockData()) {
-      const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
-      setUnreadCount(unread);
-      return;
-    }
-
     try {
       const response = await notificationAPI.getUnreadCount();
-      // Adjust based on actual API response structure
-      const count = response.count || response.unread_count || response || 0;
+      // API returns { count: <number> }
+      const count = response?.count ?? 0;
       setUnreadCount(count);
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
-      // Fallback to mock data on error if enabled
-      if (getUseMockData()) {
-        const unread = MOCK_NOTIFICATIONS.filter(n => !n.is_read).length;
-        setUnreadCount(unread);
-      }
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
+      // On error, don't update count (keep current value)
+      // Don't fallback to mock data
     }
   }, [isAuthenticated]);
 
   // Mark single notification as read
   const markAsRead = useCallback(async (id) => {
-    // Update local state immediately for better UX
+    // Update local state immediately for better UX (optimistic update)
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, is_read: true } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
 
-    // Use mock data if enabled
-    if (getUseMockData()) {
-      // Update mock data for consistency
-      const notification = MOCK_NOTIFICATIONS.find(n => n.id === id);
-      if (notification) {
-        notification.is_read = true;
-      }
-      return;
-    }
-
     try {
+      // Use the id (which is actually notification_id from backend)
       await notificationAPI.markNotificationAsRead(id);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      // Revert on error (optional - you might want to keep optimistic update)
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+      // Revert optimistic update on error
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, is_read: false } : n)
+      );
+      setUnreadCount(prev => prev + 1);
     }
   }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
-    // Update local state immediately for better UX
+    // Update local state immediately for better UX (optimistic update)
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    const previousUnreadCount = unreadCount;
     setUnreadCount(0);
-
-    // Use mock data if enabled
-    if (getUseMockData()) {
-      // Update mock data for consistency
-      MOCK_NOTIFICATIONS.forEach(n => {
-        n.is_read = true;
-      });
-      return;
-    }
 
     try {
       await notificationAPI.markAllNotificationsAsRead();
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      // Revert on error (optional - you might want to keep optimistic update)
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+      // Revert optimistic update on error
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: false })));
+      setUnreadCount(previousUnreadCount);
     }
-  }, []);
+  }, [unreadCount]);
 
   // Handle notification click - navigate to redirect_url and mark as read
   const handleNotificationClick = useCallback((notification) => {
     if (!notification.is_read) {
-      markAsRead(notification.id);
+      markAsRead(notification.id); // Uses normalized 'id' field
     }
 
     // Navigate to redirect_url if available
@@ -262,6 +182,7 @@ export const NotificationProvider = ({ children }) => {
       // Clear notifications if not authenticated
       setNotifications([]);
       setUnreadCount(0);
+      setError(null);
       return;
     }
 
@@ -290,6 +211,7 @@ export const NotificationProvider = ({ children }) => {
     unreadCount,
     isDropdownOpen,
     isLoading,
+    error,
     openDropdown,
     closeDropdown,
     toggleDropdown,
@@ -315,4 +237,3 @@ export const useNotifications = () => {
   }
   return context;
 };
-
