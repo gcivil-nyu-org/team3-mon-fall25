@@ -35,6 +35,18 @@ describe('CreateListing', () => {
         vi.clearAllMocks();
         listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
         fileUtils.validateImageFiles.mockReturnValue({ valid: true, error: null });
+        fileUtils.validateListingTitle.mockImplementation((title) => {
+            if (!title || !title.trim()) {
+                return { valid: false, error: "Title is required" };
+            }
+            if (!/[a-zA-Z0-9]/.test(title)) {
+                return {
+                    valid: false,
+                    error: "Listing title must contain at least one letter or number. Only special characters are not allowed.",
+                };
+            }
+            return { valid: true, error: null };
+        });
         fileUtils.formatFileSize.mockImplementation((bytes) => {
             if (bytes < 1024) return `${bytes} Bytes`;
             if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;

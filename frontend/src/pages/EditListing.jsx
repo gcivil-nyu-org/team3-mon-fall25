@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getListing, updateListing } from "../api/listings";
-import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
+import { formatFileSize, validateImageFiles, validateListingTitle } from "../utils/fileUtils";
 import { CATEGORIES, LOCATIONS } from "../constants/filterOptions";
 import ListingDetailContent from "../components/ListingDetailContent";
 
@@ -162,8 +162,9 @@ const EditListing = () => {
     setSaving(true);
 
     // Validation
-    if (!title.trim()) {
-      setError("Title is required");
+    const titleValidation = validateListingTitle(title);
+    if (!titleValidation.valid) {
+      setError(titleValidation.error);
       setSaving(false);
       return;
     }
