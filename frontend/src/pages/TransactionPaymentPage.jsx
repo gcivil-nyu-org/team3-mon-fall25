@@ -306,7 +306,7 @@ export default function TransactionPaymentPage() {
     setIsSaving(true);
     setError("");
 
-    // 從 transaction 物件安全取得 id
+    // Safely extract id from the transaction object
     const txId =
       transaction.transaction_id || transaction.id || transactionId;
 
