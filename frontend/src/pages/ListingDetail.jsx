@@ -17,6 +17,7 @@ export default function ListingDetail() {
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [creatingTx, setCreatingTx] = useState(false);
 
     useEffect(() => {
         // Don't try to load if there's no ID (e.g., when rendered in background on chat page)
@@ -119,6 +120,8 @@ export default function ListingDetail() {
     const handleBuyNow = async () => {
         if (!listing) return;
 
+        if (creatingTx) return;
+
         // Check if user is authenticated
         if (!isAuthenticated) {
             navigate("/login", {
@@ -128,14 +131,23 @@ export default function ListingDetail() {
         }
 
         try {
+            setCreatingTx(true);
+
             // Create a transaction for this listing
             const transaction = await createTransaction(id);
+
+            const txId = transaction.transaction_id || transaction.id;
+            if (!txId) {
+                throw new Error("Missing transaction id from response");
+            }
 
             // Redirect to transaction payment page
             navigate(`/transaction/${transaction.transaction_id}`);
         } catch (err) {
             console.error("Failed to create transaction:", err);
             alert("Failed to initiate purchase. Please try again.");
+        } finally {
+            setCreatingTx(false);
         }
     };
 
@@ -185,6 +197,7 @@ export default function ListingDetail() {
                 onMarkAsSold={handleMarkAsSold}
                 onDeleteListing={handleDeleteListing}
                 onBuyNow={handleBuyNow}
+                isBuying={creatingTx}
             />
 
             {/* Mobile Sticky Footer */}
@@ -263,7 +276,7 @@ export default function ListingDetail() {
                                 <button
                                     className="listing-detail-mobile-contact-button"
                                     onClick={handleBuyNow}
-                                    disabled={listing.status === "sold"}
+                                    disabled={listing.status === "sold" || creatingTx}
                                     style={{
                                         flex: 1,
                                         fontSize: "14px",
@@ -271,7 +284,7 @@ export default function ListingDetail() {
                                         background: "#059669"
                                     }}
                                 >
-                                    Buy
+                                    {creatingTx ? "Processing..." : "Buy"}
                                 </button>
                             </div>
                         </>
