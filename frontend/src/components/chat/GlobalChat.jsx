@@ -6,6 +6,7 @@ import { getSelfIdFromJWT, fetchMeId } from "../../api/auth";
 import { getListing, getListings } from "../../api/listings";
 import { useAuth } from "../../contexts/AuthContext";
 import { useChat } from "../../contexts/ChatContext";
+import { useNotifications } from "../../contexts/NotificationContext";
 import useChatSocket from "../../hooks/useChatSocket";
 
 import ChatModal from "./ChatModal";
@@ -16,6 +17,7 @@ export default function GlobalChat() {
   const location = useLocation();
   const { user: currentUser } = useAuth();
   const { isChatOpen, openChat, closeChat } = useChat();
+  const { fetchUnreadCount } = useNotifications();
 
   const isUrlMode = location.pathname.startsWith("/chat");
   const [internalSelectedId, setInternalSelectedId] = useState(null);
@@ -197,7 +199,13 @@ export default function GlobalChat() {
 
         const unread = transformed.find(m => String(m.senderId) !== String(selfId) && !m.read);
         if (unread) {
-           markRead(activeConversationId, unread.id).catch(() => {});
+           markRead(activeConversationId, unread.id)
+             .then(() => {
+               // Backend now also marks MESSAGE notifications as read
+               // Refresh notification count to sync the badge
+               fetchUnreadCount();
+             })
+             .catch(() => {});
            setConvs(prev => prev.map(c => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c));
         }
       } catch (e) {
@@ -209,7 +217,7 @@ export default function GlobalChat() {
         loadedConversationsRef.current.add(activeConversationId);
         fetchMsgs();
     }
-  }, [activeConversationId, selfId]);
+  }, [activeConversationId, selfId, fetchUnreadCount]);
 
   // Socket
   const { sendText, sendRead } = useChatSocket({
@@ -253,6 +261,9 @@ export default function GlobalChat() {
       // Send Read Receipt ONLY if I am actively looking at THIS conversation
       if (activeConversationId && activeConversationId === convId && String(newMsg.senderId) !== String(selfId)) {
           sendRead(newMsg.id);
+          // Backend marks MESSAGE notifications as read when chat is marked read
+          // Refresh notification count to sync the badge
+          fetchUnreadCount();
       }
     },
     onRead: (evt) => {

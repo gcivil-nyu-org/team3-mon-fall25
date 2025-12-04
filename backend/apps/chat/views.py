@@ -9,6 +9,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .models import Conversation, ConversationParticipant, Message
 from .permissions import IsConversationMember
+from apps.notifications.models import Notification
 from .serializers import (
     ConversationDetailSerializer,
     ConversationListSerializer,
@@ -197,6 +198,17 @@ class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
             part.last_read_at = timezone.now()
             part.save(update_fields=["last_read_message", "last_read_at"])
             updated = True
+
+        # Mark MESSAGE notifications as read for messages up to this point
+        # This syncs the notification badge with the chat read state
+        Notification.objects.filter(
+            notification_type="MESSAGE",
+            recipient=request.user,
+            message__conversation=conv,
+            message__created_at__lte=msg.created_at,
+            is_read=False,
+        ).update(is_read=True)
+
         if updated:
             group_name = f"chat.{conv.pk}"
             channel_layer = get_channel_layer()
