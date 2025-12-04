@@ -124,8 +124,15 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         transaction_obj.delivery_method = delivery_method
         transaction_obj.meet_location = meet_location
         transaction_obj.meet_time = meet_time
+
+        update_fields = ["delivery_method", "meet_location", "meet_time"]
+       
+       # When first time clicking "Confirm details" button: PENDING -> NEGOTIATING 
+        if transaction_obj.status == "PENDING":
+            transaction_obj.status = "NEGOTIATING"
+            update_fields.append("status")
         transaction_obj.save(
-            update_fields=["delivery_method", "meet_location", "meet_time"]
+            update_fields=update_fields
         )
 
         # Create system message
