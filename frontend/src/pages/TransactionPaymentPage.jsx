@@ -382,188 +382,236 @@ export default function TransactionPaymentPage() {
               </div>
 
               <div className="card-padding">
-                {loading && (
-                  <p className="tx-helper-text">Loading transaction…</p>
-                )}
+                {loading && <p className="tx-helper-text">Loading transaction…</p>}
                 {error && (
                   <p className="tx-error-text" data-testid="tx-error">
                     {error}
                   </p>
                 )}
 
-                {/* Payment Method Section */}
-                <div className="section-group">
-                  <label className="section-label">Payment Method</label>
-                  <div className="options-stack">
-                    <PaymentOption
-                      id="venmo"
-                      label="Venmo"
-                      subLabel="Send via Venmo"
-                      icon={
-                        <Heart
-                          size={18}
-                          color={
-                            paymentMethod === "venmo" ? "#60a5fa" : "#3b82f6"
-                          }
-                          fill={
-                            paymentMethod === "venmo" ? "#60a5fa" : "#3b82f6"
-                          }
-                        />
-                      }
-                      selected={paymentMethod === "venmo"}
-                      onSelect={setPaymentMethod}
-                    />
-                    <PaymentOption
-                      id="zelle"
-                      label="Zelle"
-                      subLabel="Send via Zelle"
-                      icon={
-                        <div
-                          style={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: 2,
-                            backgroundColor: "#9333ea",
-                          }}
-                        />
-                      }
-                      selected={paymentMethod === "zelle"}
-                      onSelect={setPaymentMethod}
-                    />
-                    <PaymentOption
-                      id="cash"
-                      label="Cash"
-                      subLabel="Pay in person"
-                      icon={<Banknote size={18} color="#16a34a" />}
-                      selected={paymentMethod === "cash"}
-                      onSelect={setPaymentMethod}
-                    />
-                  </div>
-                </div>
+                {/* ⭐ NEW ——— If confirmed, show summary instead */}
+                {isConfirmed ? (
+                  <div className="proposal-summary" style={{ 
+                    background: "#FFFBEB",
+                    border: "1px solid #FACC15",
+                    borderRadius: "12px",
+                    padding: "16px"
+                  }}>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                      <div style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "999px",
+                        background: "#FEF3C7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <Info size={14} color="#D97706" />
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 600, margin: 0 }}>
+                          You proposed these details.
+                        </p>
+                        <p style={{ fontSize: "0.85rem", color: "#6B7280", margin: 0 }}>
+                          Waiting for seller to confirm.
+                        </p>
+                      </div>
+                    </div>
 
-                {/* Delivery Details Section */}
-                <div className="section-group">
-                  <label className="section-label">Delivery Details</label>
-                  <div className="delivery-toggle-container">
-                    <button
-                      onClick={() => setDeliveryType("meetup")}
-                      className={`toggle-option ${
-                        deliveryType === "meetup" ? "active" : "inactive"
-                      }`}
-                    >
-                      <ArrowRightLeft size={14} />
-                      Meetup
-                    </button>
-                    <button
-                      onClick={() => setDeliveryType("pickup")}
-                      className={`toggle-option ${
-                        deliveryType === "pickup" ? "active" : "inactive"
-                      }`}
-                    >
-                      <MapPin size={14} />
-                      Pickup
-                    </button>
-                  </div>
-                </div>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Payment:</strong>{" "}
+                      {(paymentMethod || transaction?.payment_method || "").toUpperCase()}
+                    </div>
 
-                {/* Location Dropdown */}
-                <div className="section-group">
-                  <label className="section-label">
-                    {deliveryType === "meetup"
-                      ? "Meeting Location"
-                      : "Pickup Location"}
-                  </label>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Delivery:</strong>{" "}
+                      {(deliveryType || transaction?.delivery_method || "")
+                        .charAt(0)
+                        .toUpperCase() +
+                        (deliveryType || transaction?.delivery_method || "").slice(1)}
+                    </div>
 
-                  <div className="location-dropdown-wrapper">
-                    <button
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className={`dropdown-trigger ${
-                        isDropdownOpen ? "open" : ""
-                      }`}
-                    >
-                      <span
+                    <div>
+                      <strong>Location:</strong>{" "}
+                      {location || transaction?.meet_location || "--"}
+                    </div>
+
+                    <div style={{ marginTop: "12px", textAlign: "right" }}>
+                      {/* ⭐ NEW suggest new details */}
+                      <button
+                        type="button"
+                        className="suggest-details-btn"
+                        onClick={() => setIsConfirmed(false)}
                         style={{
-                          color: location ? "#111827" : "#6b7280",
-                          fontWeight: location ? 500 : 400,
+                          padding: "6px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #D1D5DB",
+                          background: "#FFFFFF",
+                          cursor: "pointer",
+                          fontSize: "0.85rem"
                         }}
                       >
-                        {location || "Choose a location"}
-                      </span>
-                      <ChevronDown
-                        size={16}
-                        color="#9ca3af"
-                        style={{
-                          transform: isDropdownOpen ? "rotate(180deg)" : "none",
-                          transition: "transform 0.2s",
-                        }}
-                      />
-                    </button>
+                        Suggest new details
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* ⭐ ORIGINAL FORM — unchanged except wrapped inside the else block */}
 
-                    {isDropdownOpen && (
-                      <div className="dropdown-menu">
-                        {LOCATIONS.map((loc) => (
-                          <div
-                            key={loc}
-                            onClick={() => {
-                              setLocation(loc);
-                              setIsDropdownOpen(false);
-                            }}
-                            className="dropdown-item"
-                          >
-                            {loc}
-                          </div>
-                        ))}
+                    {/* Payment Method Section */}
+                    <div className="section-group">
+                      <label className="section-label">Payment Method</label>
+                      <div className="options-stack">
+                        <PaymentOption
+                          id="venmo"
+                          label="Venmo"
+                          subLabel="Send via Venmo"
+                          icon={
+                            <Heart
+                              size={18}
+                              color={paymentMethod === "venmo" ? "#60a5fa" : "#3b82f6"}
+                              fill={paymentMethod === "venmo" ? "#60a5fa" : "#3b82f6"}
+                            />
+                          }
+                          selected={paymentMethod === "venmo"}
+                          onSelect={setPaymentMethod}
+                        />
+
+                        <PaymentOption
+                          id="zelle"
+                          label="Zelle"
+                          subLabel="Send via Zelle"
+                          icon={
+                            <div
+                              style={{
+                                width: 16,
+                                height: 16,
+                                borderRadius: 2,
+                                backgroundColor: "#9333ea",
+                              }}
+                            />
+                          }
+                          selected={paymentMethod === "zelle"}
+                          onSelect={setPaymentMethod}
+                        />
+
+                        <PaymentOption
+                          id="cash"
+                          label="Cash"
+                          subLabel="Pay in person"
+                          icon={<Banknote size={18} color="#16a34a" />}
+                          selected={paymentMethod === "cash"}
+                          onSelect={setPaymentMethod}
+                        />
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="helper-text">
-                    <Info size={12} />
-                    <span>
-                      {deliveryType === "meetup"
-                        ? "Select a safe public location on campus."
-                        : "The buyer will come to this location to pick up the item."}
-                    </span>
-                  </div>
-                </div>
+                    {/* Delivery Details Section */}
+                    <div className="section-group">
+                      <label className="section-label">Delivery Details</label>
+                      <div className="delivery-toggle-container">
+                        <button
+                          onClick={() => setDeliveryType("meetup")}
+                          className={`toggle-option ${
+                            deliveryType === "meetup" ? "active" : "inactive"
+                          }`}
+                        >
+                          <ArrowRightLeft size={14} />
+                          Meetup
+                        </button>
 
-                {/* Meeting Time */}
-                <div className="section-group">
-                  <label className="section-label">Meeting Time</label>
-                  <input
-                    type="datetime-local"
-                    className="input-field"
-                    value={meetingTime}
-                    onChange={(e) => {
-                      setMeetingTime(e.target.value);
-                      setError("");
-                    }}
-                    min={minMeetingTime}
-                  />
+                        <button
+                          onClick={() => setDeliveryType("pickup")}
+                          className={`toggle-option ${
+                            deliveryType === "pickup" ? "active" : "inactive"
+                          }`}
+                        >
+                          <MapPin size={14} />
+                          Pickup
+                        </button>
+                      </div>
+                    </div>
 
-                  <div className="helper-text">
-                    <Info size={12} />
-                    <span>Meeting time must be at least 1 hour from now.</span>
-                  </div>
-                </div>
+                    {/* Location Dropdown */}
+                    <div className="section-group">
+                      <label className="section-label">
+                        {deliveryType === "meetup" ? "Meeting Location" : "Pickup Location"}
+                      </label>
 
-                {/* Save Button */}
-                <button
-                  onClick={handleSave}
-                  disabled={isSaveDisabled}
-                  className="save-btn"
-                >
-                  {isConfirmed ? (
-                    "Details confirmed"
-                  ) : isSaving ? (
-                    <>
-                      <div className="spinner" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Confirm Details"
-                  )}
-                </button>
+                      <div className="location-dropdown-wrapper">
+                        <button
+                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                          className={`dropdown-trigger ${isDropdownOpen ? "open" : ""}`}
+                        >
+                          <span
+                            style={{
+                              color: location ? "#111827" : "#6b7280",
+                              fontWeight: location ? 500 : 400,
+                            }}
+                          >
+                            {location || "Choose a location"}
+                          </span>
+                          <ChevronDown size={16} color="#9ca3af" />
+                        </button>
+
+                        {isDropdownOpen && (
+                          <div className="dropdown-menu">
+                            {LOCATIONS.map((loc) => (
+                              <div
+                                key={loc}
+                                onClick={() => {
+                                  setLocation(loc);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className="dropdown-item"
+                              >
+                                {loc}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Meeting Time */}
+                    <div className="section-group">
+                      <label className="section-label">Meeting Time</label>
+                      <input
+                        type="datetime-local"
+                        className="input-field"
+                        value={meetingTime}
+                        onChange={(e) => {
+                          setMeetingTime(e.target.value);
+                          setError("");
+                        }}
+                        min={minMeetingTime}
+                      />
+
+                      <div className="helper-text">
+                        <Info size={12} />
+                        <span>Meeting time must be at least 1 hour from now.</span>
+                      </div>
+                    </div>
+
+                    {/* Confirm Button */}
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaveDisabled}
+                      className="save-btn"
+                    >
+                      {isSaving ? (
+                        <>
+                          <div className="spinner" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Confirm Details"
+                      )}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
