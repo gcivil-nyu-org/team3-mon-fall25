@@ -3,30 +3,26 @@ from .models import Notification
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    # These fields don't exist in the DB, we calculate them on the fly
+    # Map notification_id to id for REST API convention
+    id = serializers.IntegerField(source="notification_id", read_only=True)
+
+    # Computed fields
     title = serializers.SerializerMethodField()
     body = serializers.SerializerMethodField()
     redirect_url = serializers.SerializerMethodField()
     icon_type = serializers.SerializerMethodField()
-    actor_avatar = serializers.SerializerMethodField()
-
-    # Alias fields for frontend compatibility
-    id = serializers.IntegerField(source="notification_id", read_only=True)
     avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
-        # standard fields + our custom computed fields
         fields = [
-            "id",  # Alias for notification_id (for frontend compatibility)
-            "notification_id",  # Original primary_key (kept for backward compat)
+            "id",
             "notification_type",
             "title",
             "body",
             "redirect_url",
             "icon_type",
-            "actor_avatar",
-            "avatar",  # Alias for actor_avatar (for frontend compatibility)
+            "avatar",
             "is_read",
             "created_at",
         ]
@@ -84,7 +80,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             return "sold"  # Usually a Shopping bag
         return "default"
 
-    def get_actor_avatar(self, obj):
+    def get_avatar(self, obj):
         """Safely attempt to get the profile picture URL"""
         try:
             # This assumes your User model has a related 'profile' or similar
@@ -94,7 +90,3 @@ class NotificationSerializer(serializers.ModelSerializer):
         except Exception:
             pass
         return None
-
-    def get_avatar(self, obj):
-        """Alias for get_actor_avatar (frontend compatibility)"""
-        return self.get_actor_avatar(obj)

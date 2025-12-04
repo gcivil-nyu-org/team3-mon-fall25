@@ -331,7 +331,7 @@ class NotificationAPITests(APITestCase):
         self.assertEqual(len(results), 3)
 
         # All returned notifications should belong to Alice
-        notification_ids = [n["notification_id"] for n in results]
+        notification_ids = [n["id"] for n in results]
         self.assertIn(self.notification1.notification_id, notification_ids)
         self.assertIn(self.notification2.notification_id, notification_ids)
         self.assertIn(self.notification3.notification_id, notification_ids)
@@ -350,9 +350,7 @@ class NotificationAPITests(APITestCase):
         results = self._get_results(response.data)
         # The most recently created notification should be first
         # notification3 was created last, so it should be first
-        self.assertEqual(
-            results[0]["notification_id"], self.notification3.notification_id
-        )
+        self.assertEqual(results[0]["id"], self.notification3.notification_id)
 
     def test_list_notifications_json_structure(self):
         """
@@ -370,13 +368,11 @@ class NotificationAPITests(APITestCase):
         # Check all required fields exist
         required_fields = [
             "id",
-            "notification_id",
             "notification_type",
             "title",
             "body",
             "redirect_url",
             "icon_type",
-            "actor_avatar",
             "avatar",
             "is_read",
             "created_at",
@@ -384,11 +380,8 @@ class NotificationAPITests(APITestCase):
         for field in required_fields:
             self.assertIn(field, notification, f"Missing field: {field}")
 
-        # Verify id is an alias for notification_id
-        self.assertEqual(notification["id"], notification["notification_id"])
-
-        # Verify avatar is an alias for actor_avatar
-        self.assertEqual(notification["avatar"], notification["actor_avatar"])
+        # Verify id matches the notification_id from the model
+        self.assertEqual(notification["id"], self.notification3.notification_id)
 
     def test_list_notifications_title_and_body_formatting(self):
         """
