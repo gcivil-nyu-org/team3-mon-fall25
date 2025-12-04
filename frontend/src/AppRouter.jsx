@@ -1,8 +1,8 @@
 import React from "react";
-import {BrowserRouter, Routes, Route, Navigate} from "react-router-dom";
-import {AuthProvider} from "./contexts/AuthContext";
-import {ChatProvider} from "./contexts/ChatContext";
-import {NotificationProvider} from "./contexts/NotificationContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ChatProvider } from "./contexts/ChatContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfileGate from "./components/ProfileGate";
@@ -23,7 +23,7 @@ import SellerProfile from "./pages/SellerProfile";
 import Watchlist from "./pages/Watchlist";
 import TransactionPaymentPage from "./pages/TransactionPaymentPage";
 
-import {ROUTES} from "./constants/routes";
+import { ROUTES } from "./constants/routes";
 
 import GlobalChat from "./components/chat/GlobalChat";
 
@@ -32,33 +32,32 @@ export default function AppRouter() {
         <AuthProvider>
             <ChatProvider>
                 <BrowserRouter>
-
-                    <GlobalChat/>
-
                     <NotificationProvider>
+                        <GlobalChat />
+
                         <Routes>
                             {/* Public login + OTP routes */}
-                            <Route path={ROUTES.LOGIN} element={<Login/>}/>
-                            <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail/>}/>
+                            <Route path={ROUTES.LOGIN} element={<Login />} />
+                            <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmail />} />
 
                             {/* Profile completion */}
                             <Route
                                 path={ROUTES.COMPLETE_PROFILE}
                                 element={
                                     <ProtectedRoute>
-                                        <CreateProfile/>
+                                        <CreateProfile />
                                     </ProtectedRoute>
                                 }
                             />
 
                             {/* Shared layout (navbar + outlet) */}
-                            <Route element={<ProfileGate/>}>
-                                <Route path={ROUTES.HOME} element={<App/>}>
+                            <Route element={<ProfileGate />}>
+                                <Route path={ROUTES.HOME} element={<App />}>
                                     {/* ✅ PUBLIC routes */}
-                                    <Route index element={<Home/>}/>
-                                    <Route path="browse" element={<BrowseListings/>}/>
-                                    <Route path="listing/:id" element={<ListingDetail/>}/>
-                                    <Route path="dev/transaction" element={<TransactionPaymentPage/>}/>
+                                    <Route index element={<Home />} />
+                                    <Route path="browse" element={<BrowseListings />} />
+                                    <Route path="listing/:id" element={<ListingDetail />} />
+                                    <Route path="dev/transaction" element={<TransactionPaymentPage />} />
 
 
                                     {/* 🔒 PROTECTED routes */}
@@ -66,7 +65,7 @@ export default function AppRouter() {
                                         path="create-listing"
                                         element={
                                             <ProtectedRoute>
-                                                <CreateListing/>
+                                                <CreateListing />
                                             </ProtectedRoute>
                                         }
                                     />
@@ -74,23 +73,23 @@ export default function AppRouter() {
                                         path="my-listings"
                                         element={
                                             <ProtectedRoute>
-                                                <MyListings/>
+                                                <MyListings />
                                             </ProtectedRoute>
                                         }
                                     />
                                     <Route
                                         path="/dev/transaction "
-                                        element={<TransactionPaymentPage/>}
+                                        element={<TransactionPaymentPage />}
                                     />
                                     <Route
                                         path="transaction/:id"
-                                        element={<TransactionPaymentPage/>}
+                                        element={<TransactionPaymentPage />}
                                     />
                                     <Route
                                         path="listing/:id/edit"
                                         element={
                                             <ProtectedRoute>
-                                                <EditListing/>
+                                                <EditListing />
                                             </ProtectedRoute>
                                         }
                                     />
@@ -98,20 +97,20 @@ export default function AppRouter() {
                                         path="watchlist"
                                         element={
                                             <ProtectedRoute>
-                                                <Watchlist/>
+                                                <Watchlist />
                                             </ProtectedRoute>
                                         }
                                     />
 
 
                                     {/* Chat Routes - Use placeholder div because GlobalChat overlay handles the UI */}
-                                    <Route path="chat" element={<div style={{minHeight: '100vh'}}/>}/>
-                                    <Route path="chat/:conversationId" element={<div style={{minHeight: '100vh'}}/>}/>
+                                    <Route path="chat" element={<div style={{ minHeight: '100vh' }} />} />
+                                    <Route path="chat/:conversationId" element={<div style={{ minHeight: '100vh' }} />} />
                                     <Route
                                         path="profile"
                                         element={
                                             <ProtectedRoute>
-                                                <Profile/>
+                                                <Profile />
                                             </ProtectedRoute>
                                         }
                                     />
@@ -119,7 +118,7 @@ export default function AppRouter() {
                                         path="seller/:username"
                                         element={
                                             <ProtectedRoute>
-                                                <SellerProfile/>
+                                                <SellerProfile />
                                             </ProtectedRoute>
                                         }
                                     />
@@ -127,7 +126,7 @@ export default function AppRouter() {
                             </Route>
 
                             {/* Fallback → home */}
-                            <Route path="*" element={<Navigate to={ROUTES.HOME} replace/>}/>
+                            <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
                         </Routes>
                     </NotificationProvider>
                 </BrowserRouter>
