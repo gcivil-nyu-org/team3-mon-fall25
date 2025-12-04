@@ -5,7 +5,7 @@ from .models import Notification
 class NotificationSerializer(serializers.ModelSerializer):
     """
     Serializer for Notification model with computed fields for frontend display.
-    
+
     Provides polymorphic formatting based on notification type:
     - title: Bold header based on type
     - body: Short preview of content
@@ -13,6 +13,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     - icon_type: Icon identifier ('avatar', 'offer', or 'sold')
     - actor_avatar: URL of actor's profile picture if available
     """
+
     title = serializers.SerializerMethodField()
     body = serializers.SerializerMethodField()
     redirect_url = serializers.SerializerMethodField()
@@ -47,7 +48,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     def get_title(self, obj):
         """Return a bold headline based on the notification type"""
         actor_name = self._get_actor_name(obj.actor)
-        
+
         if obj.notification_type == "MESSAGE":
             return f"New message from {actor_name}"
         elif obj.notification_type == "NEW_OFFER":
@@ -65,7 +66,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     def get_body(self, obj):
         """Return a short preview text based on notification type"""
         actor_name = self._get_actor_name(obj.actor)
-        
+
         if obj.notification_type == "MESSAGE" and obj.message:
             # Show first 50 chars of the message text
             text = obj.message.text[:30]
@@ -73,7 +74,8 @@ class NotificationSerializer(serializers.ModelSerializer):
                 text += "..."
             return text
         elif obj.notification_type == "NEW_OFFER" and obj.listing:
-            # Using listing price as fallback. If offer amount exists elsewhere, update this
+            # Using listing price as fallback.
+            # If offer amount exists elsewhere, update this
             price = f"${obj.listing.price:.2f}" if obj.listing.price else "an offer"
             return f"{actor_name} offered {price} on '{obj.listing.title}'"
         elif obj.notification_type == "LISTING_SOLD" and obj.listing:
@@ -91,17 +93,21 @@ class NotificationSerializer(serializers.ModelSerializer):
         # MESSAGE -> Go to the Chat Room
         if obj.notification_type == "MESSAGE" and obj.message:
             return f"/chat/{obj.message.conversation.id}"
-        
+
         # OFFER/SOLD/EXPIRED -> Go to the Listing Page
-        elif obj.notification_type in [
-            "NEW_OFFER",
-            "OFFER_ACCEPTED",
-            "OFFER_DECLINED",
-            "LISTING_SOLD",
-            "LISTING_EXPIRED"
-        ] and obj.listing:
+        elif (
+            obj.notification_type
+            in [
+                "NEW_OFFER",
+                "OFFER_ACCEPTED",
+                "OFFER_DECLINED",
+                "LISTING_SOLD",
+                "LISTING_EXPIRED",
+            ]
+            and obj.listing
+        ):
             return f"/listing/{obj.listing.listing_id}"
-        
+
         return "/"
 
     def get_icon_type(self, obj):
