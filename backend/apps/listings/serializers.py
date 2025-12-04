@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from apps.listings.models import Listing, ListingImage
 from django.db import models
@@ -79,6 +80,21 @@ class ListingCreateSerializer(serializers.ModelSerializer):
                 "Authentication required to create listings"
             )
         return data
+
+    def validate_title(self, value):
+        """Validate that title contains meaningful characters"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title is required.")
+
+        # Check if title contains at least one alphanumeric character
+        # This ensures the title is meaningful and not just special characters
+        if not re.search(r"[a-zA-Z0-9]", value):
+            raise serializers.ValidationError(
+                "Listing title must contain at least one letter or number. "
+                "Only special characters are not allowed."
+            )
+
+        return value.strip()
 
     def validate_price(self, value):
         if value < 0:
@@ -239,6 +255,21 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You can only update your own listings")
 
         return data
+
+    def validate_title(self, value):
+        """Validate that title contains meaningful characters"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title is required.")
+
+        # Check if title contains at least one alphanumeric character
+        # This ensures the title is meaningful and not just special characters
+        if not re.search(r"[a-zA-Z0-9]", value):
+            raise serializers.ValidationError(
+                "Listing title must contain at least one letter or number. "
+                "Only special characters are not allowed."
+            )
+
+        return value.strip()
 
     def validate_price(self, value):
         if value < 0:
