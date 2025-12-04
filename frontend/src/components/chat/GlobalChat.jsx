@@ -234,11 +234,18 @@ export default function GlobalChat() {
       }
     };
 
-    if (!loadedConversationsRef.current.has(activeConversationId)) {
+    // Check if this conversation has unread messages
+    const activeConv = convs.find(c => c.id === activeConversationId);
+    const hasUnread = activeConv?.unreadCount > 0;
+
+    // Fetch messages if:
+    // 1. Never loaded before, OR
+    // 2. Has unread messages (ensures we get the latest)
+    if (!loadedConversationsRef.current.has(activeConversationId) || hasUnread) {
       loadedConversationsRef.current.add(activeConversationId);
       fetchMsgs();
     }
-  }, [activeConversationId, selfId, fetchUnreadCount]);
+  }, [activeConversationId, selfId, fetchUnreadCount, convs]);
 
   // Socket
   const { sendText, sendRead } = useChatSocket({
