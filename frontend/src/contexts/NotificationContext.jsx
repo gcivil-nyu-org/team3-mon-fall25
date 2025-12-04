@@ -82,12 +82,12 @@ const MOCK_NOTIFICATIONS = [
   },
 ];
 
-// Flag to enable/disable mock data (set to true for testing)
+// Flag to enable/disable mock data (set to false for production)
 // Can be overridden in tests via window.__USE_MOCK_DATA__
 const getUseMockData = () => {
   return typeof window !== 'undefined' && window.__USE_MOCK_DATA__ !== undefined
     ? window.__USE_MOCK_DATA__
-    : true;
+    : false;
 };
 
 export const NotificationProvider = ({ children }) => {

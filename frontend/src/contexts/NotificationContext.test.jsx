@@ -74,6 +74,8 @@ describe('NotificationContext', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Enable mock data for tests by default (since production now defaults to false)
+    window.__USE_MOCK_DATA__ = true;
     // Reset to true by default - isAuthenticated is now a boolean, not a function
     mockIsAuthenticated = true;
     useAuth.mockReturnValue({

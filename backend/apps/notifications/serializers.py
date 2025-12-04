@@ -10,17 +10,23 @@ class NotificationSerializer(serializers.ModelSerializer):
     icon_type = serializers.SerializerMethodField()
     actor_avatar = serializers.SerializerMethodField()
 
+    # Alias fields for frontend compatibility
+    id = serializers.IntegerField(source="notification_id", read_only=True)
+    avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = Notification
         # standard fields + our custom computed fields
         fields = [
-            "notification_id",  # Matches your model's primary_key
+            "id",  # Alias for notification_id (for frontend compatibility)
+            "notification_id",  # Original primary_key (kept for backward compat)
             "notification_type",
             "title",
             "body",
             "redirect_url",
             "icon_type",
             "actor_avatar",
+            "avatar",  # Alias for actor_avatar (for frontend compatibility)
             "is_read",
             "created_at",
         ]
@@ -88,3 +94,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         except Exception:
             pass
         return None
+
+    def get_avatar(self, obj):
+        """Alias for get_actor_avatar (frontend compatibility)"""
+        return self.get_actor_avatar(obj)
