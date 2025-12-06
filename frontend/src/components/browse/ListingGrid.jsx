@@ -30,7 +30,7 @@ export default function ListingGrid({ items }) {
             createdAt={item.created_at}
             viewCount={item.view_count}
             onClick={() => navigate(`/listing/${id}`)}
-            onSellerClick={(u) => navigate(`/seller/${u}`)}
+            onSellerClick={(username) => username && navigate(`/profile/${username}`)}
           />
         );
       })}
