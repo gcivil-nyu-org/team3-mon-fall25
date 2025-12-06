@@ -114,6 +114,10 @@
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid #f3f4f6;
     background-color: rgba(249, 250, 251, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
 }
 
 .card-header h3 {
@@ -717,4 +721,29 @@
     width: 100%;
     height: 100%;
     background-color: #f3f4f6;
+}
+
+/* --- Suggest new details button --- */
+.suggest-details-btn {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background-color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.suggest-details-btn:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+    color: var(--text-primary);
+}
+
+.suggest-details-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
