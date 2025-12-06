@@ -38,6 +38,10 @@ urlpatterns = router.urls
        Fields: listing_id, category, title, price, status,
                primary_image
 
+    6b. GET   Y   /api/v1/listings/by-username/<username>/  get listings by username
+       Fields: listing_id, category, title, price, status,
+               primary_image
+
     7. GET    Y   /api/v1/listings/search/q=<query>  search listings
        Fields: listing_id, category, title, price, status,
                primary_image
