@@ -48,13 +48,11 @@ export default function ListingCardBuyer({
   // Date String
   const postedText = createdAt ? humanizePosted(createdAt) : "";
 
-  const sellerProfilePath = (u) => `/seller/${encodeURIComponent(u)}`;
-
   const handleSellerClick = (e) => {
     e.stopPropagation();
     if (!sellerUsername) return;
     if (onSellerClick) onSellerClick(sellerUsername);
-    else navigate(sellerProfilePath(sellerUsername));
+    else navigate(`/profile/${sellerUsername}`);
   };
 
   const handleSellerKeyDown = (e) => {
