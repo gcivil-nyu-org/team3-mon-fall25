@@ -68,7 +68,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         actor_name = self._get_actor_name(obj.actor)
 
         if obj.notification_type == "MESSAGE" and obj.message:
-            # Show first 50 chars of the message text
+            # Show first 30 chars of the message text
             text = obj.message.text[:30]
             if len(obj.message.text) > 30:
                 text += "..."
@@ -103,7 +103,7 @@ class NotificationSerializer(serializers.ModelSerializer):
                 "OFFER_DECLINED",
                 "LISTING_SOLD",
                 "LISTING_EXPIRED",
-            ]
+            ]git 
             and obj.listing
         ):
             return f"/listing/{obj.listing.listing_id}"
