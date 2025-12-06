@@ -630,77 +630,69 @@ describe('NotificationContext', () => {
       }, { timeout: 3000 });
     });
 
-    it('handles fetchUnreadCount error with fallback to mock data', async () => {
-      // Test the error fallback path (lines 153-157)
-      // To trigger the fallback: USE_MOCK_DATA must be false initially (to call API),
-      // API must fail, and USE_MOCK_DATA must be true when catch block checks it
-      const originalValue = window.__USE_MOCK_DATA__;
+    // Around line 633-705
+  it('handles fetchUnreadCount error with fallback to mock data', async () => {
+    const originalValue = window.__USE_MOCK_DATA__;
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+    // Set USE_MOCK_DATA to false initially
+    window.__USE_MOCK_DATA__ = false;
 
-      // Set USE_MOCK_DATA to false initially
-      window.__USE_MOCK_DATA__ = false;
+    // Mock initial API calls for the component mount
+    notificationAPI.getNotifications.mockResolvedValue({ results: [] });
+    notificationAPI.getUnreadCount.mockResolvedValueOnce({ count: 0 }); // FIX: Return object
 
-      // Mock initial API calls for the component mount
-      notificationAPI.getNotifications.mockResolvedValue({ results: [] });
-      notificationAPI.getUnreadCount.mockResolvedValueOnce(0); // Return number directly
-
-      const FetchUnreadComponent = () => {
-        const { fetchUnreadCount, unreadCount } = useNotifications();
-        return (
-          <div>
-            <div data-testid="unread-count-error">{unreadCount}</div>
-            <button onClick={fetchUnreadCount} data-testid="fetch-unread-error">Fetch</button>
-          </div>
-        );
-      };
-
-      render(
-        <BrowserRouter>
-          <NotificationProvider>
-            <FetchUnreadComponent />
-          </NotificationProvider>
-        </BrowserRouter>
+    const FetchUnreadComponent = () => {
+      const { fetchUnreadCount, unreadCount } = useNotifications();
+      return (
+        <div>
+          <div data-testid="unread-count-error">{unreadCount}</div>
+          <button onClick={fetchUnreadCount} data-testid="fetch-unread-error">Fetch</button>
+        </div>
       );
+    };
 
-      // Wait for initial load
-      await waitFor(() => {
-        expect(screen.getByTestId('unread-count-error')).toBeInTheDocument();
-      }, { timeout: 3000 });
+    render(
+      <BrowserRouter>
+        <NotificationProvider>
+          <FetchUnreadComponent />
+        </NotificationProvider>
+      </BrowserRouter>
+    );
 
-      // Make API fail
-      notificationAPI.getUnreadCount.mockRejectedValue(new Error('API Error'));
+    // Wait for initial load
+    await waitFor(() => {
+      expect(screen.getByTestId('unread-count-error')).toBeInTheDocument();
+    }, { timeout: 3000 });
 
-      const fetchButton = screen.getByTestId('fetch-unread-error');
-      await act(async () => {
-        // Click to start the API call (with USE_MOCK_DATA = false)
-        fetchButton.click();
-        // Immediately set to true so catch block will see it and execute fallback
-        // This happens after the function starts (so initial check saw false) but
-        // before the catch block executes (so catch check will see true)
-        window.__USE_MOCK_DATA__ = true;
-        // Wait for async operations to complete
-        await new Promise(resolve => setTimeout(resolve, 300));
-      });
+    // Make API fail
+    notificationAPI.getUnreadCount.mockRejectedValue(new Error('API Error'));
 
-      // Verify error was logged (this covers the catch block)
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error fetching unread count:',
-        expect.any(Error)
-      );
-
-      // The fallback should have executed if USE_MOCK_DATA was true in catch block
-      // Since we set it to true before clicking, getUseMockData() in catch should return true
-      await waitFor(() => {
-        const count = parseInt(screen.getByTestId('unread-count-error').textContent, 10);
-        // Should be 3 (from MOCK_NOTIFICATIONS) if fallback executed, or stay at current value
-        expect(count).toBeGreaterThanOrEqual(0);
-      }, { timeout: 3000 });
-
-      // Restore original value
-      window.__USE_MOCK_DATA__ = originalValue;
-      consoleErrorSpy.mockRestore();
+    const fetchButton = screen.getByTestId('fetch-unread-error');
+    await act(async () => {
+      fetchButton.click();
+      // Set to true so catch block will see it and execute fallback
+      window.__USE_MOCK_DATA__ = true;
+      // Wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
     });
+
+    // Verify error was logged
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Error fetching unread count:',
+      expect.any(Error)
+    );
+
+    // The fallback should have set unread count to 3 (from MOCK_NOTIFICATIONS)
+    await waitFor(() => {
+      const count = parseInt(screen.getByTestId('unread-count-error').textContent, 10);
+      expect(count).toBe(3); // 3 unread notifications in MOCK_NOTIFICATIONS
+    }, { timeout: 3000 });
+
+    // Restore
+    window.__USE_MOCK_DATA__ = originalValue;
+    consoleErrorSpy.mockRestore();
+  });
 
     it('handles markAsRead API error when USE_MOCK_DATA is false', async () => {
       // Set USE_MOCK_DATA to false to test API error path (lines 180-183)
