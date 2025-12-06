@@ -74,8 +74,6 @@ class NotificationSerializer(serializers.ModelSerializer):
                 text += "..."
             return text
         elif obj.notification_type == "NEW_OFFER" and obj.listing:
-            # Using listing price as fallback.
-            # If offer amount exists elsewhere, update this
             price = f"${obj.listing.price:.2f}" if obj.listing.price else "an offer"
             return f"{actor_name} offered {price} on '{obj.listing.title}'"
         elif obj.notification_type == "LISTING_SOLD" and obj.listing:
@@ -103,7 +101,7 @@ class NotificationSerializer(serializers.ModelSerializer):
                 "OFFER_DECLINED",
                 "LISTING_SOLD",
                 "LISTING_EXPIRED",
-            ]git 
+            ]
             and obj.listing
         ):
             return f"/listing/{obj.listing.listing_id}"
