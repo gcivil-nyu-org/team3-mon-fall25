@@ -118,12 +118,13 @@ const MOCK_NOTIFICATIONS = [
  * Check if we should use mock data (testing environment or API failure fallback)
  */
 const shouldUseMockData = () => {
-  // Use mock data in test environment
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-    return true;
+  // Check for explicit window flag first (can be set by tests)
+  if (typeof window !== 'undefined' && window.__USE_MOCK_DATA__ !== undefined) {
+    return window.__USE_MOCK_DATA__;
   }
-  // Check for explicit window flag (can be set by tests)
-  if (typeof window !== 'undefined' && window.__USE_MOCK_DATA__) {
+  // Use mock data in test environment as default
+  // eslint-disable-next-line no-undef
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
     return true;
   }
   return false;
