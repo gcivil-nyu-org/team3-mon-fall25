@@ -40,6 +40,11 @@ export async function getMyListings() {
     return data;
 }
 
+export async function getListingsByUsername(username) {
+    const { data } = await apiClient.get(`${endpoints.listings}by-username/${encodeURIComponent(username)}/`);
+    return data;
+}
+
 export async function createListing(formData) {
     const { data } = await apiClient.post(endpoints.listings, formData, {
         headers: {

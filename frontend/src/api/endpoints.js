@@ -10,6 +10,7 @@ export const endpoints = {
   profiles: {
     base: '/profiles/',
     me: '/profiles/me/',
+    byId: (usernameOrId) => `/profiles/${encodeURIComponent(usernameOrId)}/`,
   },
   listings: '/listings/',
   listingPriceStats: '/listings/price-stats/',

@@ -6,14 +6,21 @@ const meEndpoint = endpoints.profiles.me;
 
 export const getMyProfile = () => apiClient.get(meEndpoint);
 
+// Get profile by username or profile_id - backend handles both
+export const getProfileById = (usernameOrId) =>
+  apiClient.get(endpoints.profiles.byId(usernameOrId));
+
 export const createProfile = (formData) =>
   apiClient.post(base, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 
-export const updateMyProfile = (payload, opts = {}) => {
+// Update profile by profile_id or username
+export const updateProfile = (profileIdOrUsername, payload, opts = {}) => {
   const config = { ...opts };
-  return apiClient.patch(meEndpoint, payload, config);
+  return apiClient.patch(endpoints.profiles.byId(profileIdOrUsername), payload, config);
 };
 
-export const deleteMyProfile = () => apiClient.delete(meEndpoint);
+// Delete profile by profile_id or username
+export const deleteProfile = (profileIdOrUsername) =>
+  apiClient.delete(endpoints.profiles.byId(profileIdOrUsername));
