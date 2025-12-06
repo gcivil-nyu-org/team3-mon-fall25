@@ -30,6 +30,104 @@ const normalizeNotifications = (apiNotifications) => {
   }
   return apiNotifications.map(normalizeNotification);
 };
+// Mock data for testing when backend is not available
+const MOCK_NOTIFICATIONS = [
+  {
+    id: '1',
+    notification_id: '1',
+    title: 'New message from Sarah Chen',
+    body: 'Is the MacBook still available? I\'m interested in purchasing it.',
+    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    is_read: false,
+    notification_type: 'MESSAGE',
+    icon_type: 'avatar',
+    redirect_url: '/chat/1',
+    actor_avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+  },
+  {
+    id: '2',
+    notification_id: '2',
+    title: 'New offer received!',
+    body: 'Alex Rodriguez offered $100 for your Desk Lamp',
+    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    is_read: false,
+    notification_type: 'NEW_OFFER',
+    icon_type: 'offer',
+    redirect_url: '/listing/5',
+  },
+  {
+    id: '3',
+    notification_id: '3',
+    title: 'Item Sold!',
+    body: 'Your iPhone 13 has been marked as sold',
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    is_read: false,
+    notification_type: 'LISTING_SOLD',
+    icon_type: 'sold',
+    redirect_url: '/my-listings',
+  },
+  {
+    id: '4',
+    notification_id: '4',
+    title: 'New message from Mike Johnson',
+    body: 'Can we meet tomorrow at 3 PM?',
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    is_read: true,
+    notification_type: 'MESSAGE',
+    icon_type: 'avatar',
+    redirect_url: '/chat/2',
+    actor_avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+  },
+  {
+    id: '5',
+    notification_id: '5',
+    title: 'Listing Expired',
+    body: 'Your Wireless Mouse listing has expired',
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    is_read: true,
+    notification_type: 'LISTING_EXPIRED',
+    icon_type: 'sold',
+    redirect_url: '/listing/7',
+  },
+  {
+    id: '6',
+    notification_id: '6',
+    title: 'Welcome to NYU Marketplace!',
+    body: 'Your profile has been successfully created. Start browsing listings now!',
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    is_read: true,
+    notification_type: 'MESSAGE',
+    icon_type: 'avatar',
+    redirect_url: '/browse',
+  },
+  {
+    id: '7',
+    notification_id: '7',
+    title: 'New message from Emma Davis',
+    body: 'Thanks for the quick response!',
+    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    is_read: true,
+    notification_type: 'MESSAGE',
+    icon_type: 'avatar',
+    redirect_url: '/chat/3',
+    actor_avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
+  },
+];
+
+/**
+ * Check if we should use mock data (testing environment or API failure fallback)
+ */
+const shouldUseMockData = () => {
+  // Use mock data in test environment
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+    return true;
+  }
+  // Check for explicit window flag (can be set by tests)
+  if (typeof window !== 'undefined' && window.__USE_MOCK_DATA__) {
+    return true;
+  }
+  return false;
+};
 
 export const NotificationProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
