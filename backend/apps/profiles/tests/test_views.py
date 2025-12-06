@@ -106,26 +106,30 @@ def test_me_endpoint_without_profile(nyu_user_factory):
 
 
 def test_update_me_endpoint(user_with_profile):
-    """Test updating profile via /me/ endpoint."""
+    """Test updating profile via profile_id endpoint."""
     user, profile = user_with_profile
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.patch("/api/v1/profiles/me/", {"full_name": "Updated Name"}, format="json")
+    res = c.patch(
+        f"/api/v1/profiles/{profile.profile_id}/",
+        {"full_name": "Updated Name"},
+        format="json"
+    )
 
     assert res.status_code == 200
     assert res.json()["full_name"] == "Updated Name"
 
 
 def test_delete_me_endpoint(user_with_profile):
-    """Test deleting profile via /me/ endpoint."""
+    """Test deleting profile via profile_id endpoint."""
     user, profile = user_with_profile
     profile_id = profile.profile_id
 
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.delete("/api/v1/profiles/me/")
+    res = c.delete(f"/api/v1/profiles/{profile_id}/")
     assert res.status_code == 204
     assert not Profile.objects.filter(profile_id=profile_id).exists()
 
@@ -264,6 +268,7 @@ def test_profile_detail_includes_all_fields(user_with_profile):
         "member_since",
         "created_at",
         "updated_at",
+        "is_own_profile",
     }
     assert set(data.keys()) == expected_fields
 
@@ -306,12 +311,16 @@ def test_update_to_duplicate_username_fails(two_users, profile_factory):
     """Test that updating to duplicate username fails."""
     u1, u2 = two_users
     profile_factory(u1, username="taken")
-    profile_factory(u2, username="original")
+    profile2 = profile_factory(u2, username="original")
 
     c = APIClient()
     c.force_authenticate(user=u2)
 
-    res = c.patch("/api/v1/profiles/me/", {"username": "taken"}, format="json")
+    res = c.patch(
+        f"/api/v1/profiles/{profile2.profile_id}/",
+        {"username": "taken"},
+        format="json"
+    )
 
     assert res.status_code == 400
 

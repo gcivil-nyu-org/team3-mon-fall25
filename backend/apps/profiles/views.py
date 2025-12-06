@@ -92,6 +92,51 @@ class ProfileViewSet(
             return CompactProfileSerializer
         return ProfileDetailSerializer
 
+    def get_object(self):
+        """
+        Override to support lookup by both profile_id (integer) and username.
+
+        URL pattern: /api/v1/profiles/<lookup_value>/
+        - If lookup_value is a valid integer, lookup by profile_id
+        - Otherwise, lookup by username (case-insensitive)
+        """
+        lookup_value = self.kwargs.get('pk')
+
+        if not lookup_value:
+            return super().get_object()
+
+        # Try to parse as integer (profile_id)
+        try:
+            int(lookup_value)
+            # It's a valid integer, use default lookup by profile_id
+            return super().get_object()
+        except (ValueError, TypeError):
+            # Not an integer, treat as username
+            queryset = self.filter_queryset(self.get_queryset())
+            try:
+                obj = queryset.get(username__iexact=lookup_value)
+            except Profile.DoesNotExist:
+                from django.http import Http404
+                raise Http404("Profile not found.")
+
+            # Check object permissions
+            self.check_object_permissions(self.request, obj)
+            return obj
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to add is_own_profile flag.
+        GET /api/v1/profiles/<id>/
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+
+        # Add flag to indicate if this is the current user's profile
+        data["is_own_profile"] = instance.user == request.user
+
+        return Response(data, status=status.HTTP_200_OK)
+
     def perform_destroy(self, instance):
         """Delete S3 avatar, listing images, profile, and user authentication details.
 
@@ -143,30 +188,16 @@ class ProfileViewSet(
         # Delete the user (cascades to profile and all related data)
         user.delete()
 
-    @action(detail=False, methods=["get", "put", "patch", "delete"], url_path="me")
+    @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):
         """
-        Get, update, or delete the current user's profile.
+        Get the current user's profile.
 
         GET /api/v1/profiles/me/
-        PUT/PATCH /api/v1/profiles/me/
-        DELETE /api/v1/profiles/me/
+
+        Note: This endpoint is kept for backward compatibility.
+        For updates/deletes, use /api/v1/profiles/<username>/ instead.
         """
-        # Special case: DELETE can work even without a profile
-        if request.method == "DELETE":
-            try:
-                profile = request.user.profile
-                self.perform_destroy(profile)
-            except Profile.DoesNotExist:
-                # User has no profile, just delete the user account
-                request.user.delete()
-
-            return Response(
-                {"detail": "Account deleted successfully."},
-                status=status.HTTP_204_NO_CONTENT,
-            )
-
-        # For other methods, profile is required
         try:
             profile = request.user.profile
         except Profile.DoesNotExist:
@@ -175,17 +206,5 @@ class ProfileViewSet(
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if request.method == "GET":
-            serializer = self.get_serializer(profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        elif request.method in ["PUT", "PATCH"]:
-            serializer = self.get_serializer(
-                profile, data=request.data, partial=request.method == "PATCH"
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-
-            # Return detailed profile data
-            detail_serializer = ProfileDetailSerializer(profile)
-            return Response(detail_serializer.data, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
