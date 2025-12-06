@@ -95,9 +95,8 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         create_system_message(transaction_obj, message_text)
 
         response_serializer = TransactionSerializer(
-            transaction_obj,
-            context={"request": request}
-            )
+            transaction_obj, context={"request": request}
+        )
         return Response(response_serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="delivery-details")
@@ -133,8 +132,8 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         transaction_obj.meet_time = meet_time
 
         update_fields = ["delivery_method", "meet_location", "meet_time"]
-       
-       # When someone clicks the "Confirm details" button: back to NEGOTIATING 
+
+        # When someone clicks the "Confirm details" button: back to NEGOTIATING
         if transaction_obj.status in ["PENDING", "NEGOTIATING", "SCHEDULED"]:
             transaction_obj.status = "NEGOTIATING"
             update_fields.append("status")
@@ -159,9 +158,8 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         create_system_message(transaction_obj, message_text)
 
         response_serializer = TransactionSerializer(
-            transaction_obj,
-            context={"request": request}
-            )
+            transaction_obj, context={"request": request}
+        )
         return Response(response_serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="confirm")
@@ -194,7 +192,9 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         # Cannot confirm your own proposal
         if transaction_obj.proposed_by == caller_role:
             return Response(
-                {"error": "You cannot confirm your own proposal. Wait for the other party."},
+                {
+                    "error": "You cannot confirm your own proposal."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -212,9 +212,13 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
 
         # Create system message
         if caller_role == "buyer":
-            message_text = "Buyer confirmed the proposed details. Transaction is scheduled."
+            message_text = (
+                "Buyer confirmed the proposed details. Transaction is scheduled."
+            )
         else:
-            message_text = "Seller confirmed the proposed details. Transaction is scheduled."
+            message_text = (
+                "Seller confirmed the proposed details. Transaction is scheduled."
+            )
 
         create_system_message(transaction_obj, message_text)
 
@@ -267,7 +271,6 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         create_system_message(transaction_obj, message_text)
 
         response_serializer = TransactionSerializer(
-            transaction_obj,
-            context={"request": request}
-            )
+            transaction_obj, context={"request": request}
+        )
         return Response(response_serializer.data)
