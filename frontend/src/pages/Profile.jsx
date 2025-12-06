@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { getMyListings } from "../api/listings.js";
-import { getMyProfile, deleteMyProfile } from "../api/profiles.js";
+import { getMyListings, getListingsByUsername } from "../api/listings.js";
+import { getMyProfile, getProfileById, deleteProfile } from "../api/profiles.js";
 import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen, FaExclamationTriangle, FaTrash } from "react-icons/fa";
 import EditProfile from "./EditProfile";
 import DeleteAccountModal from "../components/DeleteAccountModal";
@@ -11,37 +11,70 @@ import SEO from "../components/SEO";
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { username } = useParams(); // Optional username from URL (e.g., /profile/:username)
   const { user, logout } = useAuth();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileError, setProfileError] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [profile, setProfile] = useState(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
-  // Load user's profile
+  // Load profile by username (always required in URL now)
   const loadProfile = async () => {
     if (isDeleting) return; // Don't load if account is being deleted
+    setProfileError(null);
+
     try {
-      const response = await getMyProfile();
+      // If no username in URL, fetch current user's profile and redirect to their username
+      if (!username) {
+        const myProfileResponse = await getMyProfile();
+        const myUsername = myProfileResponse.data.username;
+        navigate(`/profile/${myUsername}`, { replace: true });
+        return;
+      }
+
+      // Fetch profile by username - backend handles both username and profile_id
+      const response = await getProfileById(username);
       setProfile(response.data);
+
+      // Check if this is the current user's profile
+      const ownProfile = response.data.is_own_profile || false;
+      setIsOwnProfile(ownProfile);
     } catch (err) {
       console.error("Failed to load profile:", err);
-      // Profile might not exist yet, that's okay
+      if (err.response?.status === 404) {
+        setProfileError("Profile not found.");
+      } else {
+        setProfileError(err.response?.data?.detail || "Failed to load profile.");
+      }
     }
   };
 
-  // Load user's listings
+  // Load listings by username
   const loadListings = async () => {
     if (isDeleting) return; // Don't load if account is being deleted
     setLoading(true);
     setError(null);
     try {
-      const data = await getMyListings();
-      setListings(data);
+      if (!username) {
+        setListings([]);
+        return;
+      }
+
+      // For own profile, use getMyListings; for others, use getListingsByUsername
+      if (isOwnProfile) {
+        const data = await getMyListings();
+        setListings(data);
+      } else {
+        const data = await getListingsByUsername(username);
+        setListings(data);
+      }
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "Failed to load listings.";
       setError(msg);
@@ -53,9 +86,16 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
-    loadListings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [username]);
+
+  useEffect(() => {
+    // Load listings after profile is loaded and isOwnProfile is determined
+    if (profile) {
+      loadListings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, isOwnProfile]);
 
   const handleBack = () => {
     navigate(-1);
@@ -85,8 +125,14 @@ export default function Profile() {
     setIsDeleting(true);
 
     try {
+      // Delete using profile_id (more reliable than username)
+      const profileIdToDelete = profile?.profile_id;
+      if (!profileIdToDelete) {
+        throw new Error("Profile ID not found");
+      }
+
       // Call the API to delete the profile and user account
-      await deleteMyProfile();
+      await deleteProfile(profileIdToDelete);
 
       // Logout the user and clear local storage
       // This prevents any interceptors from redirecting to /login
@@ -140,12 +186,37 @@ export default function Profile() {
   const activeListings = profile?.active_listings ?? 0;
   const soldItems = profile?.sold_items ?? 0;
 
+  // Show error state if profile not found
+  if (profileError) {
+    return (
+      <>
+        <SEO
+          title="Profile Not Found - NYU Marketplace"
+          description="The requested profile could not be found."
+        />
+        <div className="profile-page">
+          <button className="back-button" onClick={handleBack}>
+            <FaArrowLeft />
+            <span>Back</span>
+          </button>
+          <div className="empty-state">
+            <div className="empty-icon">
+              <FaBoxOpen />
+            </div>
+            <h3>Profile Not Found</h3>
+            <p>{profileError}</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <SEO
-        title="Profile - NYU Marketplace"
-        description="View and update your profile and contact info."
-        canonical="http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com/profile"
+        title={isOwnProfile ? "My Profile - NYU Marketplace" : `${profile?.full_name || "User"}'s Profile - NYU Marketplace`}
+        description={isOwnProfile ? "View and update your profile and contact info." : `View ${profile?.full_name || "user"}'s profile and listings.`}
+        canonical={isOwnProfile ? "http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com/profile" : undefined}
       />
 
       <div className="profile-page">
@@ -157,10 +228,13 @@ export default function Profile() {
 
         {/* Profile Card */}
         <div className="profile-card">
-          <button className="edit-profile-button" onClick={handleEditProfile}>
-            <FaEdit />
-            <span>Edit Profile</span>
-          </button>
+          {/* Only show Edit Profile button if viewing own profile */}
+          {isOwnProfile && (
+            <button className="edit-profile-button" onClick={handleEditProfile}>
+              <FaEdit />
+              <span>Edit Profile</span>
+            </button>
+          )}
 
           <div className="profile-header">
             {/* Profile Picture - Left Side */}
@@ -306,24 +380,26 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Danger Zone */}
-        <div className="danger-zone">
-          <div className="danger-zone-content">
-            <div className="danger-zone-left">
-              <FaExclamationTriangle className="danger-icon" />
-            </div>
-            <div className="danger-zone-right">
-              <h3 className="danger-zone-heading">Danger Zone</h3>
-              <p className="danger-zone-text">
-                Once you delete your account, there is no going back. All your listings, messages, and profile information will be permanently deleted.
-              </p>
-              <button className="delete-account-button" onClick={handleDeleteAccount}>
-                <FaTrash />
-                <span>Delete Account</span>
-              </button>
+        {/* Danger Zone - Only show for own profile */}
+        {isOwnProfile && (
+          <div className="danger-zone">
+            <div className="danger-zone-content">
+              <div className="danger-zone-left">
+                <FaExclamationTriangle className="danger-icon" />
+              </div>
+              <div className="danger-zone-right">
+                <h3 className="danger-zone-heading">Danger Zone</h3>
+                <p className="danger-zone-text">
+                  Once you delete your account, there is no going back. All your listings, messages, and profile information will be permanently deleted.
+                </p>
+                <button className="delete-account-button" onClick={handleDeleteAccount}>
+                  <FaTrash />
+                  <span>Delete Account</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Edit Profile Modal */}
         {isEditModalOpen && (

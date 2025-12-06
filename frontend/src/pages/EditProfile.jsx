@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { updateMyProfile, createProfile } from "../api/profiles.js";
+import { updateProfile, createProfile } from "../api/profiles.js";
 import { FaTimes, FaCamera, FaTrash, FaPlus } from "react-icons/fa";
 import "./EditProfile.css";
 
@@ -64,8 +64,8 @@ export default function EditProfile({ onClose, profile }) {
       }
 
       if (profile) {
-        // Update existing profile
-        await updateMyProfile(payload, {
+        // Update existing profile using profile_id
+        await updateProfile(profile.profile_id, payload, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
