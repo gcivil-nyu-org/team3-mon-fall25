@@ -5,6 +5,7 @@ import "./TransactionPaymentPage.css";
 import client from "../api/client";
 import { getListing } from "../api/listings";
 import { getTransaction } from "../api/transactions";
+import { useAuth } from "../contexts/AuthContext";
 
 import {
   Clock,
@@ -36,7 +37,6 @@ const LOCATIONS = [
 ];
 
 // --- Sub-Components ---
-
 const Header = ({ status = "PENDING" }) => (
   <div className="header-container">
     <div className="header-status-row">
@@ -48,7 +48,12 @@ const Header = ({ status = "PENDING" }) => (
   </div>
 );
 
-const TransactionDetailsCard = ({ listing, status }) => {
+const TransactionDetailsCard = ({
+  listing,
+  status,
+  viewerRole,
+  buyerLabel,
+}) => {
   const imageUrl =
     listing?.primary_image?.url ||
     listing?.images?.[0]?.image_url ||
@@ -58,9 +63,7 @@ const TransactionDetailsCard = ({ listing, status }) => {
     listing?.thumbnail_url;
 
   const sellerLabel =
-    listing?.user_netid ||
-    listing?.user_email?.split("@")[0] ||
-    "Seller";
+    listing?.user_netid || listing?.user_email?.split("@")[0] || "Seller";
 
   const formattedPrice =
     listing?.price != null
@@ -70,6 +73,9 @@ const TransactionDetailsCard = ({ listing, status }) => {
         })}`
       : "--";
 
+  const isBuyerView = viewerRole === "buyer";
+  const isSellerView = viewerRole === "seller";
+
   return (
     <div className="card card-padding details-card-inner">
       <div className="pending-badge">
@@ -78,7 +84,11 @@ const TransactionDetailsCard = ({ listing, status }) => {
 
       <div className="item-image-container">
         {imageUrl ? (
-          <img src={imageUrl} alt={listing?.title || "Listing"} className="item-image" />
+          <img
+            src={imageUrl}
+            alt={listing?.title || "Listing"}
+            className="item-image"
+          />
         ) : (
           <div className="item-image placeholder" />
         )}
@@ -96,10 +106,10 @@ const TransactionDetailsCard = ({ listing, status }) => {
           <span className="price-tag">{formattedPrice}</span>
           <div className="participants-info">
             <p>
-              <span>Seller:</span> {sellerLabel}
+              <span>Seller:</span> {isSellerView ? "You" : sellerLabel}
             </p>
             <p>
-              <span>Buyer:</span> You
+              <span>Buyer:</span> {isBuyerView ? "You" : buyerLabel || "Buyer"}
             </p>
           </div>
         </div>
@@ -154,10 +164,11 @@ export default function TransactionPaymentPage() {
   // route: /transaction/:id
   const { id } = useParams();
   const transactionId = id;
+  const { user } = useAuth();
 
+  const [viewerRole, setViewerRole] = useState(null);
   const [transaction, setTransaction] = useState(null);
   const [listing, setListing] = useState(null);
-
   const [paymentMethod, setPaymentMethod] = useState("venmo");
   const [deliveryType, setDeliveryType] = useState("meetup");
   const [location, setLocation] = useState("");
@@ -168,7 +179,18 @@ export default function TransactionPaymentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [buyerEditing, setBuyerEditing] = useState(false);
+  const [sellerEditing, setSellerEditing] = useState(false);
 
+  const isBuyerView = viewerRole === "buyer";
+  const isSellerView = viewerRole === "seller";
+
+  const buyerLabel =
+    transaction?.buyer_netid ||
+    transaction?.buyer_email?.split("@")[0] ||
+    transaction?.buyer;
+
+  // ---- Meeting time helpers ----
   const isMeetingTimeTooSoon = () => {
     if (!meetingTime) return true;
 
@@ -194,71 +216,108 @@ export default function TransactionPaymentPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   });
 
+  // Decide buyer's initial isConfirmed / buyerEditing based on backend status
+  useEffect(() => {
+    if (!transaction || viewerRole !== "buyer") return;
+
+    const normalized = (transaction.status || "").toUpperCase();
+    const proposedBy = transaction.proposed_by; // "buyer" | "seller" | null
+
+    setBuyerEditing(false);
+    setIsConfirmed(false);
+
+    // PENDING with no proposal => let buyer edit immediately on first load
+    if (normalized === "PENDING" && !proposedBy) {
+      setBuyerEditing(true);
+      return;
+    }
+
+    // NEGOTIATING: there is a proposal
+    if (normalized === "NEGOTIATING" && proposedBy) {
+      // Show summary for any proposer, but buyer starts in view mode
+      setBuyerEditing(false);
+      return;
+    }
+
+    // SCHEDULED / COMPLETED: treat as finalized; do not auto-open editing
+    if (normalized === "SCHEDULED" || normalized === "COMPLETED") {
+      setBuyerEditing(false);
+    }
+  }, [transaction, viewerRole]);
+
   // ---- Load transaction + listing ----
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  async function fetchData() {
-    try {
-      setLoading(true);
-      setError("");
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError("");
 
-      // 1) Transaction details (use shared API helper)
-      const tx = await getTransaction(transactionId);
-      if (cancelled) return;
+        const tx = await getTransaction(transactionId);
+        if (cancelled) return;
 
-      setTransaction(tx);
+        setTransaction(tx);
 
-      const normalizedStatus = (tx.status || "").toUpperCase();
-      if (normalizedStatus !== "PENDING") {
-        setIsConfirmed(true);
-      }
+        let role = tx.viewer_role || null;
 
-      setPaymentMethod(tx.payment_method || "venmo");
-      setDeliveryType(tx.delivery_method || "meetup");
-      setLocation(tx.meet_location || "");
-
-      if (tx.meet_time) {
-        setMeetingTime(tx.meet_time.slice(0, 16));
-      } else {
-        setMeetingTime("");
-      }
-
-      // 2) Listing details
-      const listingId = tx.listing;
-      if (listingId) {
-        try {
-          const listingData = await getListing(listingId);
-          if (!cancelled) setListing(listingData);
-        } catch (err) {
-          if (!cancelled) {
-            console.error("Failed to load listing", err);
+        if (!role && user) {
+          const rawUserId = user.id ?? user.user_id;
+          if (rawUserId != null) {
+            const userIdStr = String(rawUserId);
+            if (String(tx.buyer) === userIdStr) {
+              role = "buyer";
+            } else if (String(tx.seller) === userIdStr) {
+              role = "seller";
+            }
           }
         }
-      }
-    } catch (e) {
-      if (!cancelled) {
-        console.error(e);
-        setError("Failed to load transaction.");
-      }
-    } finally {
-      if (!cancelled) {
-        setLoading(false);
+
+        setViewerRole(role);
+        setPaymentMethod(tx.payment_method || "venmo");
+        setDeliveryType(tx.delivery_method || "meetup");
+        setLocation(tx.meet_location || "");
+
+        if (tx.meet_time) {
+          setMeetingTime(tx.meet_time.slice(0, 16));
+        } else {
+          setMeetingTime("");
+        }
+
+        const listingId = tx.listing;
+        if (listingId) {
+          try {
+            const listingData = await getListing(listingId);
+            if (!cancelled) setListing(listingData);
+          } catch (err) {
+            if (!cancelled) {
+              console.error("Failed to load listing", err);
+            }
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error(e);
+          setError("Failed to load transaction.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
-  }
 
-  if (transactionId) {
-    fetchData();
-  } else {
-    setLoading(false);
-    setError("Missing transaction id.");
-  }
+    if (transactionId) {
+      fetchData();
+    } else {
+      setLoading(false);
+      setError("Missing transaction id.");
+    }
 
-  return () => {
-    cancelled = true;
-  };
-}, [transactionId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [transactionId, user]);
 
   const mapStatusToStep = (status) => {
     switch (status?.toUpperCase()) {
@@ -286,37 +345,30 @@ export default function TransactionPaymentPage() {
     return "upcoming";
   };
 
-
-  const handleSave = async () => {
+  // ---- Buyer: send a new proposal (update details) ----
+  const handleBuyerSendProposal = async () => {
     if (!transaction) return;
 
-    if (isConfirmed) return;
-
     if (!location || !meetingTime) {
-      setError("Please choose a location and meeting time for a meetup.");
+      setError("Please choose a location and meeting time.");
       return;
     }
 
-    // Only allowed to pick the time after "now + 1hr"
     if (isMeetingTimeTooSoon()) {
       setError("Meeting time must be at least 1 hour from now.");
       return;
     }
-    
+
     setIsSaving(true);
     setError("");
 
-    // Safely extract id from the transaction object
-    const txId =
-      transaction.transaction_id || transaction.id || transactionId;
+    const txId = transaction.transaction_id || transaction.id || transactionId;
 
     try {
-      // Update payment method
       await client.patch(`/transactions/${txId}/payment-method/`, {
         payment_method: paymentMethod,
       });
 
-      // Update delivery details
       const payload = {
         delivery_method: deliveryType,
       };
@@ -336,7 +388,7 @@ export default function TransactionPaymentPage() {
         payload
       );
       setTransaction(res.data);
-      setIsConfirmed(true);
+      setBuyerEditing(false);
     } catch (e) {
       console.error(e);
       const apiError =
@@ -349,21 +401,169 @@ export default function TransactionPaymentPage() {
     }
   };
 
+  // ---- Confirm current proposal (shared by both roles) ----
+  const handleConfirmCurrentDetails = async () => {
+    if (!transaction) return;
+
+    const txId = transaction.transaction_id || transaction.id || transactionId;
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const res = await client.patch(`/transactions/${txId}/confirm/`);
+      setTransaction(res.data);
+      setIsConfirmed(false);
+      setBuyerEditing(false);
+      setSellerEditing(false);
+    } catch (e) {
+      console.error(e);
+      const apiError =
+        e?.response?.data?.error ||
+        e?.response?.data?.detail ||
+        "Failed to confirm transaction.";
+      setError(apiError);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ---- Seller: mark as sold ----
+  const handleMarkAsSold = async () => {
+    if (!transaction) return;
+
+    const txId = transaction.transaction_id || transaction.id || transactionId;
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const res = await client.patch(`/transactions/${txId}/mark-sold/`);
+      setTransaction(res.data);
+      setBuyerEditing(false);
+      setSellerEditing(false);
+    } catch (e) {
+      console.error(e);
+      const apiError =
+        e?.response?.data?.error ||
+        e?.response?.data?.detail ||
+        "Failed to mark as sold.";
+      setError(apiError);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ---- Seller: Request new details ----
+  const handleSellerSendProposal = async () => {
+    if (!transaction) return;
+
+    if (!location || !meetingTime) {
+      setError("Please choose a location and meeting time.");
+      return;
+    }
+
+    if (isMeetingTimeTooSoon()) {
+      setError("Meeting time must be at least 1 hour from now.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+
+    const txId = transaction.transaction_id || transaction.id || transactionId;
+
+    const payload = {
+      delivery_method: transaction.delivery_method || deliveryType || "meetup",
+      meet_location: location,
+      meet_time: new Date(meetingTime).toISOString(),
+    };
+
+    try {
+      const res = await client.patch(
+        `/transactions/${txId}/delivery-details/`,
+        payload
+      );
+      setTransaction(res.data);
+      setSellerEditing(false);
+    } catch (e) {
+      console.error(e);
+      const apiError =
+        e?.response?.data?.error ||
+        e?.response?.data?.detail ||
+        "Failed to send new proposal.";
+      setError(apiError);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ---- Buyer: suggest new details ----
+  const handleBuyerSuggestNewDetails = () => {
+    setBuyerEditing(true);
+    setIsConfirmed(false);
+    setError("");
+  };
+
+  // ---- Seller: suggest new details ----
+  const handleSellerSuggestNewDetails = () => {
+    setSellerEditing((prev) => !prev);
+    setError("");
+  };
+
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
-    // TODO: Connect chat APIs
+    // TODO: Connect chat APIs (chat will be removed later; handler kept to avoid errors)
     setChatInput("");
   };
 
-  const isSaveDisabled =
-    isSaving ||
-    !transaction ||
-    isConfirmed ||
-    !location ||
-    !meetingTime ||
-    isMeetingTimeTooSoon();
-
   const status = transaction?.status || "PENDING";
+  const normalizedStatus = (status || "").toUpperCase();
+
+  const hasProposal = !!transaction?.proposed_by;
+  const proposedByBuyer = transaction?.proposed_by === "buyer";
+  const proposedBySeller = transaction?.proposed_by === "seller";
+  const proposedBy = transaction?.proposed_by;
+
+  // Helper for summary fields
+  const paymentSummary =
+    (transaction?.payment_method || paymentMethod || "").toUpperCase() || "--";
+  const deliveryRaw =
+    (transaction?.delivery_method || deliveryType || "") || "";
+  const deliverySummary =
+    deliveryRaw.charAt(0).toUpperCase() + deliveryRaw.slice(1);
+  const locationSummary =
+    transaction?.meet_location || location || "Location not set";
+  const timeSummary = (() => {
+    const iso = transaction?.meet_time || meetingTime;
+    if (!iso) return "Time not set";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "Time not set";
+    return d.toLocaleString();
+  })();
+
+  // Show Suggest button unless status is COMPLETED
+  const canShowSuggestButton =
+    normalizedStatus !== "COMPLETED" &&
+    (isSellerView ||
+      (isBuyerView && (isConfirmed || hasProposal || normalizedStatus === "SCHEDULED")));
+
+  const canBuyerConfirm =
+    isBuyerView && proposedBySeller && normalizedStatus === "NEGOTIATING";
+
+  const canSellerConfirm =
+    isSellerView &&
+    proposedByBuyer &&
+    !["SCHEDULED", "COMPLETED"].includes(normalizedStatus);
+
+  const canSellerMarkSold =
+    isSellerView && normalizedStatus === "SCHEDULED";
+
+  const showBuyerSummary =
+    hasProposal || normalizedStatus === "SCHEDULED";
+
+  const showSellerSummary =
+    hasProposal || normalizedStatus === "SCHEDULED";
 
   return (
     <div className="transaction-page-container">
@@ -373,243 +573,550 @@ export default function TransactionPaymentPage() {
         <div className="content-grid">
           {/* Left Column (Main Content) */}
           <div className="left-column">
-            <TransactionDetailsCard listing={listing} status={status} />
+            <TransactionDetailsCard
+              listing={listing}
+              status={status}
+              viewerRole={viewerRole}
+              buyerLabel={buyerLabel}
+            />
 
             {/* Proposal Card */}
             <div className="card">
               <div className="card-header">
                 <h3>Transaction Proposal</h3>
+                {canShowSuggestButton && (
+                  <button
+                    type="button"
+                    className="suggest-details-btn"
+                    onClick={
+                      isSellerView
+                        ? handleSellerSuggestNewDetails
+                        : handleBuyerSuggestNewDetails
+                    }
+                  >
+                    Suggest new details
+                  </button>
+                )}
               </div>
 
               <div className="card-padding">
-                {loading && <p className="tx-helper-text">Loading transaction…</p>}
+                {loading && (
+                  <p className="tx-helper-text">Loading transaction…</p>
+                )}
                 {error && (
                   <p className="tx-error-text" data-testid="tx-error">
                     {error}
                   </p>
                 )}
 
-                {/* ⭐ NEW ——— If confirmed, show summary instead */}
-                {isConfirmed ? (
-                  <div className="proposal-summary" style={{ 
-                    background: "#FFFBEB",
-                    border: "1px solid #FACC15",
-                    borderRadius: "12px",
-                    padding: "16px"
-                  }}>
-                    <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                      <div style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: "999px",
-                        background: "#FEF3C7",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}>
-                        <Info size={14} color="#D97706" />
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 600, margin: 0 }}>
-                          You proposed these details.
-                        </p>
-                        <p style={{ fontSize: "0.85rem", color: "#6B7280", margin: 0 }}>
-                          Waiting for seller to confirm.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: "4px" }}>
-                      <strong>Payment:</strong>{" "}
-                      {(paymentMethod || transaction?.payment_method || "").toUpperCase()}
-                    </div>
-
-                    <div style={{ marginBottom: "4px" }}>
-                      <strong>Delivery:</strong>{" "}
-                      {(deliveryType || transaction?.delivery_method || "")
-                        .charAt(0)
-                        .toUpperCase() +
-                        (deliveryType || transaction?.delivery_method || "").slice(1)}
-                    </div>
-
-                    <div>
-                      <strong>Location:</strong>{" "}
-                      {location || transaction?.meet_location || "--"}
-                    </div>
-
-                    <div style={{ marginTop: "12px", textAlign: "right" }}>
-                      {/* ⭐ NEW suggest new details */}
-                      <button
-                        type="button"
-                        className="suggest-details-btn"
-                        onClick={() => setIsConfirmed(false)}
+                {isBuyerView ? (
+                  // ============================
+                  // BUYER VIEW
+                  // ============================
+                  <>
+                    {/* Buyer Summary: show when there is a proposal or status is SCHEDULED */}
+                    {showBuyerSummary && (
+                      <div
+                        className="proposal-summary"
                         style={{
-                          padding: "6px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid #D1D5DB",
-                          background: "#FFFFFF",
-                          cursor: "pointer",
-                          fontSize: "0.85rem"
+                          background: "#FFFBEB",
+                          border: "1px solid #FACC15",
+                          borderRadius: "12px",
+                          padding: "16px",
+                          marginBottom: "16px",
                         }}
                       >
-                        Suggest new details
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* ⭐ ORIGINAL FORM — unchanged except wrapped inside the else block */}
-
-                    {/* Payment Method Section */}
-                    <div className="section-group">
-                      <label className="section-label">Payment Method</label>
-                      <div className="options-stack">
-                        <PaymentOption
-                          id="venmo"
-                          label="Venmo"
-                          subLabel="Send via Venmo"
-                          icon={
-                            <Heart
-                              size={18}
-                              color={paymentMethod === "venmo" ? "#60a5fa" : "#3b82f6"}
-                              fill={paymentMethod === "venmo" ? "#60a5fa" : "#3b82f6"}
-                            />
-                          }
-                          selected={paymentMethod === "venmo"}
-                          onSelect={setPaymentMethod}
-                        />
-
-                        <PaymentOption
-                          id="zelle"
-                          label="Zelle"
-                          subLabel="Send via Zelle"
-                          icon={
-                            <div
-                              style={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: 2,
-                                backgroundColor: "#9333ea",
-                              }}
-                            />
-                          }
-                          selected={paymentMethod === "zelle"}
-                          onSelect={setPaymentMethod}
-                        />
-
-                        <PaymentOption
-                          id="cash"
-                          label="Cash"
-                          subLabel="Pay in person"
-                          icon={<Banknote size={18} color="#16a34a" />}
-                          selected={paymentMethod === "cash"}
-                          onSelect={setPaymentMethod}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Delivery Details Section */}
-                    <div className="section-group">
-                      <label className="section-label">Delivery Details</label>
-                      <div className="delivery-toggle-container">
-                        <button
-                          onClick={() => setDeliveryType("meetup")}
-                          className={`toggle-option ${
-                            deliveryType === "meetup" ? "active" : "inactive"
-                          }`}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            marginBottom: "10px",
+                          }}
                         >
-                          <ArrowRightLeft size={14} />
-                          Meetup
-                        </button>
-
-                        <button
-                          onClick={() => setDeliveryType("pickup")}
-                          className={`toggle-option ${
-                            deliveryType === "pickup" ? "active" : "inactive"
-                          }`}
-                        >
-                          <MapPin size={14} />
-                          Pickup
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Location Dropdown */}
-                    <div className="section-group">
-                      <label className="section-label">
-                        {deliveryType === "meetup" ? "Meeting Location" : "Pickup Location"}
-                      </label>
-
-                      <div className="location-dropdown-wrapper">
-                        <button
-                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                          className={`dropdown-trigger ${isDropdownOpen ? "open" : ""}`}
-                        >
-                          <span
+                          <div
                             style={{
-                              color: location ? "#111827" : "#6b7280",
-                              fontWeight: location ? 500 : 400,
+                              width: 20,
+                              height: 20,
+                              borderRadius: "999px",
+                              background: "#FEF3C7",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                             }}
                           >
-                            {location || "Choose a location"}
-                          </span>
-                          <ChevronDown size={16} color="#9ca3af" />
-                        </button>
-
-                        {isDropdownOpen && (
-                          <div className="dropdown-menu">
-                            {LOCATIONS.map((loc) => (
-                              <div
-                                key={loc}
-                                onClick={() => {
-                                  setLocation(loc);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className="dropdown-item"
-                              >
-                                {loc}
-                              </div>
-                            ))}
+                            <Info size={14} color="#D97706" />
                           </div>
-                        )}
+                          <div>
+                            <p style={{ fontWeight: 600, margin: 0 }}>
+                              {normalizedStatus === "SCHEDULED"
+                                ? "Meetup scheduled."
+                                : proposedByBuyer
+                                ? "You proposed these details."
+                                : "Seller proposed new details to you."}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "0.85rem",
+                                color: "#6B7280",
+                                margin: 0,
+                              }}
+                            >
+                              {normalizedStatus === "SCHEDULED"
+                                ? "These details are confirmed. If something changes, you or the seller can suggest new details."
+                                : proposedByBuyer
+                                ? "Waiting for seller to accept or suggest changes."
+                                : "Waiting for you to accept the proposal or suggest changes."}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>Payment:</strong> {paymentSummary}
+                        </div>
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>Delivery:</strong> {deliverySummary}
+                        </div>
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>Location:</strong> {locationSummary}
+                        </div>
+                        <div>
+                          <strong>Time:</strong> {timeSummary}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Meeting Time */}
-                    <div className="section-group">
-                      <label className="section-label">Meeting Time</label>
-                      <input
-                        type="datetime-local"
-                        className="input-field"
-                        value={meetingTime}
-                        onChange={(e) => {
-                          setMeetingTime(e.target.value);
-                          setError("");
-                        }}
-                        min={minMeetingTime}
-                      />
-
-                      <div className="helper-text">
-                        <Info size={12} />
-                        <span>Meeting time must be at least 1 hour from now.</span>
-                      </div>
-                    </div>
-
-                    {/* Confirm Button */}
-                    <button
-                      onClick={handleSave}
-                      disabled={isSaveDisabled}
-                      className="save-btn"
-                    >
-                      {isSaving ? (
+                    {/* Buyer form: only visible after clicking Suggest new details */}
+                    {buyerEditing &&
+                      normalizedStatus !== "COMPLETED" && (
                         <>
-                          <div className="spinner" />
-                          Saving...
+                          {/* Payment Method Section */}
+                          <div className="section-group">
+                            <label className="section-label">
+                              Payment Method
+                            </label>
+                            <div className="options-stack">
+                              <PaymentOption
+                                id="venmo"
+                                label="Venmo"
+                                subLabel="Send via Venmo"
+                                icon={
+                                  <Heart
+                                    size={18}
+                                    color={
+                                      paymentMethod === "venmo"
+                                        ? "#60a5fa"
+                                        : "#3b82f6"
+                                    }
+                                    fill={
+                                      paymentMethod === "venmo"
+                                        ? "#60a5fa"
+                                        : "#3b82f6"
+                                    }
+                                  />
+                                }
+                                selected={paymentMethod === "venmo"}
+                                onSelect={setPaymentMethod}
+                              />
+                              <PaymentOption
+                                id="zelle"
+                                label="Zelle"
+                                subLabel="Send via Zelle"
+                                icon={
+                                  <div
+                                    style={{
+                                      width: 16,
+                                      height: 16,
+                                      borderRadius: 2,
+                                      backgroundColor: "#9333ea",
+                                    }}
+                                  />
+                                }
+                                selected={paymentMethod === "zelle"}
+                                onSelect={setPaymentMethod}
+                              />
+                              <PaymentOption
+                                id="cash"
+                                label="Cash"
+                                subLabel="Pay in person"
+                                icon={<Banknote size={18} color="#16a34a" />}
+                                selected={paymentMethod === "cash"}
+                                onSelect={setPaymentMethod}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Delivery Details Section */}
+                          <div className="section-group">
+                            <label className="section-label">
+                              Delivery Details
+                            </label>
+                            <div className="delivery-toggle-container">
+                              <button
+                                onClick={() => setDeliveryType("meetup")}
+                                className={`toggle-option ${
+                                  deliveryType === "meetup"
+                                    ? "active"
+                                    : "inactive"
+                                }`}
+                              >
+                                <ArrowRightLeft size={14} />
+                                Meetup
+                              </button>
+                              <button
+                                onClick={() => setDeliveryType("pickup")}
+                                className={`toggle-option ${
+                                  deliveryType === "pickup"
+                                    ? "active"
+                                    : "inactive"
+                                }`}
+                              >
+                                <MapPin size={14} />
+                                Pickup
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Location Dropdown */}
+                          <div className="section-group">
+                            <label className="section-label">
+                              {deliveryType === "meetup"
+                                ? "Meeting Location"
+                                : "Pickup Location"}
+                            </label>
+
+                            <div className="location-dropdown-wrapper">
+                              <button
+                                onClick={() =>
+                                  setIsDropdownOpen(!isDropdownOpen)
+                                }
+                                className={`dropdown-trigger ${
+                                  isDropdownOpen ? "open" : ""
+                                }`}
+                              >
+                                <span
+                                  style={{
+                                    color: location ? "#111827" : "#6b7280",
+                                    fontWeight: location ? 500 : 400,
+                                  }}
+                                >
+                                  {location || "Choose a location"}
+                                </span>
+                                <ChevronDown
+                                  size={16}
+                                  color="#9ca3af"
+                                  style={{
+                                    transform: isDropdownOpen
+                                      ? "rotate(180deg)"
+                                      : "none",
+                                    transition: "transform 0.2s",
+                                  }}
+                                />
+                              </button>
+
+                              {isDropdownOpen && (
+                                <div className="dropdown-menu">
+                                  {LOCATIONS.map((loc) => (
+                                    <div
+                                      key={loc}
+                                      onClick={() => {
+                                        setLocation(loc);
+                                        setIsDropdownOpen(false);
+                                      }}
+                                      className="dropdown-item"
+                                    >
+                                      {loc}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Meeting Time */}
+                          <div className="section-group">
+                            <label className="section-label">
+                              Meeting Time
+                            </label>
+                            <input
+                              type="datetime-local"
+                              className="input-field"
+                              value={meetingTime}
+                              onChange={(e) => {
+                                setMeetingTime(e.target.value);
+                                setError("");
+                              }}
+                              min={minMeetingTime}
+                            />
+
+                            <div className="helper-text">
+                              <Info size={12} />
+                              <span>
+                                Meeting time must be at least 1 hour from now.
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Buyer: Send new proposal */}
+                          <button
+                            onClick={handleBuyerSendProposal}
+                            disabled={
+                              isSaving ||
+                              !transaction ||
+                              !location ||
+                              !meetingTime ||
+                              isMeetingTimeTooSoon()
+                            }
+                            className="save-btn"
+                            style={{ marginBottom: "12px" }}
+                          >
+                            {isSaving ? (
+                              <>
+                                <div className="spinner" />
+                                Sending proposal...
+                              </>
+                            ) : (
+                              "Send new proposal"
+                            )}
+                          </button>
                         </>
-                      ) : (
-                        "Confirm Details"
                       )}
-                    </button>
+
+                    {/* Buyer: Confirm current proposal (shown only when seller proposed) */}
+                    {canBuyerConfirm && (
+                      <button
+                        onClick={handleConfirmCurrentDetails}
+                        disabled={isSaving}
+                        className="save-btn"
+                      >
+                        {isSaving ? (
+                          <>
+                            <div className="spinner" />
+                            Confirming...
+                          </>
+                        ) : (
+                          "Confirm Details"
+                        )}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  // ============================
+                  // SELLER VIEW
+                  // ============================
+                  <>
+                    {/* Seller Summary: show when there is a proposal or status is SCHEDULED; if PENDING with no proposal show a brief tip */}
+                    {showSellerSummary ? (
+                      <div
+                        className="proposal-summary"
+                        style={{
+                          background: "#FFFBEB",
+                          border: "1px solid #FACC15",
+                          borderRadius: "12px",
+                          padding: "16px",
+                          marginBottom: "16px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            marginBottom: "10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: "999px",
+                              background: "#FEF3C7",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Info size={14} color="#D97706" />
+                          </div>
+                          <div>
+                            <p style={{ fontWeight: 600, margin: 0 }}>
+                              {normalizedStatus === "SCHEDULED"
+                                ? "Meetup scheduled."
+                                : proposedBy === "buyer"
+                                ? "Buyer proposed new details."
+                                : "You proposed new details to the buyer."}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "0.85rem",
+                                color: "#6B7280",
+                                margin: 0,
+                              }}
+                            >
+                              {normalizedStatus === "SCHEDULED"
+                                ? "These details are confirmed. You can still suggest changes if needed."
+                                : proposedBy === "buyer"
+                                ? "Review the proposal and confirm if it works for you."
+                                : "Waiting for buyer to accept or suggest changes."}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>Payment:</strong> {paymentSummary}
+                        </div>
+
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>Delivery:</strong> {deliverySummary}
+                        </div>
+
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong>Location:</strong> {locationSummary}
+                        </div>
+
+                        <div>
+                          <strong>Time:</strong> {timeSummary}
+                        </div>
+                      </div>
+                    ) : (
+                      normalizedStatus === "PENDING" && (
+                        <p className="tx-helper-text" style={{ marginBottom: 16 }}>
+                          No details proposed yet. Once the buyer suggests a meetup
+                          time and place, you&apos;ll see them here.
+                        </p>
+                      )
+                    )}
+
+                    {sellerEditing && normalizedStatus !== "COMPLETED" && (
+                      <>
+                        <div className="section-group">
+                          <label className="section-label">
+                            Meeting Location
+                          </label>
+
+                          <div className="location-dropdown-wrapper">
+                            <button
+                              onClick={() =>
+                                setIsDropdownOpen(!isDropdownOpen)
+                              }
+                              className={`dropdown-trigger ${
+                                isDropdownOpen ? "open" : ""
+                              }`}
+                            >
+                              <span
+                                style={{
+                                  color: location ? "#111827" : "#6b7280",
+                                  fontWeight: location ? 500 : 400,
+                                }}
+                              >
+                                {location || "Choose a location"}
+                              </span>
+                              <ChevronDown
+                                size={16}
+                                color="#9ca3af"
+                                style={{
+                                  transform: isDropdownOpen
+                                    ? "rotate(180deg)"
+                                    : "none",
+                                  transition: "transform 0.2s",
+                                }}
+                              />
+                            </button>
+
+                            {isDropdownOpen && (
+                              <div className="dropdown-menu">
+                                {LOCATIONS.map((loc) => (
+                                  <div
+                                    key={loc}
+                                    onClick={() => {
+                                      setLocation(loc);
+                                      setIsDropdownOpen(false);
+                                    }}
+                                    className="dropdown-item"
+                                  >
+                                    {loc}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="section-group">
+                          <label className="section-label">
+                            Meeting Time
+                          </label>
+                          <input
+                            type="datetime-local"
+                            className="input-field"
+                            value={meetingTime}
+                            onChange={(e) => {
+                              setMeetingTime(e.target.value);
+                              setError("");
+                            }}
+                            min={minMeetingTime}
+                          />
+
+                          <div className="helper-text">
+                            <Info size={12} />
+                            <span>
+                              Meeting time must be at least 1 hour from now.
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handleSellerSendProposal}
+                          disabled={isSaving}
+                          className="save-btn"
+                          style={{ marginBottom: "12px" }}
+                        >
+                          {isSaving ? (
+                            <>
+                              <div className="spinner" />
+                              Sending proposal...
+                            </>
+                          ) : (
+                            "Send new proposal"
+                          )}
+                        </button>
+                      </>
+                    )}
+
+                    {/* Seller Confirm (only when buyer proposed) */}
+                    {canSellerConfirm && (
+                      <button
+                        onClick={handleConfirmCurrentDetails}
+                        disabled={isSaving}
+                        className="save-btn"
+                      >
+                        {isSaving ? (
+                          <>
+                            <div className="spinner" />
+                            Confirming...
+                          </>
+                        ) : (
+                          "Confirm Details"
+                        )}
+                      </button>
+                    )}
+
+                    {/* Seller: Mark as sold (when status is SCHEDULED) */}
+                    {canSellerMarkSold && (
+                      <button
+                        onClick={handleMarkAsSold}
+                        disabled={isSaving}
+                        className="save-btn"
+                        style={{ marginTop: "12px" }}
+                      >
+                        {isSaving ? (
+                          <>
+                            <div className="spinner" />
+                            Marking as sold...
+                          </>
+                        ) : (
+                          "Mark as sold"
+                        )}
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -650,47 +1157,7 @@ export default function TransactionPaymentPage() {
               </div>
             </div>
 
-            {/* Chat Card (still mock for now) */}
-            <div className="card chat-container">
-              <div className="card-header">
-                <h3>Chat</h3>
-              </div>
-
-              <div className="chat-messages-area">
-                <div className="chat-bubble">
-                  <div className="chat-bubble-content">
-                    <div className="chat-icon-box">
-                      <Info size={14} color="#2563eb" />
-                    </div>
-                    <div>
-                      <p className="chat-text">
-                        Transaction initiated. Buyer can now set payment and
-                        delivery preferences.
-                      </p>
-                      <span className="chat-time">09:49 PM</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="chat-input-area">
-                <div className="chat-input-wrapper">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Type a message..."
-                    className="chat-input"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    className="chat-send-btn"
-                  >
-                    <Send size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Chat Card removed */}
           </div>
         </div>
       </main>

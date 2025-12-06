@@ -5,7 +5,9 @@ from .models import Transaction
 
 class TransactionSerializer(serializers.ModelSerializer):
     """Serializer for Transaction model - used for read operations"""
-
+    buyer_netid = serializers.CharField(source="buyer.netid", read_only=True)
+    viewer_role = serializers.SerializerMethodField()
+    
     class Meta:
         model = Transaction
         fields = [
@@ -20,6 +22,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "updated_at",
+            "viewer_role",
+            "proposed_by",
+            "buyer_netid",
         ]
         read_only_fields = [
             "transaction_id",
@@ -28,7 +33,29 @@ class TransactionSerializer(serializers.ModelSerializer):
             "seller",
             "created_at",
             "updated_at",
+            "viewer_role",
+            "proposed_by",
+            "buyer_netid",
         ]
+        
+    def get_viewer_role(self, obj):
+        """
+        Return 'buyer' or 'seller' dependsing on the authenticated user.
+        If the user is not the buyer or seller, return None (Normally, it won't happen)
+        """
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        
+        if not user or user.is_anonymous:
+            return None
+        
+        if obj.buyer_id == user.id:
+            return "buyer"
+        
+        if obj.seller_id == user.id:
+            return "seller"
+        
+        return None
 
 
 class PaymentMethodUpdateSerializer(serializers.Serializer):

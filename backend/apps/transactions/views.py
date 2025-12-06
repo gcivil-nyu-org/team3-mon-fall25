@@ -94,7 +94,10 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         message_text = f"Buyer selected payment method: {payment_method_display}"
         create_system_message(transaction_obj, message_text)
 
-        response_serializer = TransactionSerializer(transaction_obj)
+        response_serializer = TransactionSerializer(
+            transaction_obj,
+            context={"request": request}
+            )
         return Response(response_serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="delivery-details")
@@ -106,10 +109,14 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         """
         transaction_obj = self.get_object()
 
-        # Check if user is the buyer
-        if transaction_obj.buyer != request.user:
+        # Check the caller: "buyer" or "seller"
+        if request.user == transaction_obj.buyer:
+            proposer_role = "buyer"
+        elif request.user == transaction_obj.seller:
+            proposer_role = "seller"
+        else:
             return Response(
-                {"error": "Only the buyer can set delivery details."},
+                {"error": "Only the buyer or seller can update delivery details."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -127,27 +134,34 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
 
         update_fields = ["delivery_method", "meet_location", "meet_time"]
        
-       # When first time clicking "Confirm details" button: PENDING -> NEGOTIATING 
-        if transaction_obj.status == "PENDING":
+       # When someone clicks the "Confirm details" button: back to NEGOTIATING 
+        if transaction_obj.status in ["PENDING", "NEGOTIATING", "SCHEDULED"]:
             transaction_obj.status = "NEGOTIATING"
             update_fields.append("status")
-        transaction_obj.save(
-            update_fields=update_fields
-        )
+
+        transaction_obj.proposed_by = proposer_role
+        update_fields.append("proposed_by")
+
+        transaction_obj.save(update_fields=update_fields)
 
         # Create system message
         if delivery_method == "meetup":
+            who = "Buyer" if proposer_role == "buyer" else "Seller"
             message_text = (
-                f"Buyer proposed meetup:\n"
+                f"{who} proposed meetup:\n"
                 f"Location: {meet_location}\n"
                 f"Time: {meet_time.strftime('%Y-%m-%d %H:%M') if meet_time else 'TBD'}"
             )
         else:  # pickup
-            message_text = "Buyer selected pickup delivery method."
+            who = "Buyer" if proposer_role == "buyer" else "Seller"
+            message_text = f"{who} selected pickup delivery method."
 
         create_system_message(transaction_obj, message_text)
 
-        response_serializer = TransactionSerializer(transaction_obj)
+        response_serializer = TransactionSerializer(
+            transaction_obj,
+            context={"request": request}
+            )
         return Response(response_serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="confirm")
@@ -159,14 +173,32 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         """
         transaction_obj = self.get_object()
 
-        # Check if user is the seller
-        if transaction_obj.seller != request.user:
+        # Check the caller: "buyer" or "seller"
+        if request.user == transaction_obj.buyer:
+            caller_role = "buyer"
+        elif request.user == transaction_obj.seller:
+            caller_role = "seller"
+        else:
             return Response(
-                {"error": "Only the seller can confirm the transaction."},
+                {"error": "Only the buyer or seller can update delivery details."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Check if transaction is in a valid state
+        # Pending proposal
+        if not transaction_obj.proposed_by:
+            return Response(
+                {"error": "There is no pending proposal to confirm."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Cannot confirm your own proposal
+        if transaction_obj.proposed_by == caller_role:
+            return Response(
+                {"error": "You cannot confirm your own proposal. Wait for the other party."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Can only be confirmed under status PENDING / NEGOTIATING
         if transaction_obj.status not in ["PENDING", "NEGOTIATING"]:
             return Response(
                 {"error": "Transaction cannot be confirmed in its current state."},
@@ -175,13 +207,21 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
 
         # Update status to SCHEDULED
         transaction_obj.status = "SCHEDULED"
-        transaction_obj.save(update_fields=["status"])
+        transaction_obj.proposed_by = None
+        transaction_obj.save(update_fields=["status", "proposed_by"])
 
         # Create system message
-        message_text = "Seller confirmed the meetup. Transaction is scheduled."
+        if caller_role == "buyer":
+            message_text = "Buyer confirmed the proposed details. Transaction is scheduled."
+        else:
+            message_text = "Seller confirmed the proposed details. Transaction is scheduled."
+
         create_system_message(transaction_obj, message_text)
 
-        response_serializer = TransactionSerializer(transaction_obj)
+        response_serializer = TransactionSerializer(
+            transaction_obj,
+            context={"request": request},
+        )
         return Response(response_serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="mark-sold")
@@ -226,5 +266,8 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         message_text = "Seller marked the item as sold. Transaction completed."
         create_system_message(transaction_obj, message_text)
 
-        response_serializer = TransactionSerializer(transaction_obj)
+        response_serializer = TransactionSerializer(
+            transaction_obj,
+            context={"request": request}
+            )
         return Response(response_serializer.data)
