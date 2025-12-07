@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { searchProfiles } from "../api/profiles.js";
@@ -13,9 +13,9 @@ export default function ProfileDropdown() {
   const navigate = useNavigate();
 
   // Load profile data
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       let params = {};
       if (user.username) {
@@ -33,7 +33,7 @@ export default function ProfileDropdown() {
     } catch (err) {
       console.error("Failed to load profile:", err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadProfile();
@@ -47,7 +47,7 @@ export default function ProfileDropdown() {
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, [user]);
+  }, [loadProfile]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

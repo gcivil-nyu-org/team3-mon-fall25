@@ -829,7 +829,6 @@ describe('Profile', () => {
     describe('Edit Profile with Username Change', () => {
         it('redirects to new username URL after username change', async () => {
             const user = userEvent.setup();
-            const updatedProfile = { ...mockProfile, username: 'alex_new_username' };
 
             renderWithRouter(<Profile />);
 
