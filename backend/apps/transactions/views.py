@@ -192,9 +192,7 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         # Cannot confirm your own proposal
         if transaction_obj.proposed_by == caller_role:
             return Response(
-                {
-                    "error": "You cannot confirm your own proposal."
-                },
+                {"error": "You cannot confirm your own proposal."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
