@@ -84,27 +84,6 @@ def test_create_profile_unauthenticated():
     assert res.status_code in (401, 403)
 
 
-def test_me_endpoint_returns_current_user_profile(user_with_profile):
-    """Test /me/ endpoint returns current user's profile."""
-    user, profile = user_with_profile
-    c = APIClient()
-    c.force_authenticate(user=user)
-
-    res = c.get("/api/v1/profiles/me/")
-    assert res.status_code == 200
-    assert res.json()["profile_id"] == profile.profile_id
-
-
-def test_me_endpoint_without_profile(nyu_user_factory):
-    """Test /me/ endpoint when user has no profile."""
-    user = nyu_user_factory(1)
-    c = APIClient()
-    c.force_authenticate(user=user)
-
-    res = c.get("/api/v1/profiles/me/")
-    assert res.status_code == 404
-
-
 def test_update_me_endpoint(user_with_profile):
     """Test updating profile via profile_id endpoint."""
     user, profile = user_with_profile

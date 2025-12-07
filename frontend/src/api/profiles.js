@@ -2,13 +2,14 @@ import apiClient from "./client";
 import { endpoints } from "./endpoints";
 
 const base = endpoints.profiles.base;
-const meEndpoint = endpoints.profiles.me;
 
-export const getMyProfile = () => apiClient.get(meEndpoint);
+// Get profile by profile_id
+export const getProfileById = (id) =>
+  apiClient.get(endpoints.profiles.byId(id));
 
-// Get profile by username or profile_id - backend handles both
-export const getProfileById = (usernameOrId) =>
-  apiClient.get(endpoints.profiles.byId(usernameOrId));
+// Search profiles (e.g., by username)
+export const searchProfiles = (params) =>
+  apiClient.get(base, { params });
 
 export const createProfile = (formData) =>
   apiClient.post(base, formData, {

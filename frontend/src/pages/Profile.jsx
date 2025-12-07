@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { getMyListings, getListingsByUsername } from "../api/listings.js";
-import { getMyProfile, getProfileById, deleteProfile } from "../api/profiles.js";
+import { getMyListings, getListingsByUserId } from "../api/listings.js";
+import { getProfileById, searchProfiles, deleteProfile } from "../api/profiles.js";
 import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen, FaExclamationTriangle, FaTrash } from "react-icons/fa";
 import EditProfile from "./EditProfile";
 import DeleteAccountModal from "../components/DeleteAccountModal";
@@ -31,24 +31,56 @@ export default function Profile() {
     setProfileError(null);
 
     try {
+      let targetUsername = username;
+
       // If no username in URL, fetch current user's profile and redirect to their username
-      if (!username) {
-        const myProfileResponse = await getMyProfile();
-        const myUsername = myProfileResponse.data.username;
-        navigate(`/profile/${myUsername}`, { replace: true });
+      if (!targetUsername) {
+        // Try to find profile by user context
+        if (user) {
+            let searchParams = {};
+            if (user.username) {
+                searchParams.username = user.username;
+            } else if (user.user_id || user.id) {
+                searchParams.user = user.user_id || user.id;
+            }
+
+            if (Object.keys(searchParams).length > 0) {
+                 const searchRes = await searchProfiles(searchParams);
+                 if (searchRes.data && searchRes.data.length > 0) {
+                     targetUsername = searchRes.data[0].username;
+                     navigate(`/profile/${targetUsername}`, { replace: true });
+                     return;
+                 }
+            }
+        }
+        
+        setProfileError("Profile not found.");
         return;
       }
 
-      // Fetch profile by username - backend handles both username and profile_id
-      const response = await getProfileById(username);
+      // Step 1: Resolve username to Profile ID
+      // We use the search endpoint to find the profile by username
+      const searchResponse = await searchProfiles({ username: targetUsername });
+      
+      if (!searchResponse.data || searchResponse.data.length === 0) {
+          throw new Error("Profile not found");
+      }
+
+      // Assuming username is unique, take the first result
+      const profileId = searchResponse.data[0].profile_id;
+
+      // Step 2: Fetch full profile details by ID
+      const response = await getProfileById(profileId);
       setProfile(response.data);
 
       // Check if this is the current user's profile
+      // The backend 'retrieve' endpoint adds 'is_own_profile'
       const ownProfile = response.data.is_own_profile || false;
       setIsOwnProfile(ownProfile);
+
     } catch (err) {
       console.error("Failed to load profile:", err);
-      if (err.response?.status === 404) {
+      if (err.response?.status === 404 || err.message === "Profile not found") {
         setProfileError("Profile not found.");
       } else {
         setProfileError(err.response?.data?.detail || "Failed to load profile.");
@@ -62,18 +94,24 @@ export default function Profile() {
     setLoading(true);
     setError(null);
     try {
-      if (!username) {
+      if (!profile) {
         setListings([]);
+        setLoading(false);
         return;
       }
 
-      // For own profile, use getMyListings; for others, use getListingsByUsername
+      // For own profile, use getMyListings (shows all statuses); 
+      // for others, use getListingsByUserId (shows active only)
       if (isOwnProfile) {
         const data = await getMyListings();
         setListings(data);
       } else {
-        const data = await getListingsByUsername(username);
-        setListings(data);
+        if (profile.user_id) {
+            const data = await getListingsByUserId(profile.user_id);
+            setListings(data);
+        } else {
+            setListings([]);
+        }
       }
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || "Failed to load listings.";

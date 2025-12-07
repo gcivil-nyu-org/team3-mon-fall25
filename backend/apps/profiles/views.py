@@ -50,9 +50,6 @@ class ProfileViewSet(
     - GET /api/v1/profiles/ - List all profiles (auth required)
     - POST /api/v1/profiles/ - Create a new profile (auth required)
     - GET /api/v1/profiles/{id}/ - Get specific profile (auth required)
-    - GET /api/v1/profiles/me/ - Get current user's profile (auth)
-    - PUT/PATCH /api/v1/profiles/me/ - Update user's profile (auth)
-    - DELETE /api/v1/profiles/me/ - Delete user's profile (auth)
     """
 
     queryset = Profile.objects.all()
@@ -65,6 +62,7 @@ class ProfileViewSet(
         filters.OrderingFilter,
         filters.SearchFilter,
     ]
+    filterset_fields = ["username", "user"]
     ordering_fields = ["created_at", "full_name", "username"]
     ordering = ["-created_at"]
     search_fields = ["full_name", "username", "dorm_location"]
@@ -81,47 +79,11 @@ class ProfileViewSet(
             return ProfileCreateSerializer
         elif self.action in ["update", "partial_update"]:
             return ProfileUpdateSerializer
-        elif self.action == "me":
-            # For /me/ endpoint, check HTTP method
-            if self.request and self.request.method in ["PUT", "PATCH"]:
-                return ProfileUpdateSerializer
-            return ProfileDetailSerializer
         elif self.action == "retrieve":
             return ProfileDetailSerializer
         elif self.action == "list":
             return CompactProfileSerializer
         return ProfileDetailSerializer
-
-    def get_object(self):
-        """
-        Override to support lookup by both profile_id (integer) and username.
-
-        URL pattern: /api/v1/profiles/<lookup_value>/
-        - If lookup_value is a valid integer, lookup by profile_id
-        - Otherwise, lookup by username (case-insensitive)
-        """
-        lookup_value = self.kwargs.get('pk')
-
-        if not lookup_value:
-            return super().get_object()
-
-        # Try to parse as integer (profile_id)
-        try:
-            int(lookup_value)
-            # It's a valid integer, use default lookup by profile_id
-            return super().get_object()
-        except (ValueError, TypeError):
-            # Not an integer, treat as username
-            queryset = self.filter_queryset(self.get_queryset())
-            try:
-                obj = queryset.get(username__iexact=lookup_value)
-            except Profile.DoesNotExist:
-                from django.http import Http404
-                raise Http404("Profile not found.")
-
-            # Check object permissions
-            self.check_object_permissions(self.request, obj)
-            return obj
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -187,24 +149,3 @@ class ProfileViewSet(
 
         # Delete the user (cascades to profile and all related data)
         user.delete()
-
-    @action(detail=False, methods=["get"], url_path="me")
-    def me(self, request):
-        """
-        Get the current user's profile.
-
-        GET /api/v1/profiles/me/
-
-        Note: This endpoint is kept for backward compatibility.
-        For updates/deletes, use /api/v1/profiles/<username>/ instead.
-        """
-        try:
-            profile = request.user.profile
-        except Profile.DoesNotExist:
-            return Response(
-                {"detail": "Profile not found. Please create one first."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        serializer = self.get_serializer(profile)
-        return Response(serializer.data, status=status.HTTP_200_OK)

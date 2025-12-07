@@ -9,8 +9,7 @@ export const endpoints = {
   },
   profiles: {
     base: '/profiles/',
-    me: '/profiles/me/',
-    byId: (usernameOrId) => `/profiles/${encodeURIComponent(usernameOrId)}/`,
+    byId: (id) => `/profiles/${id}/`,
   },
   listings: '/listings/',
   listingPriceStats: '/listings/price-stats/',

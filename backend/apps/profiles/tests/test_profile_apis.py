@@ -129,26 +129,16 @@ def test_retrieve_profile_requires_auth():
 
 
 def test_get_current_user_profile(user_with_profile):
-    """Test retrieving the current user's profile via /me/ endpoint."""
+    """Test retrieving the current user's profile via ID endpoint."""
     user, profile = user_with_profile
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.get("/api/v1/profiles/me/")
+    res = c.get(f"/api/v1/profiles/{profile.profile_id}/")
     assert res.status_code == 200
     data = res.json()
     assert data["profile_id"] == profile.profile_id
     assert data["user_id"] == user.id
-
-
-def test_get_me_without_profile(nyu_user_factory):
-    """Test /me/ endpoint when user has no profile."""
-    user = nyu_user_factory(1)
-    c = APIClient()
-    c.force_authenticate(user=user)
-
-    res = c.get("/api/v1/profiles/me/")
-    assert res.status_code == 404
 
 
 def test_update_own_profile(user_with_profile):
@@ -158,7 +148,7 @@ def test_update_own_profile(user_with_profile):
     c.force_authenticate(user=user)
 
     res = c.patch(
-        "/api/v1/profiles/me/",
+        f"/api/v1/profiles/{profile.profile_id}/",
         {"full_name": "Updated Name", "bio": "Updated bio"},
         format="json",
     )
@@ -173,12 +163,12 @@ def test_update_profile_duplicate_username(two_users, profile_factory):
     """Test that updating to a duplicate username is rejected."""
     user1, user2 = two_users
     profile_factory(user1, username="user1")
-    profile_factory(user2, username="user2")
+    profile2 = profile_factory(user2, username="user2")
 
     c = APIClient()
     c.force_authenticate(user=user2)
 
-    res = c.patch("/api/v1/profiles/me/", {"username": "user1"}, format="json")
+    res = c.patch(f"/api/v1/profiles/{profile2.profile_id}/", {"username": "user1"}, format="json")
 
     assert res.status_code == 400
 
@@ -189,7 +179,7 @@ def test_delete_own_profile(user_with_profile):
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.delete("/api/v1/profiles/me/")
+    res = c.delete(f"/api/v1/profiles/{profile.profile_id}/")
     assert res.status_code == 204
 
     # Verify profile is deleted
@@ -265,7 +255,7 @@ def test_profile_includes_active_listings_count(user_with_profile):
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.get("/api/v1/profiles/me/")
+    res = c.get(f"/api/v1/profiles/{profile.profile_id}/")
     assert res.status_code == 200
     data = res.json()
     assert "active_listings" in data
@@ -291,7 +281,7 @@ def test_profile_includes_sold_items_count(user_with_profile):
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.get("/api/v1/profiles/me/")
+    res = c.get(f"/api/v1/profiles/{profile.profile_id}/")
     assert res.status_code == 200
     data = res.json()
     assert "sold_items" in data
@@ -304,7 +294,7 @@ def test_profile_includes_member_since(user_with_profile):
     c = APIClient()
     c.force_authenticate(user=user)
 
-    res = c.get("/api/v1/profiles/me/")
+    res = c.get(f"/api/v1/profiles/{profile.profile_id}/")
     assert res.status_code == 200
     data = res.json()
     assert "member_since" in data
@@ -325,12 +315,12 @@ def test_unauthenticated_cannot_create_profile():
 def test_unauthenticated_cannot_update_profile():
     """Test that unauthenticated users cannot update profiles."""
     c = APIClient()
-    res = c.patch("/api/v1/profiles/me/", {"full_name": "Updated"}, format="json")
+    res = c.patch("/api/v1/profiles/1/", {"full_name": "Updated"}, format="json")
     assert res.status_code in (401, 403)
 
 
 def test_unauthenticated_cannot_delete_profile():
     """Test that unauthenticated users cannot delete profiles."""
     c = APIClient()
-    res = c.delete("/api/v1/profiles/me/")
+    res = c.delete("/api/v1/profiles/1/")
     assert res.status_code in (401, 403)

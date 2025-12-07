@@ -258,37 +258,6 @@ class ListingViewSet(
         serializer = self.get_serializer(user_listings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["get"], url_path="by-username/(?P<username>[^/.]+)")
-    def listings_by_username(self, request, username=None):
-        """
-        Get all listings for a user by their profile username.
-        Endpoint: GET /api/v1/listings/by-username/<username>/
-
-        Returns all listings (active, sold, pending) for the specified user.
-        """
-        from apps.profiles.models import Profile
-
-        try:
-            profile = Profile.objects.select_related("user").get(
-                username__iexact=username
-            )
-        except Profile.DoesNotExist:
-            return Response(
-                {"detail": "Profile not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        # Get all listings for this user (not just active ones)
-        user_listings = (
-            Listing.objects.filter(user=profile.user, is_deleted=False)
-            .select_related("user")
-            .prefetch_related("images")
-            .order_by("-created_at")
-        )
-
-        serializer = CompactListingSerializer(user_listings, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
     @action(detail=True, methods=["get"], url_path="is_saved")
     def is_saved(self, request, pk=None):
         """
