@@ -37,6 +37,7 @@ from .serializers import (
     ListingCreateSerializer,
     ListingDetailSerializer,
     ListingUpdateSerializer,
+    ListingSuggestionSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -147,7 +148,7 @@ class ListingViewSet(
         - everything else: default (create/update/delete protected)
         """
         # Public read-only endpoints
-        if self.action in ["list", "retrieve", "search"]:
+        if self.action in ["list", "retrieve", "search", "suggestions"]:
             return [AllowAny()]
 
         # User's own listings require auth
@@ -547,3 +548,37 @@ class ListingViewSet(
             ident = f"ip:{ip}|ua:{ua}"
 
         return f"listing:view:{listing_id}:{ident}"
+
+    @action(detail=False, methods=["get"], url_path="suggestions")
+    def suggestions(self, request):
+        """
+        Lightweight search suggestions for autocomplete.
+
+        Endpoint:
+          GET /api/v1/listings/suggestions/?q=<partial text>
+
+        - Returns at most 8 suggestions
+        - Only active, non-deleted listings are considered
+        - Fields: listing_id, title, primary_image
+        """
+        q = request.query_params.get("q", "").strip()
+        if not q:
+            # Empty input -> empty suggestions (keeps frontend simple)
+            return Response([], status=status.HTTP_200_OK)
+
+        # Base queryset: reuse same filtering as list/search
+        base_qs = self.get_queryset().filter(status="active")
+
+        qs = (
+            base_qs.filter(
+                Q(title__icontains=q)
+                | Q(description__icontains=q)
+                | Q(dorm_location__icontains=q)
+                | Q(category__icontains=q)
+            )
+            .order_by("-view_count", "-created_at")
+            .distinct()[:8]
+        )
+
+        serializer = ListingSuggestionSerializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
