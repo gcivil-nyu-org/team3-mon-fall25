@@ -168,7 +168,9 @@ def test_update_profile_duplicate_username(two_users, profile_factory):
     c = APIClient()
     c.force_authenticate(user=user2)
 
-    res = c.patch(f"/api/v1/profiles/{profile2.profile_id}/", {"username": "user1"}, format="json")
+    res = c.patch(
+        f"/api/v1/profiles/{profile2.profile_id}/", {"username": "user1"}, format="json"
+    )
 
     assert res.status_code == 400
 

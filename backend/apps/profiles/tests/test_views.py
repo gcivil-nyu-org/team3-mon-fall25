@@ -93,7 +93,7 @@ def test_update_me_endpoint(user_with_profile):
     res = c.patch(
         f"/api/v1/profiles/{profile.profile_id}/",
         {"full_name": "Updated Name"},
-        format="json"
+        format="json",
     )
 
     assert res.status_code == 200
@@ -296,9 +296,7 @@ def test_update_to_duplicate_username_fails(two_users, profile_factory):
     c.force_authenticate(user=u2)
 
     res = c.patch(
-        f"/api/v1/profiles/{profile2.profile_id}/",
-        {"username": "taken"},
-        format="json"
+        f"/api/v1/profiles/{profile2.profile_id}/", {"username": "taken"}, format="json"
     )
 
     assert res.status_code == 400

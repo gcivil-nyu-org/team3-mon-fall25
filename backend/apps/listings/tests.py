@@ -275,12 +275,13 @@ class TestListingFilters:
     def test_filter_by_user(self):
         """Test filtering listings by user ID"""
         from tests.factories.factories import UserFactory
+
         user1 = UserFactory()
         user2 = UserFactory()
-        
+
         ListingFactory(user=user1, title="User1 Listing")
         ListingFactory(user=user2, title="User2 Listing")
-        
+
         resp = self.client.get(f"/api/v1/listings/?user={user1.id}")
         assert resp.status_code == 200
         results = resp.json()["results"]

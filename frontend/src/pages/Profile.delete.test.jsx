@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Profile from './Profile';
 import * as listingsApi from '../api/listings.js';
 import * as profilesApi from '../api/profiles.js';
@@ -38,7 +38,14 @@ delete window.location;
 window.location = { href: '' };
 
 const renderWithRouter = (component) => {
-  return render(<BrowserRouter>{component}</BrowserRouter>);
+  return render(
+    <MemoryRouter initialEntries={['/profile/alex_morgan']}>
+      <Routes>
+        <Route path="/profile/:username" element={component} />
+        <Route path="/" element={<div>Home</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
 };
 
 describe('Profile - Delete Account Functionality', () => {
@@ -60,6 +67,7 @@ describe('Profile - Delete Account Functionality', () => {
     active_listings: 6,
     sold_items: 18,
     member_since: '2024-08-01T00:00:00Z',
+    is_own_profile: true,
   };
 
   const mockListings = [];
@@ -69,7 +77,9 @@ describe('Profile - Delete Account Functionality', () => {
     window.location.href = '';
     useAuth.mockReturnValue({ user: mockUser, logout: mockLogout });
     listingsApi.getMyListings.mockResolvedValue(mockListings);
-    profilesApi.getMyProfile.mockResolvedValue({ data: mockProfile });
+    listingsApi.getListingsByUserId.mockResolvedValue(mockListings);
+    profilesApi.getProfileById.mockResolvedValue({ data: mockProfile });
+    profilesApi.searchProfiles.mockResolvedValue({ data: [mockProfile] });
   });
 
   afterEach(() => {
@@ -171,7 +181,8 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should not call delete API when Cancel is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockClear();
+      // No deleteMyProfile, using deleteProfile
+      // vi.mocked(profilesApi.deleteProfile).mockClear(); // Auto-cleared in beforeEach
 
       renderWithRouter(<Profile />);
 
@@ -190,16 +201,16 @@ describe('Profile - Delete Account Functionality', () => {
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       await user.click(cancelButton);
 
-      expect(profilesApi.deleteMyProfile).not.toHaveBeenCalled();
+      expect(profilesApi.deleteProfile).not.toHaveBeenCalled();
       expect(mockLogout).not.toHaveBeenCalled();
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 
   describe('Successful Delete Flow', () => {
-    it('should call deleteMyProfile API when confirmed', async () => {
+    it('should call deleteProfile API when confirmed', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockResolvedValue({});
+      profilesApi.deleteProfile.mockResolvedValue({});
 
       renderWithRouter(<Profile />);
 
@@ -222,13 +233,13 @@ describe('Profile - Delete Account Functionality', () => {
       await user.click(confirmButton);
 
       await waitFor(() => {
-        expect(profilesApi.deleteMyProfile).toHaveBeenCalledTimes(1);
+        expect(profilesApi.deleteProfile).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should logout user after successful deletion', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockResolvedValue({});
+      profilesApi.deleteProfile.mockResolvedValue({});
 
       renderWithRouter(<Profile />);
 
@@ -255,7 +266,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should navigate to home after successful deletion', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockResolvedValue({});
+      profilesApi.deleteProfile.mockResolvedValue({});
 
       renderWithRouter(<Profile />);
 
@@ -282,7 +293,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should close modal after successful deletion', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockResolvedValue({});
+      profilesApi.deleteProfile.mockResolvedValue({});
 
       renderWithRouter(<Profile />);
 
@@ -312,7 +323,7 @@ describe('Profile - Delete Account Functionality', () => {
     it('should show error alert when deletion fails', async () => {
       const user = userEvent.setup();
       const errorMessage = 'Failed to delete account';
-      vi.mocked(profilesApi.deleteMyProfile).mockRejectedValue({
+      profilesApi.deleteProfile.mockRejectedValue({
         response: { data: { detail: errorMessage } },
       });
 
@@ -341,7 +352,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should not logout on deletion failure', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockRejectedValue(new Error('Network error'));
+      profilesApi.deleteProfile.mockRejectedValue(new Error('Network error'));
 
       renderWithRouter(<Profile />);
 
@@ -371,7 +382,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should close modal on deletion failure', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockRejectedValue(new Error('Server error'));
+      profilesApi.deleteProfile.mockRejectedValue(new Error('Server error'));
 
       renderWithRouter(<Profile />);
 
@@ -398,7 +409,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should show generic error for unknown errors', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockRejectedValue({});
+      profilesApi.deleteProfile.mockRejectedValue({});
 
       renderWithRouter(<Profile />);
 
@@ -427,7 +438,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should handle 401 Unauthorized error', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockRejectedValue({
+      profilesApi.deleteProfile.mockRejectedValue({
         response: {
           status: 401,
           data: { detail: 'Authentication credentials were not provided.' },
@@ -483,7 +494,7 @@ describe('Profile - Delete Account Functionality', () => {
 
     it('should prevent deletion when modal is not confirmed', async () => {
       const user = userEvent.setup();
-      vi.mocked(profilesApi.deleteMyProfile).mockResolvedValue({});
+      profilesApi.deleteProfile.mockResolvedValue({});
 
       renderWithRouter(<Profile />);
 
@@ -500,7 +511,7 @@ describe('Profile - Delete Account Functionality', () => {
       });
 
       // Don't click confirm, modal still open
-      expect(profilesApi.deleteMyProfile).not.toHaveBeenCalled();
+      expect(profilesApi.deleteProfile).not.toHaveBeenCalled();
     });
   });
 });

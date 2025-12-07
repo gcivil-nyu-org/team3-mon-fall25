@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Profile from './Profile';
 import * as listingsApi from '../api/listings.js';
 import * as profilesApi from '../api/profiles.js';
@@ -30,7 +30,14 @@ vi.mock('react-router-dom', async () => {
 });
 
 const renderWithRouter = (component) => {
-    return render(<BrowserRouter>{component}</BrowserRouter>);
+    return render(
+        <MemoryRouter initialEntries={['/profile/alex_morgan']}>
+            <Routes>
+                <Route path="/profile/:username" element={component} />
+                <Route path="/listing/:id" element={<div>Listing Detail</div>} />
+            </Routes>
+        </MemoryRouter>
+    );
 };
 
 describe('Profile', () => {
@@ -52,6 +59,7 @@ describe('Profile', () => {
         active_listings: 6,
         sold_items: 18,
         member_since: '2024-08-01T00:00:00Z',
+        is_own_profile: true,
     };
 
     const mockListings = [
@@ -77,7 +85,9 @@ describe('Profile', () => {
         vi.clearAllMocks();
         useAuth.mockReturnValue({ user: mockUser });
         listingsApi.getMyListings.mockResolvedValue(mockListings);
-        profilesApi.getMyProfile.mockResolvedValue({ data: mockProfile });
+        listingsApi.getListingsByUserId.mockResolvedValue(mockListings);
+        profilesApi.getProfileById.mockResolvedValue({ data: mockProfile });
+        profilesApi.searchProfiles.mockResolvedValue({ data: [mockProfile] });
     });
 
     describe('Rendering', () => {
@@ -142,6 +152,7 @@ describe('Profile', () => {
             });
 
             expect(screen.getByText('Test Book')).toBeInTheDocument();
+            // Depending on flow, it might call getMyListings (own profile)
             expect(listingsApi.getMyListings).toHaveBeenCalledTimes(1);
         });
 
@@ -160,6 +171,7 @@ describe('Profile', () => {
 
         it('displays empty state when no listings', async () => {
             listingsApi.getMyListings.mockResolvedValue([]);
+            listingsApi.getListingsByUserId.mockResolvedValue([]);
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
@@ -294,7 +306,8 @@ describe('Profile', () => {
         });
 
         it('displays initial from email when profile has no full name', async () => {
-            profilesApi.getMyProfile.mockResolvedValue({ data: { ...mockProfile, full_name: null } });
+            profilesApi.getProfileById.mockResolvedValue({ data: { ...mockProfile, full_name: null } });
+            profilesApi.searchProfiles.mockResolvedValue({ data: [{ ...mockProfile, full_name: null }] });
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
@@ -304,8 +317,11 @@ describe('Profile', () => {
         });
 
         it('displays avatar image when profile has avatar_url', async () => {
-            profilesApi.getMyProfile.mockResolvedValue({
+            profilesApi.getProfileById.mockResolvedValue({
                 data: { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' }
+            });
+            profilesApi.searchProfiles.mockResolvedValue({
+                data: [{ ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' }]
             });
             renderWithRouter(<Profile />);
 
@@ -327,7 +343,8 @@ describe('Profile', () => {
         });
 
         it('displays fallback values when profile API fails', async () => {
-            profilesApi.getMyProfile.mockRejectedValue(new Error('Failed to load'));
+            profilesApi.searchProfiles.mockRejectedValue(new Error('Failed to load'));
+            profilesApi.getProfileById.mockRejectedValue(new Error('Failed to load'));
             renderWithRouter(<Profile />);
 
             await waitFor(() => {
@@ -337,8 +354,11 @@ describe('Profile', () => {
         });
 
         it('hides phone when profile has no phone', async () => {
-            profilesApi.getMyProfile.mockResolvedValue({
+            profilesApi.getProfileById.mockResolvedValue({
                 data: { ...mockProfile, phone: null }
+            });
+            profilesApi.searchProfiles.mockResolvedValue({
+                data: [{ ...mockProfile, phone: null }]
             });
             renderWithRouter(<Profile />);
 

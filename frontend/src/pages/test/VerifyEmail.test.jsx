@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import VerifyEmail from '../VerifyEmail';
 import { endpoints } from '../../api/endpoints';
 import apiClient from '../../api/client';
+import { getLastAuthEmail } from '../../utils/authEmailStorage';
 
 const mockLoginFn = vi.fn();
 const mockNavigate = vi.fn();
@@ -32,15 +33,23 @@ vi.mock('../../api/client', () => ({
   },
 }));
 
+// Mock utils
+vi.mock('../../utils/authEmailStorage', () => ({
+  getLastAuthEmail: vi.fn(() => 'user@nyu.edu'),
+  setLastAuthEmail: vi.fn(),
+}));
+
 describe('VerifyEmail page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocation = { state: { email: 'user@nyu.edu' } };
+    getLastAuthEmail.mockReturnValue('user@nyu.edu');
     sessionStorage.clear();
   });
 
   it('redirects to login if email is missing in location state', async () => {
     mockLocation = { state: undefined };
+    getLastAuthEmail.mockReturnValue(null);
 
     render(<VerifyEmail />);
 
@@ -237,6 +246,7 @@ describe('VerifyEmail page', () => {
 
   it('shows missing email error when verifying code without email in location state', async () => {
     mockLocation = { state: undefined };
+    getLastAuthEmail.mockReturnValue(null);
 
     render(<VerifyEmail />);
 
@@ -254,6 +264,7 @@ describe('VerifyEmail page', () => {
 
   it('shows missing email error when resending OTP without email in location state', async () => {
     mockLocation = { state: undefined };
+    getLastAuthEmail.mockReturnValue(null);
 
     render(<VerifyEmail />);
 

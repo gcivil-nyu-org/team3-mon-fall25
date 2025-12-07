@@ -338,7 +338,7 @@ describe('EditProfile', () => {
             await user.click(saveButton);
 
             await waitFor(() => {
-                expect(mockOnClose).toHaveBeenCalledWith(true);
+                expect(mockOnClose).toHaveBeenCalledWith(true, expect.anything());
             });
         });
 
@@ -585,7 +585,8 @@ describe('EditProfile', () => {
 
             await waitFor(() => {
                 expect(profilesApi.updateProfile).toHaveBeenCalled();
-                const formData = profilesApi.updateProfile.mock.calls[0][0];
+                // updateProfile signature: (id, data)
+                const formData = profilesApi.updateProfile.mock.calls[0][1];
                 expect(formData.get('remove_avatar')).toBe('true');
             });
         });
