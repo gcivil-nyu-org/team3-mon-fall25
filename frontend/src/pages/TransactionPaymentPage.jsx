@@ -559,8 +559,7 @@ export default function TransactionPaymentPage() {
   const canSellerMarkSold =
     isSellerView && normalizedStatus === "SCHEDULED";
 
-  const showBuyerSummary =
-    hasProposal || normalizedStatus === "SCHEDULED";
+  const showBuyerSummary = normalizedStatus !== "COMPLETED";
 
   const showSellerSummary =
     hasProposal || normalizedStatus === "SCHEDULED";
@@ -671,16 +670,20 @@ export default function TransactionPaymentPage() {
                         </div>
 
                         <div style={{ marginBottom: "4px" }}>
-                          <strong>Payment:</strong> {paymentSummary}
+                          <strong>Payment:</strong>{" "}
+                          <span>{paymentSummary}</span>
                         </div>
                         <div style={{ marginBottom: "4px" }}>
-                          <strong>Delivery:</strong> {deliverySummary}
+                          <strong>Delivery:</strong>{" "}
+                          <span>{deliverySummary}</span>
                         </div>
                         <div style={{ marginBottom: "4px" }}>
-                          <strong>Location:</strong> {locationSummary}
+                          <strong>Location:</strong>{" "}
+                          <span>{locationSummary}</span>
                         </div>
                         <div>
-                          <strong>Time:</strong> {timeSummary}
+                          <strong>Time:</strong>{" "}
+                          <span>{timeSummary}</span>
                         </div>
                       </div>
                     )}
@@ -961,19 +964,23 @@ export default function TransactionPaymentPage() {
                         </div>
 
                         <div style={{ marginBottom: "4px" }}>
-                          <strong>Payment:</strong> {paymentSummary}
+                          <strong>Payment:</strong>{" "}
+                          <span>{paymentSummary}</span>
                         </div>
 
                         <div style={{ marginBottom: "4px" }}>
-                          <strong>Delivery:</strong> {deliverySummary}
+                          <strong>Delivery:</strong>{" "}
+                          <span>{deliverySummary}</span>
                         </div>
 
                         <div style={{ marginBottom: "4px" }}>
-                          <strong>Location:</strong> {locationSummary}
+                          <strong>Location:</strong>{" "}
+                          <span>{locationSummary}</span>
                         </div>
 
                         <div>
-                          <strong>Time:</strong> {timeSummary}
+                          <strong>Time:</strong>{" "}
+                          <span>{timeSummary}</span>
                         </div>
                       </div>
                     ) : (

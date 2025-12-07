@@ -376,6 +376,7 @@
 /* Location Dropdown */
 .location-dropdown-wrapper {
     position: relative;
+    width: 100%;
 }
 
 .dropdown-trigger {
@@ -406,7 +407,7 @@
     position: absolute;
     top: 100%;
     left: 0;
-    right: 0;
+    width: 100%; 
     margin-top: 0.5rem;
     background-color: white;
     border: 1px solid var(--border-color);
