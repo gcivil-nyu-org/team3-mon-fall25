@@ -35,13 +35,14 @@ export async function updateListing(id, formData) {
     return data;
 }
 
-export async function getMyListings() {
-    const { data } = await apiClient.get(`${endpoints.listings}user/`)
+export async function getMyListings(params = {}) {
+    const { data } = await apiClient.get(`${endpoints.listings}user/`, { params });
     return data;
 }
 
-export async function getListingsByUserId(userId) {
-    const { data } = await apiClient.get(`${endpoints.listings}?user=${userId}`);
+export async function getListingsByUserId(userId, params = {}) {
+    const queryParams = { ...params, user: userId };
+    const { data } = await apiClient.get(`${endpoints.listings}`, { params: queryParams });
     return data.results || data; // Handle paginated response
 }
 

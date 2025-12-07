@@ -9,6 +9,16 @@ import DeleteAccountModal from "../components/DeleteAccountModal";
 import "./Profile.css";
 import SEO from "../components/SEO";
 
+const sortToOrdering = (sort) => {
+  switch (sort) {
+    case "price-low": return "price";
+    case "price-high": return "-price";
+    case "oldest": return "created_at";
+    case "newest": return "-created_at";
+    default: return "-created_at";
+  }
+};
+
 export default function Profile() {
   const navigate = useNavigate();
   const { username } = useParams(); // Optional username from URL (e.g., /profile/:username)
@@ -100,14 +110,22 @@ export default function Profile() {
         return;
       }
 
+      const apiParams = {
+        ordering: sortToOrdering(sortBy),
+      };
+
+      if (selectedCategory !== "all") {
+        apiParams.category = selectedCategory;
+      }
+
       // For own profile, use getMyListings (shows all statuses); 
       // for others, use getListingsByUserId (shows active only)
       if (isOwnProfile) {
-        const data = await getMyListings();
+        const data = await getMyListings(apiParams);
         setListings(data);
       } else {
         if (profile.user_id) {
-            const data = await getListingsByUserId(profile.user_id);
+            const data = await getListingsByUserId(profile.user_id, apiParams);
             setListings(data);
         } else {
             setListings([]);
@@ -129,11 +147,12 @@ export default function Profile() {
 
   useEffect(() => {
     // Load listings after profile is loaded and isOwnProfile is determined
+    // Also reload when filters change
     if (profile) {
       loadListings();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, isOwnProfile]);
+  }, [profile, isOwnProfile, selectedCategory, sortBy]);
 
   const handleBack = () => {
     navigate(-1);
