@@ -143,10 +143,16 @@ export default function Profile() {
     setIsEditModalOpen(true);
   };
 
-  const handleCloseEditModal = (shouldRefresh = false) => {
+  const handleCloseEditModal = (shouldRefresh = false, updatedProfile = null) => {
     setIsEditModalOpen(false);
     if (shouldRefresh) {
-      loadProfile();
+      if (updatedProfile && updatedProfile.username && updatedProfile.username !== username) {
+        // If username changed, navigate to new URL
+        navigate(`/profile/${updatedProfile.username}`, { replace: true });
+      } else {
+        // Otherwise just reload
+        loadProfile();
+      }
     }
   };
 

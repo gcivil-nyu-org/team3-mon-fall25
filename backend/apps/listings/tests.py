@@ -272,6 +272,21 @@ class TestListingFilters:
         assert resp.status_code == 200
         assert len(resp.json()["results"]) == 1
 
+    def test_filter_by_user(self):
+        """Test filtering listings by user ID"""
+        from tests.factories.factories import UserFactory
+        user1 = UserFactory()
+        user2 = UserFactory()
+        
+        ListingFactory(user=user1, title="User1 Listing")
+        ListingFactory(user=user2, title="User2 Listing")
+        
+        resp = self.client.get(f"/api/v1/listings/?user={user1.id}")
+        assert resp.status_code == 200
+        results = resp.json()["results"]
+        assert len(results) == 1
+        assert results[0]["title"] == "User1 Listing"
+
     def test_error_handling_negative_min_price(self):
         """Test error for negative min_price"""
         resp = self.client.get("/api/v1/listings/", {"min_price": "-1"})
