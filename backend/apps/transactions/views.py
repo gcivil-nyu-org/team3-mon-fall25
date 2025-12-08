@@ -38,8 +38,9 @@ class IsSeller(BasePermission):
 
 class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet for transaction operations.
-    Provides read-only access and custom actions for transaction management.
+    /api/v1/transactions/           -> list my transactions (buyer or seller)
+    /api/v1/transactions/{id}/      -> retrieve a single transaction
+    /api/v1/transactions/my-orders/ -> list all my transactions (alias, same queryset)
     """
 
     queryset = Transaction.objects.all()
@@ -50,6 +51,26 @@ class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
         """Filter transactions to only show those where user is buyer or seller"""
         user = self.request.user
         return Transaction.objects.filter(Q(buyer=user) | Q(seller=user))
+    
+    @action(
+        detail=False,
+        methods=["GET"],
+        url_path="my-orders",
+    )
+    def my_orders(self, request):
+        """
+        GET /api/v1/transactions/my-orders/
+        回傳目前 user 所有相關訂單（等同 list，但語意更清楚）。
+        """
+        qs = self.get_queryset()
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
 
 class TransactionUpdateViewSet(viewsets.ViewSet):
@@ -61,8 +82,7 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
 
     def get_object(self):
         """Get transaction object"""
-        transaction_id = self.kwargs.get("pk")
-        return get_object_or_404(Transaction, transaction_id=transaction_id)
+        return get_object_or_404(Transaction, pk=self.kwargs.get("pk"))
 
     @action(detail=True, methods=["patch"], url_path="payment-method")
     def payment_method(self, request, pk=None):

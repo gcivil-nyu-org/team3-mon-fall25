@@ -8,14 +8,28 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     buyer_netid = serializers.CharField(source="buyer.netid", read_only=True)
     viewer_role = serializers.SerializerMethodField()
+    # For My Orders
+    listing_title = serializers.CharField(source="listing.title", read_only=True)
+    listing_price = serializers.DecimalField(
+        source="listing.price",
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+    )
+    buyer_id = serializers.IntegerField(source="buyer.id", read_only=True)
+    seller_id = serializers.IntegerField(source="seller.id", read_only=True)
 
     class Meta:
         model = Transaction
         fields = [
             "transaction_id",
             "listing",
+            "listing_title",
+            "listing_price",
             "buyer",
+            "buyer_id",
             "seller",
+            "seller_id",
             "payment_method",
             "delivery_method",
             "meet_location",
@@ -37,6 +51,10 @@ class TransactionSerializer(serializers.ModelSerializer):
             "viewer_role",
             "proposed_by",
             "buyer_netid",
+            "listing_title",
+            "listing_price",
+            "buyer_id",
+            "seller_id",
         ]
 
     def get_viewer_role(self, obj):
