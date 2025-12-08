@@ -91,8 +91,7 @@ class Review(models.Model):
         default=list,
         blank=True,
         help_text=(
-            "List of choices: punctuality, communication, "
-            "pricing, item_description"
+            "List of choices: punctuality, communication, " "pricing, item_description"
         ),
     )
     additional_comments = models.TextField(blank=True, null=True)
