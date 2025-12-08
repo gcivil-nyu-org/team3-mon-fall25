@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import SearchBar from "../components/browse/SearchBar";
 import SortSelect from "../components/browse/SortSelect";
 import Filters from "../components/browse/Filters";
@@ -36,7 +36,7 @@ const dateRangeToPostedWithin = (dateRange) => {
 
 export default function BrowseListings() {
   const [params, setParams] = useSearchParams();
-
+  const navigate = useNavigate();
   // URL → state
   const q = params.get("q") ?? "";
   const sort = params.get("sort") ?? "newest";
@@ -253,6 +253,10 @@ export default function BrowseListings() {
     syncUrl(filters, { q: nextQ ?? "", page: 1 });
   };
 
+  const handleSuggestionSelect = (listingId) => {
+       navigate(`/listing/${listingId}`);
+  };
+
   const handleSort = (nextSort) => {
     syncUrl(filters, { sort: nextSort, page: 1 });
   };
@@ -291,7 +295,12 @@ export default function BrowseListings() {
 
           {/* Search Bar */}
           <div style={{ maxWidth: 700, margin: "28px auto 0" }}>
-            <SearchBar defaultValue={q} onSearch={handleSearch} />
+            <
+              SearchBar defaultValue={q}
+              onSearch={handleSearch}
+              onSuggestionSelect={handleSuggestionSelect}
+            />
+
           </div>
         </div>
       </section>

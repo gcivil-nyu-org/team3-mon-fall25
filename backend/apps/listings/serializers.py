@@ -499,3 +499,27 @@ class CompactListingSerializer(serializers.ModelSerializer):
         return None
 
         return None
+
+
+class ListingSuggestionSerializer(serializers.ModelSerializer):
+    primary_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Listing
+        fields = [
+            "listing_id",
+            "title",
+            "primary_image",
+        ]
+
+    def get_primary_image(self, obj):
+        """Get the primary image URL, or the first image if no primary is set"""
+        primary_img = obj.images.filter(is_primary=True).first()
+        if primary_img:
+            return primary_img.image_url
+
+        first_img = obj.images.order_by("display_order").first()
+        if first_img:
+            return first_img.image_url
+
+        return None
