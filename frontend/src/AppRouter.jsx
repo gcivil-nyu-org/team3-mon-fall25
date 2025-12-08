@@ -22,6 +22,7 @@ import Profile from "./pages/Profile";
 import SellerProfile from "./pages/SellerProfile";
 import Watchlist from "./pages/Watchlist";
 import TransactionPaymentPage from "./pages/TransactionPaymentPage";
+import MyOrdersPage from "./pages/MyOrdersPage";
 
 import {ROUTES} from "./constants/routes";
 
@@ -75,6 +76,14 @@ export default function AppRouter() {
                                         element={
                                             <ProtectedRoute>
                                                 <MyListings/>
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="orders"
+                                        element={
+                                            <ProtectedRoute>
+                                                <MyOrdersPage />
                                             </ProtectedRoute>
                                         }
                                     />

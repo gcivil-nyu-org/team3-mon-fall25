@@ -1,8 +1,9 @@
 import client from './client';
+import { endpoints } from './endpoints';
 
 /**
  * Create a new transaction for a listing by calling the buy endpoint
- * @param {string} listingId - The ID of the listing to purchase
+ * @param {string|number} listingId - The ID of the listing to purchase
  * @returns {Promise<Object>} The created transaction object
  */
 export async function createTransaction(listingId) {
@@ -12,10 +13,21 @@ export async function createTransaction(listingId) {
 
 /**
  * Get transaction details
- * @param {string} transactionId - The ID of the transaction
+ * @param {string|number} transactionId - The ID of the transaction
  * @returns {Promise<Object>} Transaction details
  */
 export async function getTransaction(transactionId) {
     const response = await client.get(`/transactions/${transactionId}/`);
     return response.data;
+}
+
+/**
+ * Get all orders (as buyer or seller) for the current user
+ * @returns {Promise<Array>} List of transactions
+ */
+export async function getMyOrders() {
+  const response = await client.get(endpoints.transactions.myOrders);
+
+  // 若之後有開啟 DRF pagination，這裡只要改成 response.data.results 即可
+  return response.data;
 }
