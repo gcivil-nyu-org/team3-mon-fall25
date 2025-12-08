@@ -41,7 +41,7 @@ function OrderCard({ order }) {
   const title = order.listing_title ?? `Listing #${order.listing}`;
   const price = order.listing_price ?? "—";
 
-  // 盡量猜一個圖片欄位，如果都沒有就顯示占位
+  // Try to infer an image field; fall back to a placeholder if none exist
   const imageUrl =
     order.listing_thumbnail_url ||
     order.listing_image_url ||
@@ -56,7 +56,7 @@ function OrderCard({ order }) {
     ? new Date(order.meet_time).toLocaleString()
     : "";
 
-  // 若有 viewer_role，可顯示 "You are the buyer/seller"
+  // If viewer_role exists, show "You are the buyer/seller"
   const roleLabel =
     order.viewer_role === "buyer"
       ? "You are the buyer"
@@ -64,7 +64,7 @@ function OrderCard({ order }) {
       ? "You are the seller"
       : null;
 
-  // 若有 buyer_netid 且是 seller，可以顯示 buyer 資訊
+  // If buyer_netid exists and viewer_role is seller, show buyer info
   const counterpartText =
     order.viewer_role === "seller" && order.buyer_netid
       ? `Buyer: ${order.buyer_netid}`
@@ -73,7 +73,7 @@ function OrderCard({ order }) {
   return (
     <Link to={`/transaction/${txId}`} className="myorders__card">
       <div className="myorders__card-inner">
-        {/* 左側圖片 */}
+        {/* Left image */}
         <div className="myorders__image-wrapper">
           {imageUrl ? (
             <img
@@ -88,7 +88,7 @@ function OrderCard({ order }) {
           )}
         </div>
 
-        {/* 右側內容 */}
+        {/* Right content */}
         <div className="myorders__content">
           <div className="myorders__content-header">
             <div className="myorders__title-block">
@@ -192,7 +192,7 @@ export default function MyOrdersPage() {
     };
   }, []);
 
-  // 用 viewer_role 分 Buying / Selling，比用 id 比較可靠
+  // Use viewer_role to split Buying/Selling; it's more reliable than comparing ids
   const buyingOrders = useMemo(
     () => orders.filter((o) => o.viewer_role === "buyer"),
     [orders]

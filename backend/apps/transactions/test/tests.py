@@ -635,9 +635,7 @@ class TestConfirmEndpoint:
         transaction.refresh_from_db()
         assert transaction.status == "SCHEDULED"
 
-    def test_buyer_confirms_seller_proposal_success(
-        self, authenticated_buyer, listing
-    ):
+    def test_buyer_confirms_seller_proposal_success(self, authenticated_buyer, listing):
         """
         Buyer can confirm when:
         - transaction is NEGOTIATING
@@ -711,9 +709,7 @@ class TestConfirmEndpoint:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_wrong_party_cannot_confirm(
-        self, authenticated_buyer, listing
-    ):
+    def test_wrong_party_cannot_confirm(self, authenticated_buyer, listing):
         """
         The same party who proposed details (proposed_by) cannot
         confirm their own proposal – should return 400.

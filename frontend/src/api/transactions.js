@@ -28,6 +28,6 @@ export async function getTransaction(transactionId) {
 export async function getMyOrders() {
   const response = await client.get(endpoints.transactions.myOrders);
 
-  // 若之後有開啟 DRF pagination，這裡只要改成 response.data.results 即可
+  // If DRF pagination gets enabled, switch this to response.data.results
   return response.data;
 }

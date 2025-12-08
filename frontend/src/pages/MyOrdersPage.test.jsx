@@ -12,7 +12,7 @@ import MyOrdersPage from "./MyOrdersPage";
 
 // ---- Mocks ----
 
-// Mock AuthContext → 給一個固定 user.id
+// Mock AuthContext -> provide a fixed user.id
 vi.mock("../contexts/AuthContext", () => ({
   useAuth: () => ({
     user: {
@@ -30,7 +30,7 @@ vi.mock("../api/transactions", () => ({
   getMyOrders: (...args) => mockGetMyOrders(...args),
 }));
 
-// Helper: 包一層 Router（模擬 /orders 頁 + /transaction/:id 詳細頁）
+// Helper: wrap with Router (simulate /orders page + /transaction/:id detail page)
 function renderWithRouter(ui, { initialEntries = ["/orders"] } = {}) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
@@ -65,25 +65,25 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    // header 存在
+    // Header exists
     expect(screen.getByText("My Orders")).toBeInTheDocument();
     expect(
       screen.getByText("Track all your transactions")
     ).toBeInTheDocument();
 
-    // 一開始會顯示 Loading
+    // Shows Loading initially
     expect(screen.getByText(/loading orders/i)).toBeInTheDocument();
 
-    // 等資料載入完
+    // Wait for data to load
     await waitFor(() => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 顯示訂單標題
+    // Shows order title
     expect(
       screen.getByText("MacBook Pro 14")
     ).toBeInTheDocument();
-    // 顯示 status badge（Scheduled）
+    // Shows status badge (Scheduled)
     expect(screen.getByText("Scheduled")).toBeInTheDocument();
   });
 
@@ -116,16 +116,16 @@ describe("MyOrdersPage", () => {
   const buyingTab = screen.getByRole("button", { name: /Buying/i });
   const sellingTab = screen.getByRole("button", { name: /Selling/i });
 
-  // ✅ 預設是 Buying tab
+  // Buying tab is active by default
   expect(buyingTab).toHaveClass("myorders__tab--active");
 
-  // 只會看到 buyer 的那筆
+  // Only the buyer-side order is visible
   expect(screen.getByText("Item as Buyer")).toBeInTheDocument();
   expect(
     screen.queryByText("Item as Seller")
   ).not.toBeInTheDocument();
 
-  // 🔁 切換到 Selling
+  // Switch to Selling
   fireEvent.click(sellingTab);
 
   expect(sellingTab).toHaveClass("myorders__tab--active");
@@ -134,7 +134,7 @@ describe("MyOrdersPage", () => {
   ).not.toBeInTheDocument();
   expect(screen.getByText("Item as Seller")).toBeInTheDocument();
 
-  // 🔁 再切回 Buying（這一步就會真正觸發 onClick={() => setMode("buying")})
+  // Switch back to Buying (this triggers onClick={() => setMode("buying")})
   fireEvent.click(buyingTab);
 
   expect(buyingTab).toHaveClass("myorders__tab--active");
@@ -145,7 +145,7 @@ describe("MyOrdersPage", () => {
 });
 
   it("shows empty state when no orders for the current tab", async () => {
-    // 全部都是 seller 角色 → Buying tab 應該顯示 empty
+    // All orders are seller role -> Buying tab should show empty state
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 3,
@@ -163,21 +163,21 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 預設 Buying tab → 看到 "No buying orders yet"
+    // Default Buying tab -> see "No buying orders yet"
     expect(
       screen.getByText(/No buying orders yet/i)
     ).toBeInTheDocument();
 
-    // 切換到 Selling tab
+    // Switch to Selling tab
     fireEvent.click(
       screen.getByRole("button", { name: /Selling/i })
     );
 
-    // 現在應該看到那筆 selling 訂單
+    // Should now see that selling order
     expect(
       screen.getByText("Only Selling Order")
     ).toBeInTheDocument();
-    // 不再顯示 Buying 空狀態
+    // Buying empty state should disappear
     expect(
       screen.queryByText(/No buying orders yet/i)
     ).not.toBeInTheDocument();
@@ -185,7 +185,7 @@ describe("MyOrdersPage", () => {
 
   it("shows error state when API call fails", async () => {
     const originalError = console.error;
-    console.error = vi.fn(); // 把錯誤訊息吃掉，避免測試輸出太吵
+    console.error = vi.fn(); // Swallow error output to keep test logs quiet
 
     mockGetMyOrders.mockRejectedValue(new Error("Network error"));
 
@@ -220,10 +220,10 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 點擊卡片的 title
+    // Click the card title
     fireEvent.click(screen.getByText("Navigable Order"));
 
-    // 路由應該切到 /transaction/99
+    // Route should navigate to /transaction/99
     await waitFor(() => {
       expect(
         screen.getByText(/Transaction detail page/i)
@@ -255,35 +255,35 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 預設 Buying tab → 先會看到空狀態
+    // Default Buying tab -> empty state is shown first
     expect(
       screen.getByText(/No buying orders yet/i)
     ).toBeInTheDocument();
 
-    // 切換到 Selling tab，才會看到這筆 order
+    // Switch to Selling tab to view this order
     fireEvent.click(
       screen.getByRole("button", { name: /Selling/i })
     );
 
-    // 確認標題有出現
+    // Verify title renders
     expect(
       screen.getByText("Order with image")
     ).toBeInTheDocument();
 
-    // 有顯示圖片（根據 alt = title）
+    // Image is shown (alt matches title)
     const img = screen.getByAltText("Order with image");
     expect(img).toBeInTheDocument();
 
-    // 有顯示 Buyer 資訊（viewer_role = seller + buyer_netid）
+    // Buyer info is shown (viewer_role = seller + buyer_netid)
     expect(
       screen.getByText(/Buyer: lp1234/i)
     ).toBeInTheDocument();
 
-    // 有顯示支付方式和運送方式
+    // Payment and delivery methods are shown
     expect(screen.getByText(/VENMO/i)).toBeInTheDocument();
     expect(screen.getByText(/pickup/i)).toBeInTheDocument();
 
-    // 有顯示地點（Tandon Lobby）
+    // Location is displayed (Tandon Lobby)
     expect(
       screen.getByText(/Tandon Lobby/)
     ).toBeInTheDocument();
@@ -307,12 +307,12 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 卡片有 render
+    // Card renders
     expect(
       screen.getByText("No status order")
     ).toBeInTheDocument();
 
-    // 不應該有任何狀態 badge（myorders__status）
+    // Should not render any status badge (myorders__status)
     const badge = document.querySelector(".myorders__status");
     expect(badge).toBeNull();
   });
@@ -341,7 +341,7 @@ describe("MyOrdersPage", () => {
   });
 
     it("shows 'No selling orders yet' when selling tab has no orders", async () => {
-    // 只有 buyer 訂單
+    // Only buyer-side orders exist
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 100,
@@ -359,7 +359,7 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 預設 Buying tab → 有訂單，不是 empty state
+    // Default Buying tab -> has an order, not an empty state
     expect(
       screen.queryByText(/No buying orders yet/i)
     ).not.toBeInTheDocument();
@@ -367,7 +367,7 @@ describe("MyOrdersPage", () => {
       screen.getByText("Only buyer side")
     ).toBeInTheDocument();
 
-    // 切到 Selling tab，因為沒有 seller 訂單 → 應該顯示 "No selling orders yet"
+    // Switch to Selling tab; with no seller orders it should show "No selling orders yet"
     fireEvent.click(screen.getByRole("button", { name: /Selling/i }));
 
     expect(
@@ -379,10 +379,10 @@ describe("MyOrdersPage", () => {
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 200,
-        listing: 77,              // 沒有 listing_title → 會顯示 Listing #77
+        listing: 77,              // No listing_title -> shows Listing #77
         // listing_title: undefined,
-        listing_price: null,      // 會走到 Price not set 分支
-        status: "WEIRD_STATUS",   // 不在 STATUS_LABELS → 直接顯示原字串
+        listing_price: null,      // Hits the Price not set branch
+        status: "WEIRD_STATUS",   // Not in STATUS_LABELS -> show raw string
         viewer_role: "buyer",
         created_at: "2025-02-01T10:00:00Z",
       },
@@ -394,12 +394,12 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 顯示 fallback title
+    // Shows fallback title
     expect(
       screen.getByText("Listing #77")
     ).toBeInTheDocument();
 
-    // StatusBadge 應該顯示原始 status 字串
+    // StatusBadge should display the raw status string
     expect(
       screen.getByText("WEIRD_STATUS")
     ).toBeInTheDocument();
@@ -429,20 +429,20 @@ describe("MyOrdersPage", () => {
       expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
     });
 
-    // 預設 Buying tab → 沒有 buyer 訂單，顯示 buying empty
+    // Default Buying tab -> no buyer orders, shows buying empty state
     expect(
       screen.getByText(/No buying orders yet/i)
     ).toBeInTheDocument();
 
-    // 切到 Selling tab
+    // Switch to Selling tab
     fireEvent.click(screen.getByRole("button", { name: /Selling/i }));
 
-    // 顯示該訂單
+    // Show that order
     expect(
       screen.getByText("Seller role without buyer_netid")
     ).toBeInTheDocument();
 
-    // 因為 viewer_role = seller 且沒有 buyer_netid → 應該顯示 "You are the seller"
+    // Because viewer_role = seller with no buyer_netid -> should show "You are the seller"
     expect(
       screen.getByText(/You are the seller/i)
     ).toBeInTheDocument();

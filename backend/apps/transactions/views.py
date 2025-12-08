@@ -51,7 +51,7 @@ class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
         """Filter transactions to only show those where user is buyer or seller"""
         user = self.request.user
         return Transaction.objects.filter(Q(buyer=user) | Q(seller=user))
-    
+
     @action(
         detail=False,
         methods=["GET"],
@@ -60,7 +60,7 @@ class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
     def my_orders(self, request):
         """
         GET /api/v1/transactions/my-orders/
-        回傳目前 user 所有相關訂單（等同 list，但語意更清楚）。
+        Return all transactions related to the current user (alias of list for clarity).
         """
         qs = self.get_queryset()
 

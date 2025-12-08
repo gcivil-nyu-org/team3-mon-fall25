@@ -181,7 +181,7 @@ describe("TransactionPaymentPage", () => {
     );
   });
 
-  // ---- 修正 1：缺 meeting time，點擊 Send 不應該打 API ----
+  // ---- Fix 1: missing meeting time should not trigger an API call when Send is clicked ----
   test("buyer validation prevents sending when location and time are missing", async () => {
     setupSuccessLoad({
       meet_location: "Bobst Library - 1st Floor",
@@ -194,20 +194,20 @@ describe("TransactionPaymentPage", () => {
       expect(mockGetTransaction).toHaveBeenCalledWith("123")
     );
 
-    // 讓表單確定出現
+    // Ensure the form has rendered
     await screen.findByText("Payment Method");
 
     const sendBtn = await screen.findByRole("button", {
       name: /Send new proposal/i,
     });
 
-    // 把時間清空，模擬「沒有選 meeting time」
+    // Clear the time to mimic "no meeting time selected"
     const timeInput = document.querySelector('input[type="datetime-local"]');
     fireEvent.change(timeInput, { target: { value: "" } });
 
     fireEvent.click(sendBtn);
 
-    // 不論按鈕實際是否 disabled，最後都不應該打 API
+    // Regardless of whether the button is disabled, the API should not be called
     expect(mockPatch).not.toHaveBeenCalled();
   });
 
@@ -226,20 +226,20 @@ describe("TransactionPaymentPage", () => {
       expect(mockGetTransaction).toHaveBeenCalledWith("123")
     );
 
-    // 先點「Suggest new details」讓 buyer 編輯表單打開
+    // Click "Suggest new details" first so the buyer edit form opens
     const suggestBtn = await screen.findByRole("button", {
       name: /suggest new details/i,
     });
     fireEvent.click(suggestBtn);
 
-    // 等 helper text 出現，確定「Meeting Time」那塊真的渲染出來
+    // Wait for helper text to confirm the Meeting Time section is rendered
     await screen.findByText(/Meeting time must be at least 1 hour from now\./i);
 
-    // 抓 datetime-local input
+    // Grab the datetime-local input
     const timeInput = document.querySelector('input[type="datetime-local"]');
     expect(timeInput).toBeTruthy();
 
-    // 建一個「現在 + 30 分鐘」的時間字串，理論上 < now+1hr → 會被 isMeetingTimeTooSoon 判定為 too soon
+    // Build a "now + 30 minutes" string; since it's under +1hr, isMeetingTimeTooSoon should flag it as too soon
     const toLocalDatetime = (d) => {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -250,7 +250,7 @@ describe("TransactionPaymentPage", () => {
     };
 
     const now = new Date();
-    const tooSoonDate = new Date(now.getTime() + 30 * 60 * 1000); // +30 分鐘
+    const tooSoonDate = new Date(now.getTime() + 30 * 60 * 1000); // +30 minutes
     const tooSoonStr = toLocalDatetime(tooSoonDate);
 
     fireEvent.change(timeInput, { target: { value: tooSoonStr } });
@@ -261,7 +261,7 @@ describe("TransactionPaymentPage", () => {
 
     fireEvent.click(sendBtn);
 
-    // 太近的時間 → 前端驗證擋下，不應該送出 delivery-details 的 PATCH
+    // Time is too soon → frontend validation should block the delivery-details PATCH
     const endpoints = mockPatch.mock.calls.map((call) => call[0]);
     expect(endpoints).not.toContain("/transactions/123/delivery-details/");
 
@@ -337,7 +337,7 @@ describe("TransactionPaymentPage", () => {
     );
   });
 
-  // ---- seller 沒填地點/時間，只檢查沒打 delivery-details ----
+  // ---- Seller left location/time empty; just confirm delivery-details isn't called ----
   test("seller propose validation requires location and time", async () => {
     setupSuccessLoad({
       viewer_role: "seller",
@@ -371,17 +371,17 @@ describe("TransactionPaymentPage", () => {
   });
 
   //   it("buyer summary shows fallback when location/time not set", async () => {
-  //   // 直接覆寫這一個測試用到的 transaction 回傳
+  //   // Override the transaction response used by this test
   //   mockGetTransaction.mockResolvedValueOnce({
   //     ...baseTransaction,
-  //     status: "SCHEDULED",        // 讓 showBuyerSummary 一定為 true
+  //     status: "SCHEDULED",        // Force showBuyerSummary to be true
   //     viewer_role: "buyer",
   //     proposed_by: "buyer",
-  //     meet_location: null,        // 沒有地點 → 要走 fallback
-  //     meet_time: null,            // 沒有時間 → 要走 fallback
+  //     meet_location: null,        // No location → should hit fallback
+  //     meet_time: null,            // No time → should hit fallback
   //   });
 
-  //   // listing 照舊
+  //   // listing unchanged
   //   mockGetListing.mockResolvedValueOnce(baseListing);
 
   //   render(<TransactionPaymentPage />);
@@ -390,7 +390,7 @@ describe("TransactionPaymentPage", () => {
   //     expect(mockGetTransaction).toHaveBeenCalledWith("123")
   //   );
 
-  //   // SCHEDULED 狀態下，summary 會顯示「Meetup scheduled.」
+  //   // In SCHEDULED state, summary shows "Meetup scheduled."
   //   await screen.findByText(/Meetup scheduled\./i);
 
   //   // fallback: Location not set / Time not set
@@ -532,9 +532,9 @@ describe("TransactionPaymentPage", () => {
 
   test("surfaces backend error when delivery-details save fails", async () => {
     setupSuccessLoad();
-    // 第一次 payment-method 成功
+    // First payment-method call succeeds
     mockPatch.mockResolvedValueOnce({ data: baseTransaction });
-    // 第二次 delivery-details 失敗
+    // Second delivery-details call fails
     mockPatch.mockRejectedValueOnce({
       response: { data: { error: "Delivery update failed." } },
     });
