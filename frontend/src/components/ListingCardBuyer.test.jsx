@@ -92,6 +92,7 @@ describe('ListingCardBuyer', () => {
         status="active"
         imageUrl=""
         sellerUsername="bob"
+        sellerProfileId={456}
         onSellerClick={onSellerClick}
         onClick={onClick}
       />,
@@ -102,7 +103,7 @@ describe('ListingCardBuyer', () => {
     fireEvent.click(sellerNode);
 
     expect(onSellerClick).toHaveBeenCalledTimes(1);
-    expect(onSellerClick).toHaveBeenCalledWith('bob');
+    expect(onSellerClick).toHaveBeenCalledWith("bob");
     expect(onClick).not.toHaveBeenCalled();
   });
 
@@ -117,6 +118,7 @@ describe('ListingCardBuyer', () => {
       status="active"
       imageUrl=""
       sellerUsername="kevin"
+      sellerProfileId={123}
       onSellerClick={onSellerClick}
     />,
     { wrapper: MemoryRouter }
@@ -127,7 +129,7 @@ describe('ListingCardBuyer', () => {
   fireEvent.keyDown(sellerRoleLink, { key: 'Enter', code: 'Enter', charCode: 13 });
 
   expect(onSellerClick).toHaveBeenCalledTimes(1);
-  expect(onSellerClick).toHaveBeenCalledWith('kevin');
+  expect(onSellerClick).toHaveBeenCalledWith("kevin");
 });
 
 });

@@ -38,7 +38,7 @@ describe('EditProfile', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useAuth.mockReturnValue({ user: mockUser });
-        profilesApi.updateMyProfile.mockResolvedValue({ data: mockProfile });
+        profilesApi.updateProfile.mockResolvedValue({ data: mockProfile });
         profilesApi.createProfile.mockResolvedValue({ data: mockProfile });
     });
 
@@ -299,7 +299,7 @@ describe('EditProfile', () => {
     });
 
     describe('Form Submission', () => {
-        it('calls updateMyProfile API when profile exists', async () => {
+        it('calls updateProfile API when profile exists', async () => {
             const user = userEvent.setup();
             render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
 
@@ -307,7 +307,7 @@ describe('EditProfile', () => {
             await user.click(saveButton);
 
             await waitFor(() => {
-                expect(profilesApi.updateMyProfile).toHaveBeenCalled();
+                expect(profilesApi.updateProfile).toHaveBeenCalled();
             });
         });
 
@@ -338,12 +338,12 @@ describe('EditProfile', () => {
             await user.click(saveButton);
 
             await waitFor(() => {
-                expect(mockOnClose).toHaveBeenCalledWith(true);
+                expect(mockOnClose).toHaveBeenCalledWith(true, expect.anything());
             });
         });
 
         it('displays error message on API failure', async () => {
-            profilesApi.updateMyProfile.mockRejectedValue({
+            profilesApi.updateProfile.mockRejectedValue({
                 response: { data: { detail: 'Failed to update profile' } }
             });
             const user = userEvent.setup();
@@ -450,7 +450,7 @@ describe('EditProfile', () => {
     describe('Error Handling', () => {
         it('displays formatted validation errors from API', async () => {
             const user = userEvent.setup();
-            profilesApi.updateMyProfile.mockRejectedValueOnce({
+            profilesApi.updateProfile.mockRejectedValueOnce({
                 response: {
                     data: {
                         username: ['Username already taken', 'Must be unique'],
@@ -472,7 +472,7 @@ describe('EditProfile', () => {
 
         it('displays error detail when API returns detail field', async () => {
             const user = userEvent.setup();
-            profilesApi.updateMyProfile.mockRejectedValueOnce({
+            profilesApi.updateProfile.mockRejectedValueOnce({
                 response: {
                     data: {
                         detail: 'Server error occurred',
@@ -492,7 +492,7 @@ describe('EditProfile', () => {
 
         it('displays error message when API returns message field', async () => {
             const user = userEvent.setup();
-            profilesApi.updateMyProfile.mockRejectedValueOnce({
+            profilesApi.updateProfile.mockRejectedValueOnce({
                 message: 'Network error',
             });
 
@@ -508,7 +508,7 @@ describe('EditProfile', () => {
 
         it('displays default error message when no error details available', async () => {
             const user = userEvent.setup();
-            profilesApi.updateMyProfile.mockRejectedValueOnce(new Error());
+            profilesApi.updateProfile.mockRejectedValueOnce(new Error());
 
             render(<EditProfile onClose={mockOnClose} profile={mockProfile} />);
 
@@ -584,8 +584,9 @@ describe('EditProfile', () => {
             await user.click(saveButton);
 
             await waitFor(() => {
-                expect(profilesApi.updateMyProfile).toHaveBeenCalled();
-                const formData = profilesApi.updateMyProfile.mock.calls[0][0];
+                expect(profilesApi.updateProfile).toHaveBeenCalled();
+                // updateProfile signature: (id, data)
+                const formData = profilesApi.updateProfile.mock.calls[0][1];
                 expect(formData.get('remove_avatar')).toBe('true');
             });
         });

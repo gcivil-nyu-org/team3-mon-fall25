@@ -36,6 +36,8 @@ describe('ProfileDropdown', () => {
     const mockUser = {
         email: 'test@nyu.edu',
         netid: 'test123',
+        username: 'alex_morgan',
+        user_id: 1,
     };
 
     const mockProfile = {
@@ -53,7 +55,7 @@ describe('ProfileDropdown', () => {
             user: mockUser,
             logout: mockLogout,
         });
-        profilesApi.getMyProfile.mockResolvedValue({ data: mockProfile });
+        profilesApi.searchProfiles.mockResolvedValue({ data: [mockProfile] });
     });
 
     describe('Rendering', () => {
@@ -72,7 +74,7 @@ describe('ProfileDropdown', () => {
         });
 
         it('displays initials from email when profile has no full_name', async () => {
-            profilesApi.getMyProfile.mockResolvedValue({ data: { ...mockProfile, full_name: null } });
+            profilesApi.searchProfiles.mockResolvedValue({ data: [{ ...mockProfile, full_name: null }] });
             renderWithRouter(<ProfileDropdown />);
             await waitFor(() => {
                 expect(screen.getByText('T')).toBeInTheDocument(); // First letter of email
@@ -80,7 +82,7 @@ describe('ProfileDropdown', () => {
         });
 
         it('displays default initial when no profile or email', async () => {
-            profilesApi.getMyProfile.mockRejectedValue(new Error('No profile'));
+            profilesApi.searchProfiles.mockResolvedValue({ data: [] });
             useAuth.mockReturnValue({
                 user: {},
                 logout: mockLogout,
@@ -186,8 +188,8 @@ describe('ProfileDropdown', () => {
         });
 
         it('displays avatar image when profile has avatar_url', async () => {
-            profilesApi.getMyProfile.mockResolvedValue({
-                data: { ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' }
+            profilesApi.searchProfiles.mockResolvedValue({
+                data: [{ ...mockProfile, avatar_url: 'http://example.com/avatar.jpg' }]
             });
             const user = userEvent.setup();
             renderWithRouter(<ProfileDropdown />);
@@ -212,7 +214,7 @@ describe('ProfileDropdown', () => {
             const myProfileButton = screen.getByText('My Profile').closest('button');
             await user.click(myProfileButton);
 
-            expect(mockNavigate).toHaveBeenCalledWith('/profile');
+            expect(mockNavigate).toHaveBeenCalledWith('/profile/alex_morgan');
         });
 
         it('closes dropdown after navigating to profile', async () => {
@@ -303,7 +305,7 @@ describe('ProfileDropdown', () => {
 
     describe('Edge Cases', () => {
         it('handles user with netid instead of email', async () => {
-            profilesApi.getMyProfile.mockRejectedValue(new Error('No profile'));
+            profilesApi.searchProfiles.mockResolvedValue({ data: [] });
             useAuth.mockReturnValue({
                 user: { netid: 'abc123' },
                 logout: mockLogout,
@@ -316,7 +318,7 @@ describe('ProfileDropdown', () => {
         });
 
         it('handles null user gracefully', async () => {
-            profilesApi.getMyProfile.mockRejectedValue(new Error('No profile'));
+            profilesApi.searchProfiles.mockResolvedValue({ data: [] });
             useAuth.mockReturnValue({
                 user: null,
                 logout: mockLogout,
@@ -343,8 +345,8 @@ describe('ProfileDropdown', () => {
         });
 
         it('displays default email when no profile email available', async () => {
-            profilesApi.getMyProfile.mockResolvedValue({
-                data: { ...mockProfile, email: null }
+            profilesApi.searchProfiles.mockResolvedValue({
+                data: [{ ...mockProfile, email: null }]
             });
             useAuth.mockReturnValue({
                 user: {},
@@ -366,14 +368,14 @@ describe('ProfileDropdown', () => {
             renderWithRouter(<ProfileDropdown />);
 
             await waitFor(() => {
-                expect(profilesApi.getMyProfile).toHaveBeenCalledTimes(1);
+                expect(profilesApi.searchProfiles).toHaveBeenCalledTimes(1);
             });
 
             // Dispatch profileUpdated event
             window.dispatchEvent(new Event('profileUpdated'));
 
             await waitFor(() => {
-                expect(profilesApi.getMyProfile).toHaveBeenCalledTimes(2);
+                expect(profilesApi.searchProfiles).toHaveBeenCalledTimes(2);
             });
         });
     });

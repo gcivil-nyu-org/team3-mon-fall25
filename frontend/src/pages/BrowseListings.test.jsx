@@ -5,6 +5,11 @@ import BrowseListings from "./BrowseListings";
 import { vi, beforeEach } from "vitest";
 import * as listingsApi from "../api/listings";
 
+vi.mock("react-range-slider-input", () => ({
+  __esModule: true,
+  default: () => <div data-testid="mock-range-slider" />
+}));
+
 vi.mock("../api/listings", () => ({
   getListings: vi.fn(),
   getFilterOptions: vi.fn(),
@@ -14,6 +19,7 @@ vi.mock("../api/listings", () => ({
   deleteListingAPI: vi.fn(),
   getMyListings: vi.fn(),
   patchListing: vi.fn(),
+  getListingPriceStats: vi.fn(),
   getListingSuggestions: vi.fn(),
 }));
 

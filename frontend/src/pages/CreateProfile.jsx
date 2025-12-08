@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./CreateProfile.css";
 
 import { fetchMeStatus } from "../api/users";
-import { createProfile, getMyProfile } from "../api/profiles";
+import { createProfile, searchProfiles } from "../api/profiles";
 import { useAuth } from "../contexts/AuthContext";
 import { getLastAuthEmail, clearLastAuthEmail } from "../utils/authEmailStorage";
 import { loadDormOptionas } from "../utils/dormOptions";
@@ -76,13 +76,17 @@ export default function CreateProfile() {
       }
 
       try {
-        const { data } = await getMyProfile();
-        if (!alive) return;
-        if (data?.profile_id) {
-          navigate("/", { replace: true });
-          return;
+        if (user?.username) {
+            const { data } = await searchProfiles({ username: user.username });
+            if (!alive) return;
+            if (data && data.length > 0) {
+              navigate("/", { replace: true });
+              return;
+            }
+            if (data && data.length > 0) {
+                 setEmail((prev) => data[0].email || prev || getLastAuthEmail());
+            }
         }
-        setEmail((prev) => data.email || prev || getLastAuthEmail());
       } catch (err) {
         if (err?.response?.status !== 404) {
           console.error("Failed to check existing profile", err);
@@ -97,7 +101,7 @@ export default function CreateProfile() {
     return () => {
       alive = false;
     };
-  }, [navigate]);
+  }, [navigate, user]);
 
   const onChange = (e) => {
     const { name, value } = e.target;

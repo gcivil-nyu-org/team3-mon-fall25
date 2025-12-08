@@ -82,6 +82,8 @@ describe('ListingDetail - Share Functionality', () => {
         location: 'New York',
         user_netid: 'testuser',
         user_email: 'testuser@nyu.edu',
+        seller_profile_id: 456,
+        is_owner: false,
         created_at: '2024-01-01T00:00:00Z',
         images: [
             { image_url: 'https://example.com/image1.jpg' },
@@ -618,6 +620,8 @@ describe('ListingDetail - Core Functionality', () => {
         location: 'New York',
         user_netid: 'testuser',
         user_email: 'testuser@nyu.edu',
+        seller_profile_id: 456,
+        is_owner: false,
         created_at: '2024-01-01T00:00:00Z',
         images: [
             { image_url: 'https://example.com/image1.jpg' },
@@ -2073,11 +2077,12 @@ describe('ListingDetail - Core Functionality', () => {
             expect(listingsApi.getListings).not.toHaveBeenCalled();
         });
 
-        it('should handle handleViewProfile when sellerUsername is null', async () => {
+        it('should handle handleViewProfile when seller_profile_id is null', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             listingsApi.getListing.mockResolvedValue({
                 ...mockListing,
-                user_netid: null,
-                user_email: null,
+                seller_profile_id: null,
+                is_owner: false,
             });
 
             renderListingDetail();
@@ -2086,12 +2091,13 @@ describe('ListingDetail - Core Functionality', () => {
                 expect(screen.getByText('Test Laptop')).toBeInTheDocument();
             });
 
-            // Try to click view profile button - should not navigate if no username
+            // Try to click view profile button - should not navigate if no seller_profile_id
             const viewProfileButton = screen.getByText('View Profile');
             fireEvent.click(viewProfileButton);
 
-            // Should not navigate when sellerUsername is null
+            // Should not navigate when seller_profile_id is null
             expect(mockNavigate).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
         });
 
         it('should handle handleToggleSave when listing is null', async () => {
@@ -2630,6 +2636,9 @@ describe('ListingDetail - Core Functionality', () => {
             location: 'New York',
             user_netid: 'testuser',
             user_email: 'testuser@nyu.edu',
+            seller_profile_id: 456,
+            seller_username: 'testuser',
+            is_owner: false,
             created_at: '2024-01-01T00:00:00Z',
             images: [{ image_url: 'https://example.com/image1.jpg' }],
         };
@@ -2717,28 +2726,20 @@ describe('ListingDetail - Core Functionality', () => {
             fireEvent.click(viewProfileButton);
 
             await waitFor(() => {
-                expect(mockNavigate).toHaveBeenCalledWith(
-                    '/seller/testuser',
-                    expect.objectContaining({
-                        state: expect.objectContaining({
-                            currentListing: expect.any(Object),
-                        }),
-                    })
-                );
+                expect(mockNavigate).toHaveBeenCalledWith('/profile/testuser');
             });
 
             localStorage.clear();
         });
 
-        it('should handle view profile with email when netid is missing', async () => {
+        it('should handle view profile with seller_username', async () => {
             const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
             localStorage.setItem('access_token', mockToken);
             localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));
 
             listingsApi.getListing.mockResolvedValue({
                 ...mockListing,
-                user_netid: null,
-                user_email: 'testuser@nyu.edu',
+                seller_username: 'anotheruser',
             });
 
             render(
@@ -2757,10 +2758,39 @@ describe('ListingDetail - Core Functionality', () => {
             fireEvent.click(viewProfileButton);
 
             await waitFor(() => {
-                expect(mockNavigate).toHaveBeenCalledWith(
-                    '/seller/testuser',
-                    expect.any(Object)
-                );
+                expect(mockNavigate).toHaveBeenCalledWith('/profile/anotheruser');
+            });
+
+            localStorage.clear();
+        });
+
+        it('should navigate to own profile when viewing own listing', async () => {
+            const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.fake';
+            localStorage.setItem('access_token', mockToken);
+            localStorage.setItem('user', JSON.stringify({ email: 'test@nyu.edu' }));
+
+            listingsApi.getListing.mockResolvedValue({
+                ...mockListing,
+                is_owner: true,
+            });
+
+            render(
+                <BrowserRouter>
+                    <AuthProvider>
+                        <ListingDetail />
+                    </AuthProvider>
+                </BrowserRouter>
+            );
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Laptop')).toBeInTheDocument();
+            });
+
+            const viewProfileButton = screen.getByText('View Profile');
+            fireEvent.click(viewProfileButton);
+
+            await waitFor(() => {
+                expect(mockNavigate).toHaveBeenCalledWith('/profile');
             });
 
             localStorage.clear();
@@ -2778,6 +2808,9 @@ describe('ListingDetail - Core Functionality', () => {
             location: 'New York',
             user_netid: 'testuser',
             user_email: 'testuser@nyu.edu',
+            seller_profile_id: 456,
+            seller_username: 'testuser',
+            is_owner: false,
             created_at: '2024-01-01T00:00:00Z',
             images: [{ image_url: 'https://example.com/image1.jpg' }],
         };

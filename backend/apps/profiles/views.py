@@ -1,6 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import (
     SAFE_METHODS,
@@ -50,9 +49,6 @@ class ProfileViewSet(
     - GET /api/v1/profiles/ - List all profiles (auth required)
     - POST /api/v1/profiles/ - Create a new profile (auth required)
     - GET /api/v1/profiles/{id}/ - Get specific profile (auth required)
-    - GET /api/v1/profiles/me/ - Get current user's profile (auth)
-    - PUT/PATCH /api/v1/profiles/me/ - Update user's profile (auth)
-    - DELETE /api/v1/profiles/me/ - Delete user's profile (auth)
     """
 
     queryset = Profile.objects.all()
@@ -65,6 +61,7 @@ class ProfileViewSet(
         filters.OrderingFilter,
         filters.SearchFilter,
     ]
+    filterset_fields = ["username", "user"]
     ordering_fields = ["created_at", "full_name", "username"]
     ordering = ["-created_at"]
     search_fields = ["full_name", "username", "dorm_location"]
@@ -81,16 +78,25 @@ class ProfileViewSet(
             return ProfileCreateSerializer
         elif self.action in ["update", "partial_update"]:
             return ProfileUpdateSerializer
-        elif self.action == "me":
-            # For /me/ endpoint, check HTTP method
-            if self.request and self.request.method in ["PUT", "PATCH"]:
-                return ProfileUpdateSerializer
-            return ProfileDetailSerializer
         elif self.action == "retrieve":
             return ProfileDetailSerializer
         elif self.action == "list":
             return CompactProfileSerializer
         return ProfileDetailSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to add is_own_profile flag.
+        GET /api/v1/profiles/<id>/
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+
+        # Add flag to indicate if this is the current user's profile
+        data["is_own_profile"] = instance.user == request.user
+
+        return Response(data, status=status.HTTP_200_OK)
 
     def perform_destroy(self, instance):
         """Delete S3 avatar, listing images, profile, and user authentication details.
@@ -142,50 +148,3 @@ class ProfileViewSet(
 
         # Delete the user (cascades to profile and all related data)
         user.delete()
-
-    @action(detail=False, methods=["get", "put", "patch", "delete"], url_path="me")
-    def me(self, request):
-        """
-        Get, update, or delete the current user's profile.
-
-        GET /api/v1/profiles/me/
-        PUT/PATCH /api/v1/profiles/me/
-        DELETE /api/v1/profiles/me/
-        """
-        # Special case: DELETE can work even without a profile
-        if request.method == "DELETE":
-            try:
-                profile = request.user.profile
-                self.perform_destroy(profile)
-            except Profile.DoesNotExist:
-                # User has no profile, just delete the user account
-                request.user.delete()
-
-            return Response(
-                {"detail": "Account deleted successfully."},
-                status=status.HTTP_204_NO_CONTENT,
-            )
-
-        # For other methods, profile is required
-        try:
-            profile = request.user.profile
-        except Profile.DoesNotExist:
-            return Response(
-                {"detail": "Profile not found. Please create one first."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if request.method == "GET":
-            serializer = self.get_serializer(profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        elif request.method in ["PUT", "PATCH"]:
-            serializer = self.get_serializer(
-                profile, data=request.data, partial=request.method == "PATCH"
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-
-            # Return detailed profile data
-            detail_serializer = ProfileDetailSerializer(profile)
-            return Response(detail_serializer.data, status=status.HTTP_200_OK)

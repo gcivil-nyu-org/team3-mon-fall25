@@ -255,8 +255,16 @@ class ListingViewSet(
         Endpoint: GET /api/v1/listings/user/
         """
         # Use get_queryset() to assure is_deleted=False
-        user_listings = self.get_queryset().filter(user=request.user)
-        serializer = self.get_serializer(user_listings, many=True)
+        queryset = self.get_queryset().filter(user=request.user)
+
+        # Apply standard filters (category, price, etc.) and sorting
+        filtered_queryset = self.filter_queryset(queryset)
+
+        # No pagination for now to maintain backward compatibility with
+        # frontend expectation that getMyListings returns a list,
+        # not a paginated object.
+        # If pagination is needed later, frontend getMyListings will need updates.
+        serializer = self.get_serializer(filtered_queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="is_saved")
