@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -61,3 +62,52 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"Transaction {self.transaction_id}: {self.listing.title}"
+
+
+class Review(models.Model):
+    WHAT_WENT_WELL_CHOICES = [
+        ("punctuality", "Punctuality"),
+        ("communication", "Communication"),
+        ("pricing", "Pricing"),
+        ("item_description", "Item Description"),
+    ]
+
+    review_id = models.AutoField(primary_key=True)
+    transaction = models.OneToOneField(
+        Transaction,
+        on_delete=models.CASCADE,
+        related_name="review",
+    )
+    reviewer = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="reviews_given",
+    )
+    rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Rating from 1 to 5 stars",
+    )
+    what_went_well = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "List of choices: punctuality, communication, " "pricing, item_description"
+        ),
+    )
+    additional_comments = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "reviews"
+        indexes = [
+            models.Index(fields=["transaction"]),
+            models.Index(fields=["reviewer"]),
+            models.Index(fields=["rating"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return (
+            f"Review {self.review_id} for Transaction {self.transaction.transaction_id}"
+        )

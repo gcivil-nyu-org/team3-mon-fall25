@@ -6,15 +6,19 @@ from rest_framework.test import APIClient
 from apps.chat.models import Conversation, Message
 from apps.listings.models import Listing
 from apps.transactions.helpers import create_system_message
-from apps.transactions.models import Transaction
+from apps.transactions.models import Review, Transaction
 from apps.transactions.serializers import (
     DeliveryDetailsUpdateSerializer,
     PaymentMethodUpdateSerializer,
+    ReviewCreateSerializer,
+    ReviewSerializer,
+    ReviewUpdateSerializer,
     TransactionSerializer,
 )
 from apps.transactions.views import (
     IsBuyer,
     IsBuyerOrSeller,
+    IsReviewer,
     IsSeller,
     TransactionViewSet,
 )
@@ -825,3 +829,564 @@ class TestTransactionHelpers:
         assert Conversation.objects.count() == 1
         # Message should be in existing conversation
         assert Message.objects.filter(conversation=existing_conv).exists()
+
+
+@pytest.mark.django_db
+class TestReviewModel:
+    """Tests for Review model"""
+
+    def test_review_creation(self, two_users, transaction):
+        """Test review can be created"""
+        buyer, _ = two_users
+        review = Review.objects.create(
+            transaction=transaction,
+            reviewer=buyer,
+            rating=5,
+            what_went_well=["punctuality", "communication"],
+            additional_comments="Great seller!",
+        )
+        assert review.review_id is not None
+        assert review.transaction == transaction
+        assert review.reviewer == buyer
+        assert review.rating == 5
+        assert len(review.what_went_well) == 2
+
+    def test_review_str_representation(self, two_users, transaction):
+        """Test review string representation"""
+        buyer, _ = two_users
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+        assert "Review" in str(review)
+        assert str(review.transaction.transaction_id) in str(review)
+
+    def test_review_one_to_one_with_transaction(self, two_users, transaction):
+        """Test review has one-to-one relationship with transaction"""
+        buyer, _ = two_users
+        Review.objects.create(transaction=transaction, reviewer=buyer, rating=5)
+
+        with pytest.raises(Exception):
+            Review.objects.create(transaction=transaction, reviewer=buyer, rating=4)
+
+    def test_review_default_what_went_well(self, two_users, transaction):
+        """Test default what_went_well is empty list"""
+        buyer, _ = two_users
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+        assert review.what_went_well == []
+
+    def test_review_optional_comments(self, two_users, transaction):
+        """Test additional_comments is optional"""
+        buyer, _ = two_users
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+        assert review.additional_comments is None
+
+
+@pytest.mark.django_db
+class TestReviewSerializer:
+    """Tests for Review serializers"""
+
+    def test_review_serializer(self, two_users, transaction):
+        """Test ReviewSerializer serialization"""
+        buyer, _ = two_users
+        review = Review.objects.create(
+            transaction=transaction,
+            reviewer=buyer,
+            rating=5,
+            what_went_well=["punctuality"],
+            additional_comments="Good",
+        )
+
+        serializer = ReviewSerializer(review)
+        data = serializer.data
+        assert data["review_id"] == review.review_id
+        assert data["transaction"] == transaction.transaction_id
+        assert data["reviewer"] == buyer.id
+        assert data["rating"] == 5
+        assert data["what_went_well"] == ["punctuality"]
+        assert data["additional_comments"] == "Good"
+
+    def test_review_create_serializer_valid(self):
+        """Test ReviewCreateSerializer with valid data"""
+        serializer = ReviewCreateSerializer(
+            data={
+                "rating": 5,
+                "what_went_well": ["punctuality", "communication"],
+                "additional_comments": "Great!",
+            }
+        )
+        assert serializer.is_valid()
+
+    def test_review_create_serializer_rating_validation(self):
+        """Test ReviewCreateSerializer rating validation"""
+        serializer = ReviewCreateSerializer(data={"rating": 6, "what_went_well": []})
+        assert not serializer.is_valid()
+        assert "rating" in serializer.errors
+
+        serializer = ReviewCreateSerializer(data={"rating": 0, "what_went_well": []})
+        assert not serializer.is_valid()
+        assert "rating" in serializer.errors
+
+    def test_review_create_serializer_what_went_well_validation(self):
+        """Test ReviewCreateSerializer what_went_well validation"""
+        serializer = ReviewCreateSerializer(
+            data={"rating": 5, "what_went_well": ["invalid_choice"]}
+        )
+        assert not serializer.is_valid()
+        assert "what_went_well" in serializer.errors
+
+    def test_review_create_serializer_all_valid_choices(self):
+        """Test ReviewCreateSerializer accepts all valid choices"""
+        valid_choices = ["punctuality", "communication", "pricing", "item_description"]
+        serializer = ReviewCreateSerializer(
+            data={"rating": 5, "what_went_well": valid_choices}
+        )
+        assert serializer.is_valid()
+
+    def test_review_update_serializer(self):
+        """Test ReviewUpdateSerializer"""
+        serializer = ReviewUpdateSerializer(
+            data={
+                "rating": 4,
+                "what_went_well": ["pricing"],
+                "additional_comments": "Updated",
+            }
+        )
+        assert serializer.is_valid()
+
+
+@pytest.mark.django_db
+class TestReviewPermissions:
+    """Tests for review permission classes"""
+
+    def test_is_reviewer_permission(self, two_users, transaction):
+        """Test IsReviewer permission"""
+        buyer, seller = two_users
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+
+        permission = IsReviewer()
+
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        buyer_request = MockRequest(buyer)
+        seller_request = MockRequest(seller)
+
+        assert permission.has_object_permission(buyer_request, None, review)
+        assert not permission.has_object_permission(seller_request, None, review)
+
+
+@pytest.mark.django_db
+class TestReviewViewSet:
+    """Tests for ReviewViewSet CRUD operations"""
+
+    def test_create_review_success(self, authenticated_buyer, listing, two_users):
+        """Test successful review creation"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 5,
+                "what_went_well": ["punctuality", "communication"],
+                "additional_comments": "Excellent seller!",
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["rating"] == 5
+        assert data["transaction"] == transaction.transaction_id
+        assert data["reviewer"] == buyer.id
+        assert len(data["what_went_well"]) == 2
+        assert data["additional_comments"] == "Excellent seller!"
+
+    def test_create_review_missing_transaction_id(self, authenticated_buyer):
+        """Test creating review without transaction_id fails"""
+        client, _ = authenticated_buyer
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {"rating": 5, "what_went_well": []},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "transaction_id" in response.json()["error"].lower()
+
+    def test_create_review_nonexistent_transaction(self, authenticated_buyer):
+        """Test creating review for non-existent transaction fails"""
+        client, _ = authenticated_buyer
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {"transaction_id": 99999, "rating": 5, "what_went_well": []},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_create_review_not_buyer(self, authenticated_seller, listing, two_users):
+        """Test seller cannot create review"""
+        client, seller = authenticated_seller
+        buyer, _ = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 5,
+                "what_went_well": [],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "buyer" in response.json()["error"].lower()
+
+    def test_create_review_not_completed(self, authenticated_buyer, listing, two_users):
+        """Test cannot review non-completed transaction"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="PENDING"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 5,
+                "what_went_well": [],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "completed" in response.json()["error"].lower()
+
+    def test_create_review_already_exists(
+        self, authenticated_buyer, listing, two_users
+    ):
+        """Test cannot create duplicate review"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        Review.objects.create(transaction=transaction, reviewer=buyer, rating=5)
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 4,
+                "what_went_well": [],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "already exists" in response.json()["error"].lower()
+
+    def test_create_review_invalid_rating(
+        self, authenticated_buyer, listing, two_users
+    ):
+        """Test creating review with invalid rating fails"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 6,
+                "what_went_well": [],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_review_invalid_what_went_well(
+        self, authenticated_buyer, listing, two_users
+    ):
+        """Test creating review with invalid what_went_well fails"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 5,
+                "what_went_well": ["invalid_option"],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_retrieve_review_as_buyer(self, authenticated_buyer, listing, two_users):
+        """Test buyer can retrieve their review"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction,
+            reviewer=buyer,
+            rating=5,
+            what_went_well=["punctuality"],
+        )
+
+        response = client.get(f"/api/v1/reviews/{review.review_id}/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["review_id"] == review.review_id
+
+    def test_retrieve_review_as_seller(self, authenticated_seller, listing, two_users):
+        """Test seller can retrieve review"""
+        _, seller = two_users
+        buyer, _ = two_users
+
+        client = APIClient()
+        client.force_authenticate(user=seller)
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+
+        response = client.get(f"/api/v1/reviews/{review.review_id}/")
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_retrieve_review_unauthorized(self, listing, two_users):
+        """Test unauthorized user cannot retrieve review"""
+        buyer, seller = two_users
+        other_user = User.objects.create_user(
+            email="other@nyu.edu", password="test", is_email_verified=True
+        )
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=other_user)
+
+        response = client.get(f"/api/v1/reviews/{review.review_id}/")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_update_review_success(self, authenticated_buyer, listing, two_users):
+        """Test successful review update"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction,
+            reviewer=buyer,
+            rating=5,
+            what_went_well=["punctuality"],
+            additional_comments="Good",
+        )
+
+        response = client.patch(
+            f"/api/v1/reviews/{review.review_id}/",
+            {
+                "rating": 4,
+                "what_went_well": ["communication", "pricing"],
+                "additional_comments": "Updated comment",
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        review.refresh_from_db()
+        assert review.rating == 4
+        assert len(review.what_went_well) == 2
+        assert review.additional_comments == "Updated comment"
+
+    def test_update_review_not_reviewer(self, authenticated_seller, listing, two_users):
+        """Test non-reviewer cannot update review"""
+        client, seller = authenticated_seller
+        buyer, _ = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+
+        response = client.patch(
+            f"/api/v1/reviews/{review.review_id}/",
+            {"rating": 4},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_review_success(self, authenticated_buyer, listing, two_users):
+        """Test successful review deletion"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+
+        response = client.delete(f"/api/v1/reviews/{review.review_id}/")
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not Review.objects.filter(review_id=review.review_id).exists()
+
+    def test_delete_review_not_reviewer(self, authenticated_seller, listing, two_users):
+        """Test non-reviewer cannot delete review"""
+        client, seller = authenticated_seller
+        buyer, _ = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review = Review.objects.create(
+            transaction=transaction, reviewer=buyer, rating=5
+        )
+
+        response = client.delete(f"/api/v1/reviews/{review.review_id}/")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert Review.objects.filter(review_id=review.review_id).exists()
+
+    def test_list_reviews_requires_authentication(self, api_client):
+        """Test that listing reviews requires authentication"""
+        response = api_client.get("/api/v1/reviews/")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_filter_reviews_by_transaction(
+        self, authenticated_buyer, listing, two_users
+    ):
+        """Test filtering reviews by transaction_id"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction1 = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+        transaction2 = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        review1 = Review.objects.create(
+            transaction=transaction1, reviewer=buyer, rating=5
+        )
+        Review.objects.create(transaction=transaction2, reviewer=buyer, rating=4)
+
+        response = client.get(
+            f"/api/v1/reviews/?transaction_id={transaction1.transaction_id}"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["review_id"] == review1.review_id
+
+    def test_create_review_with_empty_what_went_well(
+        self, authenticated_buyer, listing, two_users
+    ):
+        """Test creating review with empty what_went_well list"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 5,
+                "what_went_well": [],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["what_went_well"] == []
+
+    def test_create_review_without_comments(
+        self, authenticated_buyer, listing, two_users
+    ):
+        """Test creating review without additional comments"""
+        client, buyer = authenticated_buyer
+        _, seller = two_users
+
+        transaction = Transaction.objects.create(
+            listing=listing, buyer=buyer, seller=seller, status="COMPLETED"
+        )
+
+        response = client.post(
+            "/api/v1/reviews/",
+            {
+                "transaction_id": transaction.transaction_id,
+                "rating": 5,
+                "what_went_well": ["punctuality"],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["additional_comments"] is None

@@ -7,10 +7,13 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from .helpers import create_system_message
-from .models import Transaction
+from .models import Review, Transaction
 from .serializers import (
     DeliveryDetailsUpdateSerializer,
     PaymentMethodUpdateSerializer,
+    ReviewCreateSerializer,
+    ReviewSerializer,
+    ReviewUpdateSerializer,
     TransactionSerializer,
 )
 
@@ -221,3 +224,156 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
 
         response_serializer = TransactionSerializer(transaction_obj)
         return Response(response_serializer.data)
+
+
+class IsReviewer(BasePermission):
+    """Permission to check if user is the reviewer"""
+
+    def has_object_permission(self, request, view, obj):
+        return obj.reviewer == request.user
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for review operations.
+    Provides CRUD operations for transaction reviews.
+    """
+
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter reviews based on user role and query parameters"""
+        user = self.request.user
+        queryset = Review.objects.all()
+
+        transaction_id = self.request.query_params.get("transaction_id")
+        if transaction_id:
+            queryset = queryset.filter(transaction__transaction_id=transaction_id)
+
+        if self.action in ["update", "partial_update", "destroy"]:
+            queryset = queryset.filter(reviewer=user)
+
+        return queryset
+
+    def get_permissions(self):
+        """Set permissions based on action"""
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [permissions.IsAuthenticated(), IsReviewer()]
+        return [permissions.IsAuthenticated()]
+
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action"""
+        if self.action == "create":
+            return ReviewCreateSerializer
+        elif self.action in ["update", "partial_update"]:
+            return ReviewUpdateSerializer
+        return ReviewSerializer
+
+    def create(self, request, *args, **kwargs):
+        """
+        POST /api/v1/reviews/
+        Create a review for a transaction.
+        Only the buyer can create a review.
+        """
+        transaction_id = request.data.get("transaction_id")
+
+        if not transaction_id:
+            return Response(
+                {"error": "transaction_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            transaction_obj = Transaction.objects.get(transaction_id=transaction_id)
+        except Transaction.DoesNotExist:
+            return Response(
+                {"error": "Transaction not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if transaction_obj.buyer != request.user:
+            return Response(
+                {"error": "Only the buyer can create a review for this transaction."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if transaction_obj.status != "COMPLETED":
+            return Response(
+                {"error": "Can only review completed transactions."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if hasattr(transaction_obj, "review"):
+            return Response(
+                {"error": "A review already exists for this transaction."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        review = serializer.save(
+            transaction=transaction_obj,
+            reviewer=request.user,
+        )
+
+        response_serializer = ReviewSerializer(review)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        GET /api/v1/reviews/{id}/
+        Retrieve a specific review.
+        """
+        review = self.get_object()
+        transaction = review.transaction
+
+        if request.user not in [transaction.buyer, transaction.seller]:
+            return Response(
+                {"error": "You do not have permission to view this review."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(review)
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """
+        PUT /api/v1/reviews/{id}/
+        Update a review.
+        Only the reviewer can update their review.
+        """
+        partial = kwargs.pop("partial", False)
+        review = self.get_object()
+
+        if review.reviewer != request.user:
+            return Response(
+                {"error": "Only the reviewer can update this review."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(review, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        response_serializer = ReviewSerializer(review)
+        return Response(response_serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        DELETE /api/v1/reviews/{id}/
+        Delete a review.
+        Only the reviewer can delete their review.
+        """
+        review = self.get_object()
+
+        if review.reviewer != request.user:
+            return Response(
+                {"error": "Only the reviewer can delete this review."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        review.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
