@@ -81,3 +81,11 @@ export async function getListingPriceStats() {
     const { data } = await apiClient.get(endpoints.listingPriceStats);
     return data;
 }
+
+export async function getListingSuggestions(query) {
+  const q = (query || "").trim();
+  if (q.length < 2) return [];
+  const params = new URLSearchParams({ q });
+  const res = await apiClient.get(`/listings/suggestions/?${params.toString()}`);
+  return res.data;
+}

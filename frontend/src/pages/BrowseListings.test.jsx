@@ -14,9 +14,11 @@ vi.mock("../api/listings", () => ({
   deleteListingAPI: vi.fn(),
   getMyListings: vi.fn(),
   patchListing: vi.fn(),
+  getListingSuggestions: vi.fn(),
 }));
 
 describe("BrowseListings integration", () => {
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock getFilterOptions for all tests
@@ -24,6 +26,7 @@ describe("BrowseListings integration", () => {
       categories: ['Electronics', 'Books', 'Furniture', 'Apparel', 'Other'],
       locations: ['Othmer Hall', 'Brooklyn', 'Manhattan', 'Other']
     });
+    vi.mocked(listingsApi.getListingSuggestions).mockResolvedValue([]);
   });
 
   it("shows listings and allows searching", async () => {
