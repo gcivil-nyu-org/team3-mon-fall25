@@ -174,7 +174,6 @@ export default function TransactionPaymentPage() {
   const [location, setLocation] = useState("");
   const [meetingTime, setMeetingTime] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [chatInput, setChatInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -517,12 +516,6 @@ export default function TransactionPaymentPage() {
   const handleSellerSuggestNewDetails = () => {
     setSellerEditing((prev) => !prev);
     setError("");
-  };
-
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    // TODO: Connect chat APIs (chat will be removed later; handler kept to avoid errors)
-    setChatInput("");
   };
 
   // ---- Cancel transaction ----

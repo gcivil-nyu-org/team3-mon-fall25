@@ -16,12 +16,16 @@ export default function useChatSocket({
   // and unnecessary reconnects when the handler function identity changes.
   const onMessageRef = useRef(onMessage);
   const onReadRef = useRef(onRead);
+  const onOpenRef = useRef(onOpen);
+  const onCloseRef = useRef(onClose);
   
   // Update refs whenever the passed functions change
   useEffect(() => {
     onMessageRef.current = onMessage;
     onReadRef.current = onRead;
-  }, [onMessage, onRead]);
+    onOpenRef.current = onOpen;
+    onCloseRef.current = onClose;
+  }, [onMessage, onRead, onOpen, onClose]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -50,7 +54,7 @@ export default function useChatSocket({
         console.log("WS Connected");
         retryRef.current = 0;
         setConnected(true);
-        if (onOpen) onOpen();
+        if (onOpenRef.current) onOpenRef.current();
       };
 
       ws.onmessage = (evt) => {
@@ -71,7 +75,7 @@ export default function useChatSocket({
       ws.onclose = (e) => {
         console.log("WS Closed", e.code, e.reason);
         setConnected(false);
-        if (onClose) onClose();
+        if (onCloseRef.current) onCloseRef.current();
         
         if (closed) return;
         

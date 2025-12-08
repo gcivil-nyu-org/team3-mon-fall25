@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Package, User, Calendar, DollarSign, ArrowRight } from "lucide-react";
 import { getMyOrders } from "../api/transactions";
-import { useAuth } from "../contexts/AuthContext";
 import "./MyOrdersPage.css";
 
 const STATUS_LABELS = {
@@ -161,7 +160,6 @@ function OrderCard({ order }) {
 }
 
 export default function MyOrdersPage() {
-  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [mode, setMode] = useState("buying"); // "buying" | "selling"
   const [loading, setLoading] = useState(true);
