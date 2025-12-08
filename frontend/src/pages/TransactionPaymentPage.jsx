@@ -239,8 +239,12 @@ export default function TransactionPaymentPage() {
       return;
     }
 
-    // SCHEDULED / COMPLETED: treat as finalized; do not auto-open editing
-    if (normalized === "SCHEDULED" || normalized === "COMPLETED") {
+    // SCHEDULED / COMPLETED / CANCELLED: treat as finalized; do not auto-open editing
+    if (
+      normalized === "SCHEDULED" ||
+      normalized === "COMPLETED" ||
+      normalized === "CANCELLED"
+    ) {
       setBuyerEditing(false);
     }
   }, [transaction, viewerRole]);
@@ -320,7 +324,7 @@ export default function TransactionPaymentPage() {
   }, [transactionId, user]);
 
   const mapStatusToStep = (status) => {
-    switch (status?.toUpperCase()) {
+    switch ((status || "").toUpperCase()) {
       case "PENDING":
         return "initiated";
       case "NEGOTIATING":
@@ -328,11 +332,15 @@ export default function TransactionPaymentPage() {
       case "SCHEDULED":
         return "scheduled";
       case "COMPLETED":
+      case "CANCELLED":
         return "completed";
       default:
         return "initiated";
     }
   };
+
+  const status = transaction?.status || "PENDING";
+  const normalizedStatus = (status || "").toUpperCase();
 
   const currentStep = mapStatusToStep(transaction?.status);
   const stepOrder = ["initiated", "negotiating", "scheduled", "completed"];
@@ -517,8 +525,36 @@ export default function TransactionPaymentPage() {
     setChatInput("");
   };
 
-  const status = transaction?.status || "PENDING";
-  const normalizedStatus = (status || "").toUpperCase();
+  // ---- Cancel transaction ----
+  const handleCancelTransaction = async () => {
+    if (!transaction) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this order? This will release the item back to the marketplace."
+    );
+    if (!confirmed) return;
+
+    const txId = transaction.transaction_id || transaction.id || transactionId;
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const res = await client.patch(`/transactions/${txId}/cancel/`);
+      setTransaction(res.data);
+      setBuyerEditing(false);
+      setSellerEditing(false);
+    } catch (e) {
+      console.error(e);
+      const apiError =
+        e?.response?.data?.error ||
+        e?.response?.data?.detail ||
+        "Failed to cancel transaction.";
+      setError(apiError);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const hasProposal = !!transaction?.proposed_by;
   const proposedByBuyer = transaction?.proposed_by === "buyer";
@@ -542,11 +578,14 @@ export default function TransactionPaymentPage() {
     return d.toLocaleString();
   })();
 
-  // Show Suggest button unless status is COMPLETED
+  // Show Suggest button unless status is COMPLETED / CANCELLED
   const canShowSuggestButton =
-    normalizedStatus !== "COMPLETED" &&
+    !["COMPLETED", "CANCELLED"].includes(normalizedStatus) &&
     (isSellerView ||
-      (isBuyerView && (isConfirmed || hasProposal || normalizedStatus === "SCHEDULED")));
+      (isBuyerView &&
+        (isConfirmed ||
+          hasProposal ||
+          normalizedStatus === "SCHEDULED")));
 
   const canBuyerConfirm =
     isBuyerView && proposedBySeller && normalizedStatus === "NEGOTIATING";
@@ -554,21 +593,29 @@ export default function TransactionPaymentPage() {
   const canSellerConfirm =
     isSellerView &&
     proposedByBuyer &&
-    !["SCHEDULED", "COMPLETED"].includes(normalizedStatus);
+    !["SCHEDULED", "COMPLETED", "CANCELLED"].includes(normalizedStatus);
 
   const canSellerMarkSold =
     isSellerView && normalizedStatus === "SCHEDULED";
 
-  // Show summary for NEGOTIATING / SCHEDULED / COMPLETED
+  // Cancel allowed when buyer or seller and status is PENDING/NEGOTIATING/SCHEDULED
+  const canCancel =
+    !!transaction &&
+    (isBuyerView || isSellerView) &&
+    ["PENDING", "NEGOTIATING", "SCHEDULED"].includes(normalizedStatus);
+
+  // Show summary for NEGOTIATING / SCHEDULED / COMPLETED / CANCELLED
   const showBuyerSummary =
     normalizedStatus === "NEGOTIATING" ||
     normalizedStatus === "SCHEDULED" ||
-    normalizedStatus === "COMPLETED";
+    normalizedStatus === "COMPLETED" ||
+    normalizedStatus === "CANCELLED";
 
   const showSellerSummary =
     hasProposal ||
     normalizedStatus === "SCHEDULED" ||
-    normalizedStatus === "COMPLETED";
+    normalizedStatus === "COMPLETED" ||
+    normalizedStatus === "CANCELLED";
 
   return (
     <div className="transaction-page-container">
@@ -619,7 +666,7 @@ export default function TransactionPaymentPage() {
                   // BUYER VIEW
                   // ============================
                   <>
-                    {/* Buyer Summary: show when there is a proposal or status is SCHEDULED */}
+                    {/* Buyer Summary */}
                     {showBuyerSummary && (
                       <div
                         className="proposal-summary"
@@ -657,6 +704,8 @@ export default function TransactionPaymentPage() {
                                 ? "Meetup scheduled."
                                 : normalizedStatus === "COMPLETED"
                                 ? "Transaction completed."
+                                : normalizedStatus === "CANCELLED"
+                                ? "Transaction cancelled."
                                 : proposedByBuyer
                                 ? "You proposed these details."
                                 : "Seller proposed new details to you."}
@@ -672,6 +721,8 @@ export default function TransactionPaymentPage() {
                                 ? "These details are confirmed. If something changes, you or the seller can suggest new details."
                                 : normalizedStatus === "COMPLETED"
                                 ? "These were the final confirmed details for this transaction."
+                                : normalizedStatus === "CANCELLED"
+                                ? "This transaction was cancelled. These were the last proposed details."
                                 : proposedByBuyer
                                 ? "Waiting for seller to accept or suggest changes."
                                 : "Waiting for you to accept the proposal or suggest changes."}
@@ -700,7 +751,9 @@ export default function TransactionPaymentPage() {
 
                     {/* Buyer form: only visible after clicking Suggest new details */}
                     {buyerEditing &&
-                      normalizedStatus !== "COMPLETED" && (
+                      !["COMPLETED", "CANCELLED"].includes(
+                        normalizedStatus
+                      ) && (
                         <>
                           {/* Payment Method Section */}
                           <div className="section-group">
@@ -917,7 +970,7 @@ export default function TransactionPaymentPage() {
                   // SELLER VIEW
                   // ============================
                   <>
-                    {/* Seller Summary: show when there is a proposal or status is SCHEDULED; if PENDING with no proposal show a brief tip */}
+                    {/* Seller Summary */}
                     {showSellerSummary ? (
                       <div
                         className="proposal-summary"
@@ -955,6 +1008,8 @@ export default function TransactionPaymentPage() {
                                 ? "Meetup scheduled."
                                 : normalizedStatus === "COMPLETED"
                                 ? "Transaction completed."
+                                : normalizedStatus === "CANCELLED"
+                                ? "Transaction cancelled."
                                 : proposedBy === "buyer"
                                 ? "Buyer proposed new details."
                                 : "You proposed new details to the buyer."}
@@ -970,6 +1025,8 @@ export default function TransactionPaymentPage() {
                                 ? "These details are confirmed. You can still suggest changes if needed."
                                 : normalizedStatus === "COMPLETED"
                                 ? "These were the final confirmed details for this transaction."
+                                : normalizedStatus === "CANCELLED"
+                                ? "This transaction was cancelled. These were the last proposed details."
                                 : proposedBy === "buyer"
                                 ? "Review the proposal and confirm if it works for you."
                                 : "Waiting for buyer to accept or suggest changes."}
@@ -999,108 +1056,114 @@ export default function TransactionPaymentPage() {
                       </div>
                     ) : (
                       normalizedStatus === "PENDING" && (
-                        <p className="tx-helper-text" style={{ marginBottom: 16 }}>
-                          No details proposed yet. Once the buyer suggests a meetup
-                          time and place, you&apos;ll see them here.
+                        <p
+                          className="tx-helper-text"
+                          style={{ marginBottom: 16 }}
+                        >
+                          No details proposed yet. Once the buyer suggests a
+                          meetup time and place, you&apos;ll see them here.
                         </p>
                       )
                     )}
 
-                    {sellerEditing && normalizedStatus !== "COMPLETED" && (
-                      <>
-                        <div className="section-group">
-                          <label className="section-label">
-                            Meeting Location
-                          </label>
+                    {sellerEditing &&
+                      !["COMPLETED", "CANCELLED"].includes(
+                        normalizedStatus
+                      ) && (
+                        <>
+                          <div className="section-group">
+                            <label className="section-label">
+                              Meeting Location
+                            </label>
 
-                          <div className="location-dropdown-wrapper">
-                            <button
-                              onClick={() =>
-                                setIsDropdownOpen(!isDropdownOpen)
-                              }
-                              className={`dropdown-trigger ${
-                                isDropdownOpen ? "open" : ""
-                              }`}
-                            >
-                              <span
-                                style={{
-                                  color: location ? "#111827" : "#6b7280",
-                                  fontWeight: location ? 500 : 400,
-                                }}
+                            <div className="location-dropdown-wrapper">
+                              <button
+                                onClick={() =>
+                                  setIsDropdownOpen(!isDropdownOpen)
+                                }
+                                className={`dropdown-trigger ${
+                                  isDropdownOpen ? "open" : ""
+                                }`}
                               >
-                                {location || "Choose a location"}
+                                <span
+                                  style={{
+                                    color: location ? "#111827" : "#6b7280",
+                                    fontWeight: location ? 500 : 400,
+                                  }}
+                                >
+                                  {location || "Choose a location"}
+                                </span>
+                                <ChevronDown
+                                  size={16}
+                                  color="#9ca3af"
+                                  style={{
+                                    transform: isDropdownOpen
+                                      ? "rotate(180deg)"
+                                      : "none",
+                                    transition: "transform 0.2s",
+                                  }}
+                                />
+                              </button>
+
+                              {isDropdownOpen && (
+                                <div className="dropdown-menu">
+                                  {LOCATIONS.map((loc) => (
+                                    <div
+                                      key={loc}
+                                      onClick={() => {
+                                        setLocation(loc);
+                                        setIsDropdownOpen(false);
+                                      }}
+                                      className="dropdown-item"
+                                    >
+                                      {loc}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="section-group">
+                            <label className="section-label">
+                              Meeting Time
+                            </label>
+                            <input
+                              type="datetime-local"
+                              className="input-field"
+                              value={meetingTime}
+                              onChange={(e) => {
+                                setMeetingTime(e.target.value);
+                                setError("");
+                              }}
+                              min={minMeetingTime}
+                            />
+
+                            <div className="helper-text">
+                              <Info size={12} />
+                              <span>
+                                Meeting time must be at least 1 hour from now.
                               </span>
-                              <ChevronDown
-                                size={16}
-                                color="#9ca3af"
-                                style={{
-                                  transform: isDropdownOpen
-                                    ? "rotate(180deg)"
-                                    : "none",
-                                  transition: "transform 0.2s",
-                                }}
-                              />
-                            </button>
+                            </div>
+                          </div>
 
-                            {isDropdownOpen && (
-                              <div className="dropdown-menu">
-                                {LOCATIONS.map((loc) => (
-                                  <div
-                                    key={loc}
-                                    onClick={() => {
-                                      setLocation(loc);
-                                      setIsDropdownOpen(false);
-                                    }}
-                                    className="dropdown-item"
-                                  >
-                                    {loc}
-                                  </div>
-                                ))}
-                              </div>
+                          <button
+                            onClick={handleSellerSendProposal}
+                            disabled={isSaving}
+                            className="save-btn"
+                            style={{ marginBottom: "12px" }}
+                          >
+                            {isSaving ? (
+                              <>
+                                <div className="spinner" />
+                                Sending proposal...
+                              </>
+                            ) : (
+                              "Send new proposal"
                             )}
-                          </div>
-                        </div>
-
-                        <div className="section-group">
-                          <label className="section-label">
-                            Meeting Time
-                          </label>
-                          <input
-                            type="datetime-local"
-                            className="input-field"
-                            value={meetingTime}
-                            onChange={(e) => {
-                              setMeetingTime(e.target.value);
-                              setError("");
-                            }}
-                            min={minMeetingTime}
-                          />
-
-                          <div className="helper-text">
-                            <Info size={12} />
-                            <span>
-                              Meeting time must be at least 1 hour from now.
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={handleSellerSendProposal}
-                          disabled={isSaving}
-                          className="save-btn"
-                          style={{ marginBottom: "12px" }}
-                        >
-                          {isSaving ? (
-                            <>
-                              <div className="spinner" />
-                              Sending proposal...
-                            </>
-                          ) : (
-                            "Send new proposal"
-                          )}
-                        </button>
-                      </>
-                    )}
+                          </button>
+                        </>
+                      )}
 
                     {/* Seller Confirm (only when buyer proposed) */}
                     {canSellerConfirm && (
@@ -1170,13 +1233,46 @@ export default function TransactionPaymentPage() {
                   status={getStepStatus("scheduled")}
                 />
                 <TimelineItem
-                  title="Completed"
-                  desc="Item sold"
+                  title={
+                    normalizedStatus === "CANCELLED"
+                      ? "Cancelled"
+                      : "Completed"
+                  }
+                  desc={
+                    normalizedStatus === "CANCELLED"
+                      ? "Transaction cancelled"
+                      : "Item sold"
+                  }
                   status={getStepStatus("completed")}
                   isLast
                 />
               </div>
             </div>
+
+            {/* Cancel Order Card */}
+            {canCancel && (
+              <div className="card card-padding cancel-card">
+                <p className="tx-helper-text" style={{ marginBottom: "0.75rem" }}>
+                  Need to back out? You can cancel this transaction and release
+                  the item back to the marketplace.
+                </p>
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={handleCancelTransaction}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="spinner" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    "Cancel order"
+                  )}
+                </button>
+              </div>
+            )}
 
             {/* Chat Card removed */}
           </div>
