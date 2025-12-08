@@ -559,10 +559,16 @@ export default function TransactionPaymentPage() {
   const canSellerMarkSold =
     isSellerView && normalizedStatus === "SCHEDULED";
 
-  const showBuyerSummary = normalizedStatus !== "COMPLETED";
+  // Show summary for NEGOTIATING / SCHEDULED / COMPLETED
+  const showBuyerSummary =
+    normalizedStatus === "NEGOTIATING" ||
+    normalizedStatus === "SCHEDULED" ||
+    normalizedStatus === "COMPLETED";
 
   const showSellerSummary =
-    hasProposal || normalizedStatus === "SCHEDULED";
+    hasProposal ||
+    normalizedStatus === "SCHEDULED" ||
+    normalizedStatus === "COMPLETED";
 
   return (
     <div className="transaction-page-container">
@@ -649,6 +655,8 @@ export default function TransactionPaymentPage() {
                             <p style={{ fontWeight: 600, margin: 0 }}>
                               {normalizedStatus === "SCHEDULED"
                                 ? "Meetup scheduled."
+                                : normalizedStatus === "COMPLETED"
+                                ? "Transaction completed."
                                 : proposedByBuyer
                                 ? "You proposed these details."
                                 : "Seller proposed new details to you."}
@@ -662,6 +670,8 @@ export default function TransactionPaymentPage() {
                             >
                               {normalizedStatus === "SCHEDULED"
                                 ? "These details are confirmed. If something changes, you or the seller can suggest new details."
+                                : normalizedStatus === "COMPLETED"
+                                ? "These were the final confirmed details for this transaction."
                                 : proposedByBuyer
                                 ? "Waiting for seller to accept or suggest changes."
                                 : "Waiting for you to accept the proposal or suggest changes."}
@@ -943,6 +953,8 @@ export default function TransactionPaymentPage() {
                             <p style={{ fontWeight: 600, margin: 0 }}>
                               {normalizedStatus === "SCHEDULED"
                                 ? "Meetup scheduled."
+                                : normalizedStatus === "COMPLETED"
+                                ? "Transaction completed."
                                 : proposedBy === "buyer"
                                 ? "Buyer proposed new details."
                                 : "You proposed new details to the buyer."}
@@ -956,6 +968,8 @@ export default function TransactionPaymentPage() {
                             >
                               {normalizedStatus === "SCHEDULED"
                                 ? "These details are confirmed. You can still suggest changes if needed."
+                                : normalizedStatus === "COMPLETED"
+                                ? "These were the final confirmed details for this transaction."
                                 : proposedBy === "buyer"
                                 ? "Review the proposal and confirm if it works for you."
                                 : "Waiting for buyer to accept or suggest changes."}
