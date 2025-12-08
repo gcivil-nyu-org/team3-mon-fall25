@@ -69,4 +69,46 @@ describe('redirectAfterAuth', () => {
 
     expect(navigate).toHaveBeenCalledWith(ROUTES.HOME, { replace: true });
   });
+
+  it('redirects to complete profile when API returns profile_complete false', async () => {
+    fetchMeStatus.mockResolvedValueOnce({ data: { profile_complete: false } });
+
+    await redirectAfterAuth(navigate);
+
+    expect(fetchMeStatus).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(ROUTES.COMPLETE_PROFILE, {
+      replace: true,
+    });
+  });
+
+  it('redirects to fallback when API returns profile_complete true', async () => {
+    fetchMeStatus.mockResolvedValueOnce({ data: { profile_complete: true } });
+
+    await redirectAfterAuth(navigate);
+
+    expect(fetchMeStatus).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(ROUTES.HOME, { replace: true });
+  });
+
+  it('handles API response with null data', async () => {
+    fetchMeStatus.mockResolvedValueOnce({ data: null });
+
+    await redirectAfterAuth(navigate);
+
+    expect(fetchMeStatus).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(ROUTES.COMPLETE_PROFILE, {
+      replace: true,
+    });
+  });
+
+  it('handles API response with undefined data', async () => {
+    fetchMeStatus.mockResolvedValueOnce({ data: undefined });
+
+    await redirectAfterAuth(navigate);
+
+    expect(fetchMeStatus).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(ROUTES.COMPLETE_PROFILE, {
+      replace: true,
+    });
+  });
 });

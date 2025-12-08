@@ -1,15 +1,24 @@
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import logoImage from "../assets/images/nyu-marketplace-logo.png";
 import SEO from "../components/SEO";
-import {useAuth} from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationContext";
+import NotificationAlert from "../components/NotificationAlert";
 
 
 export default function Home() {
-    const {isAuthenticated} = useAuth();
-    const loggedIn =
-        typeof isAuthenticated === "function"
-            ? isAuthenticated()
-            : !!isAuthenticated;
+    const { isAuthenticated } = useAuth();
+    const { unreadCount, openDropdown } = useNotifications();
+    const loggedIn = !!isAuthenticated;
+
+    const handleViewNotifications = () => {
+        // Scroll to top and open notifications panel
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Open notifications after scroll completes
+        setTimeout(() => {
+            openDropdown();
+        }, 500);
+    };
 
     return (
         <>
@@ -19,10 +28,20 @@ export default function Home() {
                 canonical="http://nyu-marketplace-env.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com/"
             />
 
+            {/* Notification Alert Section */}
+            {loggedIn && (
+                <section style={{ padding: "40px 24px 0", maxWidth: 1120, margin: "0 auto" }}>
+                    <NotificationAlert
+                        unreadCount={unreadCount}
+                        onViewNotifications={handleViewNotifications}
+                    />
+                </section>
+            )}
+
             {/* Hero Section */}
-            <section style={{background: "#F5F5F5", padding: "100px 24px"}}>
-                <div style={{maxWidth: 1120, margin: "0 auto", textAlign: "center"}}>
-                    <div style={{marginBottom: 10}}>
+            <section style={{ background: "#F5F5F5", padding: "100px 24px" }}>
+                <div style={{ maxWidth: 1120, margin: "0 auto", textAlign: "center" }}>
+                    <div style={{ marginBottom: 10 }}>
                         <img
                             src={logoImage}
                             alt="NYU Marketplace"
@@ -118,7 +137,7 @@ export default function Home() {
                 </div>
             </section>
             {/* Feature Cards Section */}
-            <section style={{padding: "40px 24px", background: "#F5F5F5"}}>
+            <section style={{ padding: "40px 24px", background: "#F5F5F5" }}>
                 <div style={{
                     maxWidth: 1120,
                     margin: "0 auto",
@@ -127,7 +146,7 @@ export default function Home() {
                     gap: 50,
                 }}>
                     {/* Card 1: Easy to Find */}
-                    <div style={{textAlign: "center"}}>
+                    <div style={{ textAlign: "center" }}>
                         <div style={{
                             width: 90,
                             height: 90,
@@ -141,16 +160,16 @@ export default function Home() {
                         }}>
                             🔍
                         </div>
-                        <h3 style={{margin: 0, fontSize: 19, fontWeight: 700, color: "#111"}}>
+                        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 700, color: "#111" }}>
                             Easy to Find
                         </h3>
-                        <p style={{margin: "12px 0 0", color: "#6b7280", fontSize: 15, lineHeight: 1.6}}>
+                        <p style={{ margin: "12px 0 0", color: "#6b7280", fontSize: 15, lineHeight: 1.6 }}>
                             Search and filter through listings to find exactly what you need
                         </p>
                     </div>
 
                     {/* Card 2: Safe & Secure */}
-                    <div style={{textAlign: "center"}}>
+                    <div style={{ textAlign: "center" }}>
                         <div style={{
                             width: 90,
                             height: 90,
@@ -164,16 +183,16 @@ export default function Home() {
                         }}>
                             🛡️
                         </div>
-                        <h3 style={{margin: 0, fontSize: 19, fontWeight: 700, color: "#111"}}>
+                        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 700, color: "#111" }}>
                             Safe & Secure
                         </h3>
-                        <p style={{margin: "12px 0 0", color: "#6b7280", fontSize: 15, lineHeight: 1.6}}>
+                        <p style={{ margin: "12px 0 0", color: "#6b7280", fontSize: 15, lineHeight: 1.6 }}>
                             Connect only with verified NYU students in your dorm community
                         </p>
                     </div>
 
                     {/* Card 3: Great Deals */}
-                    <div style={{textAlign: "center"}}>
+                    <div style={{ textAlign: "center" }}>
                         <div style={{
                             width: 90,
                             height: 90,
@@ -187,10 +206,10 @@ export default function Home() {
                         }}>
                             📈
                         </div>
-                        <h3 style={{margin: 0, fontSize: 19, fontWeight: 700, color: "#111"}}>
+                        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 700, color: "#111" }}>
                             Great Deals
                         </h3>
-                        <p style={{margin: "12px 0 0", color: "#6b7280", fontSize: 15, lineHeight: 1.6}}>
+                        <p style={{ margin: "12px 0 0", color: "#6b7280", fontSize: 15, lineHeight: 1.6 }}>
                             Find affordable items from students who know what you need
                         </p>
                     </div>
@@ -203,8 +222,8 @@ export default function Home() {
                 padding: "80px 24px",
                 textAlign: "center",
             }}>
-                <div style={{maxWidth: 800, margin: "0 auto"}}>
-                    <p style={{margin: 0, fontSize: 15, color: "rgba(255,255,255,0.9)"}}>
+                <div style={{ maxWidth: 800, margin: "0 auto" }}>
+                    <p style={{ margin: 0, fontSize: 15, color: "rgba(255,255,255,0.9)" }}>
                         Ready to get started?
                     </p>
                     <h2 style={{

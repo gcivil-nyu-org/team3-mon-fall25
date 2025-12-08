@@ -15,7 +15,7 @@ const TestComponent = () => {
         <div>
             <div data-testid="user">{user ? JSON.stringify(user) : 'null'}</div>
             <div data-testid="token">{token || 'null'}</div>
-            <div data-testid="isAuthenticated">{isAuthenticated().toString()}</div>
+            <div data-testid="isAuthenticated">{isAuthenticated.toString()}</div>
             <div data-testid="isLoading">{isLoading.toString()}</div>
             <button onClick={() => login('access123', 'refresh123', { id: 1, email: 'test@nyu.edu' })}>
                 Login
@@ -119,9 +119,8 @@ describe('AuthContext', () => {
             expect(screen.getByTestId('token')).toHaveTextContent('null');
         });
 
-        it('handles invalid token format gracefully', async () => {
+        it('handles invalid token format gracefully', () => {
             const mockToken = 'invalid_token';
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
             jwtDecode.mockImplementation(() => {
                 throw new Error('Invalid token');
@@ -134,18 +133,12 @@ describe('AuthContext', () => {
                 </AuthProvider>
             );
 
-            await waitFor(() => {
-                expect(screen.getByTestId('isLoading')).toHaveTextContent('false');
-            });
-
-            await waitFor(() => {
-                expect(consoleSpy).toHaveBeenCalled();
-            });
-
+            // Should immediately clear invalid token during initialization
+            expect(localStorage.getItem('access_token')).toBeNull();
             expect(screen.getByTestId('user')).toHaveTextContent('null');
             expect(screen.getByTestId('token')).toHaveTextContent('null');
-
-            consoleSpy.mockRestore();
+            expect(screen.getByTestId('isAuthenticated')).toHaveTextContent('false');
+            expect(screen.getByTestId('isLoading')).toHaveTextContent('false');
         });
     });
 
@@ -247,7 +240,7 @@ describe('AuthContext', () => {
         });
     });
 
-    describe('isAuthenticated function', () => {
+    describe('isAuthenticated boolean', () => {
         it('returns true for valid non-expired token', async () => {
             const mockToken = 'valid_token';
             const mockDecoded = { exp: Math.floor(Date.now() / 1000) + 3600 }; // Expires in 1 hour

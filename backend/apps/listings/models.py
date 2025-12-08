@@ -30,6 +30,7 @@ class Listing(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     view_count = models.PositiveIntegerField(default=0)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "listings"

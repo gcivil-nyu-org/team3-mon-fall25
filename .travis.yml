@@ -101,6 +101,7 @@ jobs:
         - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
         - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
         - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
+        - TERM=dumb # Disable terminal control sequences in CI logs
 
       before_script:
         # Create the test database before running tests
@@ -123,7 +124,7 @@ jobs:
         - python backend/manage.py collectstatic --noinput
         - echo "Running backend tests with coverage..."
         - cd backend
-        - coverage run -m pytest .
+        - coverage run -m pytest . --color=no --tb=short
         - coverage report --fail-under=85
         # parallel pytest with coverage
         #- pytest -n auto --cov=. --cov-report=term --cov-report=lcov --cov-fail-under=85
@@ -188,6 +189,7 @@ jobs:
         - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
         - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
         - AWS_STORAGE_BUCKET_NAME=$AWS_STORAGE_BUCKET_NAME
+        - TERM=dumb # Disable terminal control sequences in CI logs
 
       before_script:
         # Create the test database before running tests

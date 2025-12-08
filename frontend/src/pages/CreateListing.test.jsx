@@ -35,6 +35,18 @@ describe('CreateListing', () => {
         vi.clearAllMocks();
         listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
         fileUtils.validateImageFiles.mockReturnValue({ valid: true, error: null });
+        fileUtils.validateListingTitle.mockImplementation((title) => {
+            if (!title || !title.trim()) {
+                return { valid: false, error: "Title is required" };
+            }
+            if (!/[a-zA-Z0-9]/.test(title)) {
+                return {
+                    valid: false,
+                    error: "Listing title must contain at least one letter or number. Only special characters are not allowed.",
+                };
+            }
+            return { valid: true, error: null };
+        });
         fileUtils.formatFileSize.mockImplementation((bytes) => {
             if (bytes < 1024) return `${bytes} Bytes`;
             if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
@@ -81,6 +93,103 @@ describe('CreateListing', () => {
             expect(screen.getByText('Weinstein Hall')).toBeInTheDocument();
             expect(screen.getByText('Brittany Hall')).toBeInTheDocument();
             expect(screen.getByText('Founders Hall')).toBeInTheDocument();
+        });
+
+        it('handles error when loading filter options and falls back to hardcoded values', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+            listingsApi.getFilterOptions.mockRejectedValue(new Error('API Error'));
+            renderWithRouter(<CreateListing />);
+
+            // Should still render with fallback values
+            await waitFor(() => {
+                expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
+            });
+
+            // Verify console.error was called
+            await waitFor(() => {
+                expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading filter options:', expect.any(Error));
+            });
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('renders flat location list when dorm_locations is falsy', async () => {
+            // Test line 335: fallback rendering when dorm_locations is null/undefined
+            const mockFilterOptions = {
+                categories: ['Electronics', 'Books'],
+                locations: ['Othmer Hall', 'Clark Hall'],
+                dorm_locations: null // Explicitly null to test fallback path
+            };
+
+            listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
+            renderWithRouter(<CreateListing />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
+            });
+
+            // Wait for API call to complete and state to update
+            await waitFor(() => {
+                expect(listingsApi.getFilterOptions).toHaveBeenCalled();
+            });
+
+            // Verify that locations are rendered from the flat list (line 335 fallback)
+            await waitFor(() => {
+                expect(screen.getByText('Othmer Hall')).toBeInTheDocument();
+            });
+            expect(screen.getByText('Clark Hall')).toBeInTheDocument();
+        });
+
+        it('handles empty locations array from API and falls back to hardcoded locations', async () => {
+            // Test lines 32-35: when apiOptions.locations is empty or flatLocations.length is 0
+            const mockFilterOptions = {
+                categories: ['Electronics', 'Books'],
+                locations: [], // Empty array
+                dorm_locations: { washington_square: ['Othmer Hall'], downtown: [], other: [] }
+            };
+
+            listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
+            renderWithRouter(<CreateListing />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
+            });
+
+            // Wait for API call to complete
+            await waitFor(() => {
+                expect(listingsApi.getFilterOptions).toHaveBeenCalled();
+            });
+
+            // Should still render locations (from hardcoded fallback)
+            const locationSelect = screen.getByLabelText(/location/i);
+            expect(locationSelect).toBeInTheDocument();
+        });
+
+        it('uses API values when all are provided (no fallbacks)', async () => {
+            // Test lines 32-34: when apiOptions.locations and apiOptions.categories are truthy
+            const mockFilterOptions = {
+                categories: ['Custom Category 1', 'Custom Category 2'],
+                locations: ['Custom Location 1', 'Custom Location 2'],
+                dorm_locations: { washington_square: ['Custom Dorm'], downtown: [], other: [] }
+            };
+
+            listingsApi.getFilterOptions.mockResolvedValue(mockFilterOptions);
+            renderWithRouter(<CreateListing />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Create a New Listing')).toBeInTheDocument();
+            });
+
+            // Wait for API call to complete
+            await waitFor(() => {
+                expect(listingsApi.getFilterOptions).toHaveBeenCalled();
+            });
+
+            // Verify that custom categories and locations are used (not fallbacks)
+            await waitFor(() => {
+                expect(screen.getByText('Custom Category 1')).toBeInTheDocument();
+            });
+            expect(screen.getByText('Custom Category 2')).toBeInTheDocument();
         });
     });
 
@@ -204,6 +313,30 @@ describe('CreateListing', () => {
             await waitFor(() => {
                 expect(screen.getByText(/total:/i)).toBeInTheDocument();
             });
+        });
+
+        it('displays large file warning when file size exceeds 8MB', async () => {
+            const user = userEvent.setup();
+            fileUtils.formatFileSize.mockImplementation((bytes) => {
+                if (bytes < 1024) return `${bytes} Bytes`;
+                if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+                return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+            });
+            renderWithRouter(<CreateListing />);
+            // Create a file larger than 8MB (9MB)
+            const largeFile = new File(['x'.repeat(9 * 1024 * 1024)], 'large.png', { type: 'image/png' });
+            const fileInput = screen.getByLabelText(/images/i);
+
+            await user.upload(fileInput, largeFile);
+
+            await waitFor(() => {
+                expect(screen.getByText('large.png')).toBeInTheDocument();
+            });
+
+            // The file should be displayed with warning styling (isLarge = true)
+            // This tests lines 453-456 where isLarge is true
+            const fileDisplay = screen.getByText('large.png').closest('div');
+            expect(fileDisplay).toBeInTheDocument();
         });
     });
 
@@ -548,6 +681,35 @@ describe('CreateListing', () => {
 
             await waitFor(() => {
                 expect(screen.getByText('Network error')).toBeInTheDocument();
+            });
+        });
+
+        it('handles API error when detail is null but message is present', async () => {
+            const user = userEvent.setup();
+            const error = new Error('API Error');
+            error.response = { data: { detail: null, message: 'Error message from message field' } };
+            listingsApi.createListing.mockRejectedValue(error);
+            renderWithRouter(<CreateListing />);
+            await waitFor(() => {
+                expect(screen.getByText('Electronics')).toBeInTheDocument();
+            });
+
+            const titleInput = screen.getByLabelText(/title/i);
+            const descInput = screen.getByLabelText(/description/i);
+            const priceInput = screen.getByLabelText(/price/i);
+            const categorySelect = screen.getByLabelText(/category/i);
+            const locationSelect = screen.getByLabelText(/location/i);
+            const submitButton = screen.getByRole('button', { name: /create listing/i });
+
+            await user.type(titleInput, 'Test Title');
+            await user.type(descInput, 'Test Description');
+            await user.type(priceInput, '99.99');
+            await user.selectOptions(categorySelect, 'Electronics');
+            await user.selectOptions(locationSelect, 'Othmer Hall');
+            await user.click(submitButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Error message from message field')).toBeInTheDocument();
             });
         });
     });

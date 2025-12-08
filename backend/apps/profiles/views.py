@@ -93,18 +93,54 @@ class ProfileViewSet(
         return ProfileDetailSerializer
 
     def perform_destroy(self, instance):
-        """Delete S3 avatar, profile, and user authentication details.
+        """Delete S3 avatar, listing images, profile, and user authentication details.
 
         When a user deletes their profile, it indicates they want to exit
         the platform, so we also delete their authentication information.
+
+        This will cascade delete:
+        - Profile (OneToOne with User)
+        - All Listings (CASCADE)
+        - All ListingImages (CASCADE via Listings)
+        - All Watchlist entries (CASCADE)
+        - All Transactions (both as buyer and seller) (CASCADE)
+        - All ConversationParticipants (CASCADE)
+        - All Messages will have sender set to None (handled by model)
+
+        S3 cleanup:
+        - Profile avatar
+        - All listing images
         """
         user = instance.user
 
-        # Delete S3 avatar if exists
+        # Delete profile avatar from S3 if exists
         if instance.avatar_url:
-            s3_service.delete_image(instance.avatar_url)
+            try:
+                s3_service.delete_image(instance.avatar_url)
+            except Exception as e:
+                # Log but don't fail deletion if S3 delete fails
+                print(f"Warning: Failed to delete avatar from S3: {str(e)}")
 
-        # Delete the user (cascades to profile due to OneToOne relationship)
+        # Delete all listing images from S3
+        try:
+            from apps.listings.models import ListingImage
+
+            # Get all listing IDs for this user first
+            user_listing_ids = list(user.listings.values_list("listing_id", flat=True))
+            if user_listing_ids:
+                listing_images = ListingImage.objects.filter(
+                    listing_id__in=user_listing_ids
+                )
+                for img in listing_images:
+                    try:
+                        s3_service.delete_image(img.image_url)
+                    except Exception as e:
+                        msg = "Warning: Failed to delete listing image"
+                        print(f"{msg} from S3: {str(e)}")
+        except Exception as e:
+            print(f"Warning: Error during listing images cleanup: {str(e)}")
+
+        # Delete the user (cascades to profile and all related data)
         user.delete()
 
     @action(detail=False, methods=["get", "put", "patch", "delete"], url_path="me")
@@ -116,6 +152,21 @@ class ProfileViewSet(
         PUT/PATCH /api/v1/profiles/me/
         DELETE /api/v1/profiles/me/
         """
+        # Special case: DELETE can work even without a profile
+        if request.method == "DELETE":
+            try:
+                profile = request.user.profile
+                self.perform_destroy(profile)
+            except Profile.DoesNotExist:
+                # User has no profile, just delete the user account
+                request.user.delete()
+
+            return Response(
+                {"detail": "Account deleted successfully."},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+
+        # For other methods, profile is required
         try:
             profile = request.user.profile
         except Profile.DoesNotExist:
@@ -138,10 +189,3 @@ class ProfileViewSet(
             # Return detailed profile data
             detail_serializer = ProfileDetailSerializer(profile)
             return Response(detail_serializer.data, status=status.HTTP_200_OK)
-
-        elif request.method == "DELETE":
-            self.perform_destroy(profile)
-            return Response(
-                {"detail": "Profile deleted successfully."},
-                status=status.HTTP_204_NO_CONTENT,
-            )

@@ -12,8 +12,15 @@ export const endpoints = {
     me: '/profiles/me/',
   },
   listings: '/listings/',
+  listingPriceStats: '/listings/price-stats/',
   products: '/products/',
   users: '/users/',
   orders: '/orders/',
   watchlist: '/watchlist/',
+  notifications: {
+    base: '/notifications/',
+    unreadCount: '/notifications/unread-count/',
+    markAllRead: '/notifications/mark-all-read/',
+    markRead: (id) => `/notifications/${id}/read/`,
+  },
 };

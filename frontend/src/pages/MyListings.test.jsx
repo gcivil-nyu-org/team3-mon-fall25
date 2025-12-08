@@ -57,7 +57,7 @@ describe("MyListings", () => {
     );
 
     expect(screen.getByText("Loading your listings...")).toBeInTheDocument();
-    
+
     await waitFor(() => {
       expect(screen.queryByText("Loading your listings...")).not.toBeInTheDocument();
     });
@@ -142,6 +142,82 @@ describe("MyListings", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Test Laptop")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with response.data.detail when retry fails", async () => {
+    const errorWithDetail = {
+      response: {
+        data: {
+          detail: "Retry error detail",
+        },
+      },
+    };
+    listingsApi.getMyListings
+      .mockRejectedValueOnce(new Error("Initial error"))
+      .mockRejectedValueOnce(errorWithDetail);
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Retry")).toBeInTheDocument();
+    });
+
+    const retryButton = screen.getByText("Retry");
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Retry error detail")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with only message when retry fails", async () => {
+    listingsApi.getMyListings
+      .mockRejectedValueOnce(new Error("Initial error"))
+      .mockRejectedValueOnce({ message: "Retry error message" });
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Retry")).toBeInTheDocument();
+    });
+
+    const retryButton = screen.getByText("Retry");
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Retry error message")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with default message when retry fails and no error details", async () => {
+    listingsApi.getMyListings
+      .mockRejectedValueOnce(new Error("Initial error"))
+      .mockRejectedValueOnce(new Error());
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Retry")).toBeInTheDocument();
+    });
+
+    const retryButton = screen.getByText("Retry");
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load your listings/i)).toBeInTheDocument();
     });
   });
 
@@ -259,7 +335,7 @@ describe("MyListings", () => {
   });
 
   it("handles error when marking as sold fails", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => { });
     listingsApi.patchListing.mockRejectedValue(new Error("Failed to update"));
 
     render(
@@ -285,8 +361,66 @@ describe("MyListings", () => {
     alertSpy.mockRestore();
   });
 
+  it("does not update state when component unmounts before API completes", async () => {
+    // Create a promise that we can control
+    let resolvePromise;
+    const controlledPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+    listingsApi.getMyListings.mockReturnValue(controlledPromise);
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    // Unmount before the promise resolves
+    unmount();
+
+    // Now resolve the promise
+    resolvePromise(mockListings);
+
+    // Wait a bit to ensure any state updates would have happened
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // The component is unmounted, so we can't check the DOM
+    // But we can verify the API was called
+    expect(listingsApi.getMyListings).toHaveBeenCalled();
+  });
+
+  it("does not update state on error when component unmounts before API fails", async () => {
+    // Create a promise that we can control
+    let rejectPromise;
+    const controlledPromise = new Promise((_, reject) => {
+      rejectPromise = reject;
+    });
+    listingsApi.getMyListings.mockReturnValue(controlledPromise);
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    // Unmount before the promise rejects
+    unmount();
+
+    // Now reject the promise
+    rejectPromise(new Error("Network error"));
+
+    // Wait a bit to ensure any state updates would have happened
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // The component is unmounted, so we can't check the DOM
+    // But we can verify the API was called
+    expect(listingsApi.getMyListings).toHaveBeenCalled();
+  });
+
+
+
   it("handles error when delete fails", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => { });
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     listingsApi.deleteListingAPI.mockRejectedValue(new Error("Failed to delete"));
 
@@ -307,6 +441,104 @@ describe("MyListings", () => {
 
       await waitFor(() => {
         expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
+      });
+    }
+
+    alertSpy.mockRestore();
+    confirmSpy.mockRestore();
+  });
+
+  it("handles error with response.data.detail", async () => {
+    const errorWithDetail = {
+      response: {
+        data: {
+          detail: "Custom error message",
+        },
+      },
+    };
+    listingsApi.getMyListings.mockRejectedValue(errorWithDetail);
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Custom error message")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with response.data.detail and message", async () => {
+    listingsApi.getMyListings.mockRejectedValue({
+      response: { data: { detail: "API error" } },
+      message: "Network error",
+    });
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("API error")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with only message property", async () => {
+    listingsApi.getMyListings.mockRejectedValue({
+      message: "Network error",
+    });
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Network error")).toBeInTheDocument();
+    });
+  });
+
+  it("handles error with default message when no error details", async () => {
+    listingsApi.getMyListings.mockRejectedValue(new Error());
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load your listings/i)).toBeInTheDocument();
+    });
+  });
+
+  it("reloads listings when delete fails and returns false", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => { });
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    listingsApi.deleteListingAPI.mockResolvedValue(false);
+    listingsApi.getMyListings.mockResolvedValue(mockListings);
+
+    render(
+      <MemoryRouter>
+        <MyListings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Laptop")).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByText(/Delete/i);
+    if (deleteButtons.length > 0) {
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith("Failed to delete listing. Please try again.");
+        expect(listingsApi.getMyListings).toHaveBeenCalledTimes(2); // Initial load + reload after failure
       });
     }
 

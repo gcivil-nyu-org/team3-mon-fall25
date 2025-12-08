@@ -870,3 +870,118 @@ class TestListingViewSetAdditional:
             mock_logger.info.assert_called()
             # Check that delete_image was called twice
             assert mock_delete.call_count == 2
+
+
+@pytest.mark.django_db
+class TestPriceStats:
+    """Tests for the price-stats endpoint."""
+
+    def test_price_stats_with_active_listings(self, api_client):
+        """Test price_stats returns correct min and max for active listings."""
+        from decimal import Decimal
+
+        ListingFactory(price=10.00, status="active")
+        ListingFactory(price=50.00, status="active")
+        ListingFactory(price=25.00, status="active")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert Decimal(response.data["min_price"]) == Decimal("10.00")
+        assert Decimal(response.data["max_price"]) == Decimal("50.00")
+
+    def test_price_stats_with_no_listings(self, api_client):
+        """Test price_stats returns 0 when no listings exist."""
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["min_price"] == "0"
+        assert response.data["max_price"] == "0"
+
+    def test_price_stats_ignores_inactive_listings(self, api_client):
+        """Test price_stats only considers active listings, ignoring sold/inactive."""
+        from decimal import Decimal
+
+        ListingFactory(price=100.00, status="active")
+        ListingFactory(price=200.00, status="active")
+        # These should be ignored
+        ListingFactory(price=5.00, status="inactive")
+        ListingFactory(price=500.00, status="sold")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert Decimal(response.data["min_price"]) == Decimal("100.00")
+        assert Decimal(response.data["max_price"]) == Decimal("200.00")
+
+    def test_price_stats_with_only_inactive_listings(self, api_client):
+        """Test price_stats returns 0 when only inactive/sold listings exist."""
+        ListingFactory(price=100.00, status="inactive")
+        ListingFactory(price=200.00, status="sold")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["min_price"] == "0"
+        assert response.data["max_price"] == "0"
+
+    def test_price_stats_with_single_active_listing(self, api_client):
+        """Test price_stats when only one active listing exists."""
+        from decimal import Decimal
+
+        ListingFactory(price=75.50, status="active")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert Decimal(response.data["min_price"]) == Decimal("75.50")
+        assert Decimal(response.data["max_price"]) == Decimal("75.50")
+
+    def test_price_stats_with_same_prices(self, api_client):
+        """Test price_stats when all active listings have same price."""
+        from decimal import Decimal
+
+        ListingFactory(price=50.00, status="active")
+        ListingFactory(price=50.00, status="active")
+        ListingFactory(price=50.00, status="active")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert Decimal(response.data["min_price"]) == Decimal("50.00")
+        assert Decimal(response.data["max_price"]) == Decimal("50.00")
+
+    def test_price_stats_is_public(self, api_client):
+        """Test price_stats endpoint is accessible without authentication."""
+        ListingFactory(price=20.00, status="active")
+
+        # Using unauthenticated client
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "min_price" in response.data
+        assert "max_price" in response.data
+
+    def test_price_stats_with_decimal_precision(self, api_client):
+        """Test price_stats preserves decimal precision."""
+        from decimal import Decimal
+
+        ListingFactory(price=10.99, status="active")
+        ListingFactory(price=99.99, status="active")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert Decimal(response.data["min_price"]) == Decimal("10.99")
+        assert Decimal(response.data["max_price"]) == Decimal("99.99")
+
+    def test_price_stats_returns_string_format(self, api_client):
+        """Test price_stats returns prices as strings."""
+        ListingFactory(price=15.00, status="active")
+        ListingFactory(price=30.00, status="active")
+
+        response = api_client.get("/api/v1/listings/price-stats/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert isinstance(response.data["min_price"], str)
+        assert isinstance(response.data["max_price"], str)

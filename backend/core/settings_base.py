@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.listings",
     "apps.chat",
     "apps.transactions",
+    "apps.notifications",
     "channels",
     "rest_framework",
     "corsheaders",
@@ -182,3 +183,10 @@ EMAIL_USE_SSL = False
 DATA_UPLOAD_MAX_MEMORY_SIZE = 120 * 1024 * 1024  # 120MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 120 * 1024 * 1024  # 120MB
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # Allow for many images and form fields
+
+ASGI_APPLICATION = "core.asgi.application"
+
+if "daphne" not in INSTALLED_APPS:
+    INSTALLED_APPS.insert(0, "daphne")
+if "channels" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("channels")

@@ -1,15 +1,16 @@
-import os
 from .settings_base import *  # noqa: F403, F401
 
-try:
-    from .settings_local import *  # noqa
-except ImportError:
-    pass
 
-DEBUG = False
+DEBUG = True
 
-# Avoid cache issues
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+
+SIMPLE_JWT.update(  # noqa: F405
+    {
+        "ACCESS_TOKEN_LIFETIME": timedelta(minutes=120),
+        "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    }
+)
 
 ALLOWED_HOSTS = [
     "nyu-marketplace-dev.eba-vjpy9jfw.us-east-1.elasticbeanstalk.com",
@@ -50,7 +51,7 @@ DATABASES = {
     }
 }
 
-# settings.py (DEV ONLY)
+
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 
@@ -64,3 +65,11 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "us-east-1")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+
+ASGI_APPLICATION = "core.asgi.application"
+
+
+if "daphne" not in INSTALLED_APPS:
+    INSTALLED_APPS.insert(0, "daphne")
+if "channels" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("channels")

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from apps.listings.models import Listing, ListingImage
 from django.db import models
@@ -80,6 +81,21 @@ class ListingCreateSerializer(serializers.ModelSerializer):
             )
         return data
 
+    def validate_title(self, value):
+        """Validate that title contains meaningful characters"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title is required.")
+
+        # Check if title contains at least one alphanumeric character
+        # This ensures the title is meaningful and not just special characters
+        if not re.search(r"[a-zA-Z0-9]", value):
+            raise serializers.ValidationError(
+                "Listing title must contain at least one letter or number. "
+                "Only special characters are not allowed."
+            )
+
+        return value.strip()
+
     def validate_price(self, value):
         if value < 0:
             raise serializers.ValidationError("Price must be non-negative.")
@@ -134,6 +150,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     user_id = serializers.CharField(source="user.user_id", read_only=True)
     is_saved = serializers.SerializerMethodField()
     save_count = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -153,6 +170,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "user_id",
             "is_saved",
             "save_count",
+            "is_owner",
         ]
         read_only_fields = [
             "listing_id",
@@ -162,6 +180,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "user_netid",
             "is_saved",
             "save_count",
+            "is_owner",
         ]
 
     def get_is_saved(self, obj):
@@ -178,6 +197,13 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         from .models import Watchlist
 
         return Watchlist.objects.filter(listing=obj).count()
+
+    def get_is_owner(self, obj):
+        """Check if current user is the owner of this listing"""
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            return obj.user == request.user
+        return False
 
 
 # Update listing— PUT / PATCH
@@ -229,6 +255,21 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You can only update your own listings")
 
         return data
+
+    def validate_title(self, value):
+        """Validate that title contains meaningful characters"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title is required.")
+
+        # Check if title contains at least one alphanumeric character
+        # This ensures the title is meaningful and not just special characters
+        if not re.search(r"[a-zA-Z0-9]", value):
+            raise serializers.ValidationError(
+                "Listing title must contain at least one letter or number. "
+                "Only special characters are not allowed."
+            )
+
+        return value.strip()
 
     def validate_price(self, value):
         if value < 0:

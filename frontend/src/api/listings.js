@@ -76,3 +76,8 @@ export async function getFilterOptions() {
     const { data } = await apiClient.get(`${endpoints.listings}filter-options/`);
     return data;
 }
+
+export async function getListingPriceStats() {
+    const { data } = await apiClient.get(endpoints.listingPriceStats);
+    return data;
+}

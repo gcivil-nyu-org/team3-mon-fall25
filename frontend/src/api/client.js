@@ -32,11 +32,15 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
 
-      // ✅ Only redirect if we *previously* had a token
-      // (i.e., session expired). If user was never logged in,
-      // let the app stay on Home/Browse/etc.
+      // ✅ Only redirect to login if we had a token (session expired)
+      // Don't redirect if there was no token (already logged out)
       if (hadToken && window.location.pathname !== '/login') {
         window.location.href = '/login';
+      }
+
+      // Don't log 401 errors if there was no token (expected during logout)
+      if (!hadToken) {
+        return Promise.reject(error);
       }
     }
 

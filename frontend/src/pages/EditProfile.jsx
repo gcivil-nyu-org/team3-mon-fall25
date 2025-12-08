@@ -80,14 +80,17 @@ export default function EditProfile({ onClose, profile }) {
       onClose(true);
     } catch (err) {
       const errorData = err.response?.data;
-      if (errorData && typeof errorData === "object") {
+      // Check for detail field first (single error message)
+      if (errorData?.detail) {
+        setError(errorData.detail);
+      } else if (errorData && typeof errorData === "object") {
         // Format validation errors
         const messages = Object.entries(errorData)
           .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(", ") : errors}`)
           .join("\n");
         setError(messages);
       } else {
-        setError(err.response?.data?.detail || err.message || "Failed to save profile");
+        setError(err.message || "Failed to save profile");
       }
       console.error("Failed to save profile:", err);
     } finally {

@@ -1,19 +1,33 @@
-import React, {useEffect} from "react";
-import {Outlet, Link, NavLink, useLocation} from "react-router-dom";
-import {useAuth} from "./contexts/AuthContext";
-import {useChat} from "./contexts/ChatContext";
+import React, {useEffect, useRef} from "react";
+import { Outlet, Link, NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
+import { useChat } from "./contexts/ChatContext";
 import ProfileDropdown from "./components/ProfileDropdown";
-import GlobalChatWindow from "./components/GlobalChatWindow";
-import {FaComments} from "react-icons/fa";
-import {ToastContainer} from "react-toastify";
+import {useNotifications} from "./contexts/NotificationContext";
+import GlobalChat from "./components/chat/GlobalChat";
+import { FaComments } from "react-icons/fa";
+import { ToastContainer } from "react-toastify";
+import NotificationPanel from "./components/NotificationPanel";
+import {Bell} from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 import logoImage from "./assets/images/nyu-marketplace-header-logo.png";
 
 export default function App() {
-    const {user} = useAuth();
-    const {openChat} = useChat();
+    const { user } = useAuth();
+    const { openChat } = useChat();
     const location = useLocation();
+    const {
+        notifications,
+        unreadCount,
+        isDropdownOpen,
+        toggleDropdown,
+        closeDropdown,
+        markAsRead,
+        markAllAsRead,
+        handleNotificationClick,
+    } = useNotifications();
+    const notificationRef = useRef(null);
 
     // Track previous path for chat background
     useEffect(() => {
@@ -22,12 +36,33 @@ export default function App() {
         }
     }, [location.pathname]);
 
+    // Close notification dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                closeDropdown();
+            }
+        };
+
+        if (isDropdownOpen) {
+            // Use setTimeout to ensure the event listener is added after the current click event
+            const timeoutId = setTimeout(() => {
+                document.addEventListener("mousedown", handleClickOutside);
+            }, 0);
+
+            return () => {
+                clearTimeout(timeoutId);
+                document.removeEventListener("mousedown", handleClickOutside);
+            };
+        }
+    }, [isDropdownOpen, closeDropdown]);
+
     return (
         <div
             style={{
                 minHeight: "100vh",
-                background: "var(--bg)",      // light page background
-                color: "#111",                 // normal text; nav sets its own color
+                background: "var(--bg)",
+                color: "#111",
                 fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
                 display: "flex",
                 flexDirection: "column",
@@ -48,7 +83,7 @@ export default function App() {
                                 marginRight: "12px",
                                 borderRadius: "10px",
                                 padding: "4px",
-                                background: "#ffffff20",  // semi-transparent white for a subtle highlight
+                                background: "#ffffff20",
                                 backdropFilter: "blur(5px)"
                             }}
                         />
@@ -104,6 +139,65 @@ export default function App() {
                             </button>
                         )}
 
+                        {/* Notification Bell */}
+                        {user && (
+                            <div className="nav__notification-wrapper" ref={notificationRef}>
+                                <button
+                                    onClick={toggleDropdown}
+                                    className="nav__link"
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: "6px 0",
+                                        color: "inherit",
+                                        font: "inherit",
+                                        position: "relative",
+                                    }}
+                                    aria-label="Notifications"
+                                >
+                                    <Bell style={{fontSize: "20px", width: "20px", height: "20px"}}/>
+                                    {unreadCount > 0 && (
+                                        <span
+                                            style={{
+                                                position: "absolute",
+                                                top: "-2px",
+                                                right: "-2px",
+                                                backgroundColor: "#ef4444",
+                                                color: "white",
+                                                borderRadius: "50%",
+                                                width: "20px",
+                                                height: "20px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: "11px",
+                                                fontWeight: "600",
+                                                border: "2px solid #56018D",
+                                                minWidth: "20px",
+                                            }}
+                                        >
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Notification Panel */}
+                                {isDropdownOpen && (
+                                    <NotificationPanel
+                                        notifications={notifications}
+                                        onMarkAsRead={markAsRead}
+                                        onMarkAllAsRead={markAllAsRead}
+                                        onNotificationClick={handleNotificationClick}
+                                        onClose={closeDropdown}
+                                    />
+                                )}
+                            </div>
+                        )}
+
                         {user ? (
                             <ProfileDropdown/>
                         ) : (
@@ -118,12 +212,12 @@ export default function App() {
 
 
             {/* Page content */}
-            <div style={{flex: 1, paddingTop: '64px' /* Account for fixed header */}}>
+            <div style={{flex: 1, paddingTop: '64px' }}>
                 <Outlet/>
             </div>
 
-            {/* Global Chat Window - persists across all routes */}
-            <GlobalChatWindow/>
+
+            <GlobalChat />
 
             {/* Toast notifications */}
             <ToastContainer

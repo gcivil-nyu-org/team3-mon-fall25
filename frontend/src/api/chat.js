@@ -1,4 +1,3 @@
-// frontend/src/api/chat.js
 import apiClient from "../api/client";
 
 export async function createOrFetchDirect(peerId) {
