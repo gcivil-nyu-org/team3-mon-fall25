@@ -96,7 +96,7 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         # Disallow updates when completed or cancelled
         if transaction_obj.status in ["COMPLETED", "CANCELLED"]:
             return Response(
-                {"error": "Cannot update payment method for a completed or cancelled transaction."},
+                {"error": "Cannot update payment method for the transaction."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -138,7 +138,7 @@ class TransactionUpdateViewSet(viewsets.ViewSet):
         # Disallow updates when completed or cancelled
         if transaction_obj.status in ["COMPLETED", "CANCELLED"]:
             return Response(
-                {"error": "Cannot update delivery details for a completed or cancelled transaction."},
+                {"error": "Cannot update delivery details for the transaction."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

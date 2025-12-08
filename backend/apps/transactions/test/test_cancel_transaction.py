@@ -74,7 +74,9 @@ def _cancel_url(tx_id: int) -> str:
 
 
 @pytest.mark.django_db
-def test_buyer_can_cancel_pending_transaction(api_client, two_users, make_transaction, listing):
+def test_buyer_can_cancel_pending_transaction(
+    api_client, two_users, make_transaction, listing
+):
     buyer, seller = two_users
     tx = make_transaction(status="PENDING")
 
@@ -95,7 +97,9 @@ def test_buyer_can_cancel_pending_transaction(api_client, two_users, make_transa
 
 
 @pytest.mark.django_db
-def test_seller_can_cancel_scheduled_transaction(api_client, two_users, make_transaction, listing):
+def test_seller_can_cancel_scheduled_transaction(
+    api_client, two_users, make_transaction, listing
+):
     buyer, seller = two_users
     # Assume negotiation is done and status is SCHEDULED
     tx = make_transaction(status="SCHEDULED")
@@ -155,7 +159,9 @@ def test_cannot_cancel_twice(api_client, two_users, make_transaction):
 
 
 @pytest.mark.django_db
-def test_third_party_cannot_cancel(api_client, two_users, make_transaction, django_user_model):
+def test_third_party_cannot_cancel(
+    api_client, two_users, make_transaction, django_user_model
+):
     buyer, seller = two_users
     tx = make_transaction(status="PENDING")
 
