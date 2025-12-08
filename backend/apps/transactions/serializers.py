@@ -60,7 +60,6 @@ class TransactionSerializer(serializers.ModelSerializer):
     def get_viewer_role(self, obj):
         """
         Return 'buyer' or 'seller' dependsing on the authenticated user.
-        If the user is not the buyer or seller, return None (Normally, it won't happen)
         """
         request = self.context.get("request")
         user = getattr(request, "user", None)
