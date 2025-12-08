@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createListing, getFilterOptions } from "../api/listings";
 import SEO from "../components/SEO";
-import { formatFileSize, validateImageFiles } from "../utils/fileUtils";
+import { formatFileSize, validateImageFiles, validateListingTitle } from "../utils/fileUtils";
 import { CATEGORIES, LOCATIONS, DORM_LOCATIONS_GROUPED } from "../constants/filterOptions";
 
 const CreateListing = () => {
@@ -77,8 +77,9 @@ const CreateListing = () => {
     setLoading(true);
 
     // Validation
-    if (!title.trim()) {
-      setError("Title is required");
+    const titleValidation = validateListingTitle(title);
+    if (!titleValidation.valid) {
+      setError(titleValidation.error);
       setLoading(false);
       return;
     }

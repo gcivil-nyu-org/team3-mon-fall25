@@ -35,9 +35,15 @@ export async function updateListing(id, formData) {
     return data;
 }
 
-export async function getMyListings() {
-    const { data } = await apiClient.get(`${endpoints.listings}user/`)
+export async function getMyListings(params = {}) {
+    const { data } = await apiClient.get(`${endpoints.listings}user/`, { params });
     return data;
+}
+
+export async function getListingsByUserId(userId, params = {}) {
+    const queryParams = { ...params, user: userId };
+    const { data } = await apiClient.get(`${endpoints.listings}`, { params: queryParams });
+    return data.results || data; // Handle paginated response
 }
 
 export async function createListing(formData) {
@@ -80,4 +86,12 @@ export async function getFilterOptions() {
 export async function getListingPriceStats() {
     const { data } = await apiClient.get(endpoints.listingPriceStats);
     return data;
+}
+
+export async function getListingSuggestions(query) {
+  const q = (query || "").trim();
+  if (q.length < 2) return [];
+  const params = new URLSearchParams({ q });
+  const res = await apiClient.get(`/listings/suggestions/?${params.toString()}`);
+  return res.data;
 }

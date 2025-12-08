@@ -28,6 +28,7 @@ describe("ListingGrid", () => {
       status: "active",
       dorm_location: "Othmer Hall",
       seller_username: "alice",
+      seller_profile_id: 101,
       created_at: "2024-01-01T00:00:00Z",
       view_count: 10,
       primary_image: { url: "https://example.com/laptop.jpg" },
@@ -40,6 +41,7 @@ describe("ListingGrid", () => {
       status: "active",
       location: "Brooklyn",
       seller_username: "bob",
+      seller_profile_id: 102,
       created_at: "2024-01-02T00:00:00Z",
       view_count: 5,
       images: [{ image_url: "https://example.com/book.jpg" }],
@@ -93,7 +95,7 @@ describe("ListingGrid", () => {
     const sellerLink = screen.getByRole("link", { name: /@alice/i });
     fireEvent.click(sellerLink);
 
-    expect(mockNavigate).toHaveBeenCalledWith("/seller/alice");
+    expect(mockNavigate).toHaveBeenCalledWith("/profile/alice");
   });
 
   it("handles empty items array", () => {

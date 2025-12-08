@@ -48,26 +48,33 @@ export default function ListingDetail() {
     }, [id]);
 
     const handleViewProfile = () => {
-        const sellerUsername =
-            listing?.user_netid || listing?.user_email?.split("@")[0];
+        // If this is the user's own listing, go to their profile
+        if (listing?.is_owner) {
+            navigate("/profile");
+            return;
+        }
 
-        if (!sellerUsername) return;
+        // Get the seller's username for URL-friendly navigation
+        const sellerUsername = listing?.seller_username;
+
+        if (!sellerUsername) {
+            console.error("No seller username available");
+            return;
+        }
 
         // If not logged in, send to login and remember intended destination
         if (!isAuthenticated) {
             navigate("/login", {
                 replace: false,
                 state: {
-                    from: { pathname: `/seller/${sellerUsername}` },
+                    from: { pathname: `/profile/${sellerUsername}` },
                 },
             });
             return;
         }
 
-        // Logged in → go to seller profile as before
-        navigate(`/seller/${sellerUsername}`, {
-            state: { currentListing: listing },
-        });
+        // Logged in → go to seller's profile using username
+        navigate(`/profile/${sellerUsername}`);
     };
 
     const handleEditListing = () => {

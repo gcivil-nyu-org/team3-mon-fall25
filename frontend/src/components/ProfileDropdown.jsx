@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { getMyProfile } from "../api/profiles.js";
+import { searchProfiles } from "../api/profiles.js";
 import { FaUser, FaSignOutAlt } from "react-icons/fa";
 import "./ProfileDropdown.css";
 
@@ -13,14 +13,27 @@ export default function ProfileDropdown() {
   const navigate = useNavigate();
 
   // Load profile data
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
+    if (!user) return;
+
     try {
-      const response = await getMyProfile();
-      setProfile(response.data);
+      let params = {};
+      if (user.username) {
+        params.username = user.username;
+      } else if (user.user_id || user.id) {
+        params.user = user.user_id || user.id;
+      } else {
+        return;
+      }
+
+      const response = await searchProfiles(params);
+      if (response.data && response.data.length > 0) {
+        setProfile(response.data[0]);
+      }
     } catch (err) {
       console.error("Failed to load profile:", err);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadProfile();
@@ -34,7 +47,7 @@ export default function ProfileDropdown() {
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
-  }, []);
+  }, [loadProfile]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -64,7 +77,11 @@ export default function ProfileDropdown() {
 
   const handleMyProfile = () => {
     setIsOpen(false);
-    navigate("/profile");
+    if (profile?.username) {
+      navigate(`/profile/${profile.username}`);
+    } else {
+      navigate("/profile");
+    }
   };
 
   const handleLogout = () => {

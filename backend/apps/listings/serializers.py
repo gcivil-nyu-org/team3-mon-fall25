@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from apps.listings.models import Listing, ListingImage
 from django.db import models
@@ -80,6 +81,21 @@ class ListingCreateSerializer(serializers.ModelSerializer):
             )
         return data
 
+    def validate_title(self, value):
+        """Validate that title contains meaningful characters"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title is required.")
+
+        # Check if title contains at least one alphanumeric character
+        # This ensures the title is meaningful and not just special characters
+        if not re.search(r"[a-zA-Z0-9]", value):
+            raise serializers.ValidationError(
+                "Listing title must contain at least one letter or number. "
+                "Only special characters are not allowed."
+            )
+
+        return value.strip()
+
     def validate_price(self, value):
         if value < 0:
             raise serializers.ValidationError("Price must be non-negative.")
@@ -132,6 +148,8 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_netid = serializers.CharField(source="user.netid", read_only=True)
     user_id = serializers.CharField(source="user.user_id", read_only=True)
+    seller_profile_id = serializers.SerializerMethodField()
+    seller_username = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
     save_count = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
@@ -152,6 +170,8 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "user_email",
             "user_netid",
             "user_id",
+            "seller_profile_id",
+            "seller_username",
             "is_saved",
             "save_count",
             "is_owner",
@@ -162,10 +182,26 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             "updated_at",
             "user_email",
             "user_netid",
+            "seller_profile_id",
+            "seller_username",
             "is_saved",
             "save_count",
             "is_owner",
         ]
+
+    def get_seller_profile_id(self, obj):
+        """Get the seller's profile ID"""
+        try:
+            return obj.user.profile.profile_id
+        except Exception:
+            return None
+
+    def get_seller_username(self, obj):
+        """Get the seller's profile username for URL navigation"""
+        try:
+            return obj.user.profile.username
+        except Exception:
+            return None
 
     def get_is_saved(self, obj):
         """Check if current user has saved this listing"""
@@ -239,6 +275,21 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You can only update your own listings")
 
         return data
+
+    def validate_title(self, value):
+        """Validate that title contains meaningful characters"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Title is required.")
+
+        # Check if title contains at least one alphanumeric character
+        # This ensures the title is meaningful and not just special characters
+        if not re.search(r"[a-zA-Z0-9]", value):
+            raise serializers.ValidationError(
+                "Listing title must contain at least one letter or number. "
+                "Only special characters are not allowed."
+            )
+
+        return value.strip()
 
     def validate_price(self, value):
         if value < 0:
@@ -386,10 +437,11 @@ class ListingUpdateSerializer(serializers.ModelSerializer):
 class CompactListingSerializer(serializers.ModelSerializer):
     primary_image = serializers.SerializerMethodField()
 
-    # Expose seller username from user.netid (null-safe)
-    seller_username = serializers.CharField(
-        source="user.netid", read_only=True, allow_null=True
-    )
+    # Expose seller username from profile (null-safe)
+    seller_username = serializers.SerializerMethodField()
+
+    # Expose seller profile ID for navigation
+    seller_profile_id = serializers.SerializerMethodField()
 
     # Add dorm_location field
     dorm_location = serializers.CharField(read_only=True, allow_null=True)
@@ -410,11 +462,26 @@ class CompactListingSerializer(serializers.ModelSerializer):
             "status",
             "primary_image",
             "seller_username",
+            "seller_profile_id",
             "created_at",
             "view_count",
             "dorm_location",
             "location",
         ]
+
+    def get_seller_profile_id(self, obj):
+        """Get the seller's profile ID"""
+        try:
+            return obj.user.profile.profile_id
+        except Exception:
+            return None
+
+    def get_seller_username(self, obj):
+        """Get the seller's profile username for URL navigation"""
+        try:
+            return obj.user.profile.username
+        except Exception:
+            return None
 
     def get_primary_image(self, obj):
         """Get the primary image URL, or the first image if no primary is set"""
@@ -430,5 +497,29 @@ class CompactListingSerializer(serializers.ModelSerializer):
 
         # No images for this listing
         return None
+
+        return None
+
+
+class ListingSuggestionSerializer(serializers.ModelSerializer):
+    primary_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Listing
+        fields = [
+            "listing_id",
+            "title",
+            "primary_image",
+        ]
+
+    def get_primary_image(self, obj):
+        """Get the primary image URL, or the first image if no primary is set"""
+        primary_img = obj.images.filter(is_primary=True).first()
+        if primary_img:
+            return primary_img.image_url
+
+        first_img = obj.images.order_by("display_order").first()
+        if first_img:
+            return first_img.image_url
 
         return None

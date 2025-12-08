@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
+vi.mock("react-range-slider-input", () => ({
+  __esModule: true,
+  default: () => <div data-testid="mock-range-slider" />
+}));
+
 // Mock the listings API module before importing the component
 vi.mock('../api/listings', () => ({
   getListings: vi.fn(),
@@ -12,6 +17,7 @@ vi.mock('../api/listings', () => ({
     dorm_locations: {},
     locations: [],
   }),
+  getListingPriceStats: vi.fn(),
 }));
 
 import { getListings } from '../api/listings';

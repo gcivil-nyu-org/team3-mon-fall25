@@ -35,6 +35,13 @@ export default function GlobalChat() {
     null; // Was: (convs.length > 0 ? convs[0].id : null);
   // -----------------------------------------------------
 
+  // Navigate away from chat routes if user is not authenticated
+  useEffect(() => {
+    if (isUrlMode && !currentUser) {
+      navigate("/");
+    }
+  }, [isUrlMode, currentUser, navigate]);
+
   useEffect(() => {
     if (isUrlMode && !isChatOpen) {
         openChat();
@@ -195,11 +202,14 @@ export default function GlobalChat() {
 
         setNextBefore((prev) => ({ ...prev, [activeConversationId]: next_before }));
 
-        const unread = transformed.find(m => String(m.senderId) !== String(selfId) && !m.read);
-        if (unread) {
-           markRead(activeConversationId, unread.id).catch(() => {});
-           setConvs(prev => prev.map(c => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c));
+        // Mark the most recent message as read when conversation is loaded
+        // This updates last_read_message in backend, ensuring unread count is accurate
+        if (transformed.length > 0) {
+          const mostRecentMessage = transformed[0]; // Messages are sorted newest first
+          markRead(activeConversationId, mostRecentMessage.id).catch(() => {});
         }
+        // Always clear unread count when messages are loaded for active conversation
+        setConvs(prev => prev.map(c => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c));
       } catch (e) {
         console.error("Load msg error:", e);
       }
@@ -210,6 +220,85 @@ export default function GlobalChat() {
         fetchMsgs();
     }
   }, [activeConversationId, selfId]);
+
+  // Mark all unread messages as read when conversation becomes active
+  // This effect runs when activeConversationId changes
+  useEffect(() => {
+    if (!activeConversationId || !selfId) return;
+
+    // Clear unread count immediately when conversation is selected
+    setConvs(prev => prev.map(c => 
+      c.id === activeConversationId && c.unreadCount > 0 
+        ? { ...c, unreadCount: 0 } 
+        : c
+    ));
+
+    // Get messages for this conversation
+    const conversationMessages = messages[activeConversationId] || [];
+    
+    // If no messages yet, we're done (unread count already cleared)
+    if (conversationMessages.length === 0) {
+      return;
+    }
+    
+    // Mark the most recent message as read (this updates last_read_message in backend)
+    // This ensures unread count only counts messages received after opening the chat
+    const mostRecentMessage = conversationMessages[0]; // Messages are sorted newest first
+    if (mostRecentMessage) {
+      markRead(activeConversationId, mostRecentMessage.id).catch(() => {});
+      
+      // Update messages to mark them as read locally
+      setMessages(prev => {
+        const list = prev[activeConversationId] || [];
+        if (list.length === 0) return prev;
+        
+        const updated = list.map(m => {
+          if (String(m.senderId) !== String(selfId) && !m.read) {
+            return { ...m, read: true };
+          }
+          return m;
+        });
+        return { ...prev, [activeConversationId]: updated };
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId, selfId]);
+
+  // Also mark messages as read when messages are loaded for the active conversation
+  const activeMessages = messages[activeConversationId] || [];
+  const activeMessagesLength = activeMessages.length;
+  
+  useEffect(() => {
+    if (!activeConversationId || !selfId || activeMessagesLength === 0) return;
+
+    // Mark the most recent message as read (this updates last_read_message in backend)
+    const mostRecentMessage = activeMessages[0]; // Messages are sorted newest first
+    if (mostRecentMessage) {
+      markRead(activeConversationId, mostRecentMessage.id).catch(() => {});
+      
+      // Update messages to mark them as read locally
+      setMessages(prev => {
+        const list = prev[activeConversationId] || [];
+        if (list.length === 0) return prev;
+        
+        const updated = list.map(m => {
+          if (String(m.senderId) !== String(selfId) && !m.read) {
+            return { ...m, read: true };
+          }
+          return m;
+        });
+        return { ...prev, [activeConversationId]: updated };
+      });
+
+      // Ensure unread count is cleared
+      setConvs(prev => prev.map(c => 
+        c.id === activeConversationId && c.unreadCount > 0 
+          ? { ...c, unreadCount: 0 } 
+          : c
+      ));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId, selfId, activeMessagesLength]);
 
   // Socket
   const { sendText, sendRead } = useChatSocket({
@@ -240,12 +329,33 @@ export default function GlobalChat() {
 
       setConvs(prev => prev.map(c => {
         if (String(c.id) === String(convId)) {
+          // If we're viewing this conversation, unread count is 0
+          // (we'll mark messages as read when viewing)
+          if (activeConversationId === convId) {
             return {
-                ...c,
-                lastMessage: { content: newMsg.text, timestamp: newMsg.timestamp },
-                // Increment unread ONLY if I am not looking at this specific chat
-                unreadCount: (activeConversationId !== convId) ? (c.unreadCount || 0) + 1 : 0
+              ...c,
+              lastMessage: { content: newMsg.text, timestamp: newMsg.timestamp },
+              unreadCount: 0
             };
+          }
+
+          // If message is from current user, set unread count to 0
+          // (sending a message means we're viewing the chat, backend updates last_read_message)
+          if (String(newMsg.senderId) === String(selfId)) {
+            return {
+              ...c,
+              lastMessage: { content: newMsg.text, timestamp: newMsg.timestamp },
+              unreadCount: 0
+            };
+          }
+
+          // Message is from another user and we're not viewing this conversation
+          // Increment unread count (backend will provide accurate count on next refresh)
+          return {
+            ...c,
+            lastMessage: { content: newMsg.text, timestamp: newMsg.timestamp },
+            unreadCount: (c.unreadCount || 0) + 1
+          };
         }
         return c;
       }));

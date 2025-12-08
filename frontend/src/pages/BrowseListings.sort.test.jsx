@@ -3,7 +3,16 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
-vi.mock('../api/listings', () => ({ getListings: vi.fn() }));
+vi.mock("react-range-slider-input", () => ({
+  __esModule: true,
+  default: () => <div data-testid="mock-range-slider" />
+}));
+
+vi.mock('../api/listings', () => ({
+  getListings: vi.fn(),
+  getFilterOptions: vi.fn().mockResolvedValue({}),
+  getListingPriceStats: vi.fn(),
+}));
 import { getListings } from '../api/listings';
 import BrowseListings from './BrowseListings';
 

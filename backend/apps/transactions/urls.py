@@ -1,10 +1,11 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import TransactionUpdateViewSet, TransactionViewSet
+from .views import ReviewViewSet, TransactionUpdateViewSet, TransactionViewSet
 
 router = DefaultRouter()
 router.register("transactions", TransactionViewSet, basename="transactions")
+router.register("reviews", ReviewViewSet, basename="reviews")
 
 urlpatterns = router.urls
 

@@ -9,7 +9,7 @@ export const endpoints = {
   },
   profiles: {
     base: '/profiles/',
-    me: '/profiles/me/',
+    byId: (id) => `/profiles/${id}/`,
   },
   listings: '/listings/',
   listingPriceStats: '/listings/price-stats/',

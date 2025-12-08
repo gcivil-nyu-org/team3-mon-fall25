@@ -18,7 +18,7 @@ export default function useChatSocket({
   const onReadRef = useRef(onRead);
   const onOpenRef = useRef(onOpen);
   const onCloseRef = useRef(onClose);
-  
+
   // Update refs whenever the passed functions change
   useEffect(() => {
     onMessageRef.current = onMessage;
@@ -76,7 +76,6 @@ export default function useChatSocket({
         console.log("WS Closed", e.code, e.reason);
         setConnected(false);
         if (onCloseRef.current) onCloseRef.current();
-        
         if (closed) return;
         
         // Don't retry if the backend rejected auth (4001/4003)
