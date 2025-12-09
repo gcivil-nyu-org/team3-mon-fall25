@@ -17,7 +17,9 @@
 - [Development Workflow](#development-workflow)
 
 ## About the Project
-The NYU Marketplace is a platform for buying and selling items between NYU students. It is a web application that allows users to create listings, browse listings, and purchase items. It is built with Django and React.
+Buy and sell with fellow NYU students. Find great deals on textbooks, furniture, electronics, and more.
+
+![Buy and sell](images/buy.png)
 
 ## Key Features
 *List the high-level Epics or capabilities delivered.*
