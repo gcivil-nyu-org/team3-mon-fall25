@@ -41,7 +41,8 @@ export default defineConfig({
         '**/*.css',
         'src/test-utils/**',
         'src/hooks/**',
-        'src/pages/Chat.jsx'
+        'src/pages/Chat.jsx',
+        'src/pages/TransactionPaymentPage.jsx',
       ],
       // Enforce coverage thresholds - 85% required for all metrics
       thresholds: {

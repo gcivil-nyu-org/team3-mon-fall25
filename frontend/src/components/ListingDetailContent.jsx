@@ -30,6 +30,7 @@ export default function ListingDetailContent({
     onMarkAsSold,
     onDeleteListing,
     onBuyNow,
+    isBuying = false,
 }) {
     const { isAuthenticated } = useAuth();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -551,12 +552,12 @@ export default function ListingDetailContent({
                                             <button
                                                 className="listing-detail-contact-button"
                                                 onClick={onBuyNow}
-                                                disabled={listing.status === "sold"}
+                                                disabled={listing.status === "sold" || isBuying}
                                                 style={{
                                                     background: "#059669",
                                                 }}
                                             >
-                                                Buy Now
+                                                {isBuying ? "Processing..." : "Buy Now"}     
                                             </button>
                                         </>
                                     )}

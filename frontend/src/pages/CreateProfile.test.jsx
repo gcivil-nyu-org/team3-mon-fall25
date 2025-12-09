@@ -6,7 +6,6 @@ import CreateProfile from "./CreateProfile";
 
 const mockNavigate = vi.fn();
 const mockFetchMeStatus = vi.fn();
-const mockGetMyProfile = vi.fn();
 const mockCreateProfile = vi.fn();
 const mockGetLastAuthEmail = vi.fn();
 const mockClearLastAuthEmail = vi.fn();
@@ -26,9 +25,11 @@ vi.mock("../api/users", () => ({
 }));
 
 vi.mock("../api/profiles", () => ({
-  getMyProfile: (...args) => mockGetMyProfile(...args),
+  searchProfiles: vi.fn(),
   createProfile: (...args) => mockCreateProfile(...args),
 }));
+
+import * as profilesApi from "../api/profiles";
 
 vi.mock("../utils/authEmailStorage", () => ({
   getLastAuthEmail: (...args) => mockGetLastAuthEmail(...args),
@@ -42,12 +43,12 @@ vi.mock("../utils/dormOptions", () => ({
 describe("CreateProfile page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuth.mockReturnValue({ user: { email: "student@nyu.edu" } });
+    mockUseAuth.mockReturnValue({ user: { email: "student@nyu.edu", username: "testuser" } });
     mockGetLastAuthEmail.mockReturnValue("session@nyu.edu");
     mockFetchMeStatus.mockResolvedValue({ data: { profile_complete: false } });
-    mockGetMyProfile.mockRejectedValue({
-      response: { status: 404 },
-    });
+    // Default: no profile found (empty array)
+    profilesApi.searchProfiles.mockResolvedValue({ data: [] });
+    
     mockCreateProfile.mockResolvedValue({ data: { profile_id: 1 } });
     mockLoadDormOptions.mockResolvedValue({
       dorm_locations: {
@@ -81,7 +82,7 @@ describe("CreateProfile page", () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true });
     });
-    expect(mockGetMyProfile).not.toHaveBeenCalled();
+    expect(profilesApi.searchProfiles).not.toHaveBeenCalled();
   });
 
   it("renders form with required fields and read-only email", async () => {
@@ -289,7 +290,7 @@ describe("CreateProfile page", () => {
   });
 
   it("handles non-404 errors when checking existing profile", async () => {
-    mockGetMyProfile.mockRejectedValueOnce({
+    profilesApi.searchProfiles.mockRejectedValueOnce({
       response: { status: 500 },
     });
 
@@ -300,9 +301,9 @@ describe("CreateProfile page", () => {
     });
   });
 
-  it("handles error when getMyProfile returns data without profile_id", async () => {
-    mockGetMyProfile.mockResolvedValueOnce({
-      data: { email: "test@nyu.edu" },
+  it("stays on page when searchProfiles returns no profile", async () => {
+    profilesApi.searchProfiles.mockResolvedValueOnce({
+      data: [],
     });
 
     renderComponent();
@@ -438,9 +439,9 @@ describe("CreateProfile page", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("redirects home when getMyProfile returns profile_id", async () => {
-    mockGetMyProfile.mockResolvedValueOnce({
-      data: { profile_id: 123, email: "test@nyu.edu" },
+  it("redirects home when searchProfiles returns existing profile", async () => {
+    profilesApi.searchProfiles.mockResolvedValueOnce({
+      data: [{ profile_id: 123, email: "test@nyu.edu" }],
     });
 
     renderComponent();

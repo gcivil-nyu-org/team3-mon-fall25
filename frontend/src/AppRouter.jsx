@@ -19,9 +19,9 @@ import Login from "./pages/Login";
 import VerifyEmail from "./pages/VerifyEmail";
 import CreateProfile from "./pages/CreateProfile";
 import Profile from "./pages/Profile";
-import SellerProfile from "./pages/SellerProfile";
 import Watchlist from "./pages/Watchlist";
 import TransactionPaymentPage from "./pages/TransactionPaymentPage";
+import MyOrdersPage from "./pages/MyOrdersPage";
 
 import {ROUTES} from "./constants/routes";
 
@@ -79,6 +79,14 @@ export default function AppRouter() {
                                         }
                                     />
                                     <Route
+                                        path="orders"
+                                        element={
+                                            <ProtectedRoute>
+                                                <MyOrdersPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
                                         path="/dev/transaction "
                                         element={<TransactionPaymentPage/>}
                                     />
@@ -116,10 +124,10 @@ export default function AppRouter() {
                                         }
                                     />
                                     <Route
-                                        path="seller/:username"
+                                        path="profile/:username"
                                         element={
                                             <ProtectedRoute>
-                                                <SellerProfile/>
+                                                <Profile/>
                                             </ProtectedRoute>
                                         }
                                     />

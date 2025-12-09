@@ -25,7 +25,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         assert not User.objects.filter(id=user_id).exists()
@@ -58,7 +58,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         assert not Listing.objects.filter(listing_id__in=listing_ids).exists()
@@ -94,7 +94,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         # ListingImages should cascade delete with Listing
@@ -124,7 +124,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         assert not Watchlist.objects.filter(watchlist_id=watchlist_id).exists()
@@ -160,7 +160,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         assert not Transaction.objects.filter(transaction_id=transaction_id).exists()
@@ -196,7 +196,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         assert not Transaction.objects.filter(transaction_id=transaction_id).exists()
@@ -225,7 +225,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
 
@@ -274,7 +274,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
 
@@ -315,7 +315,7 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
 
@@ -331,51 +331,11 @@ class TestDeleteProfileWithProfile:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
         # 204 No Content responses typically have no body
         # Just verify the status code is correct
-
-
-class TestDeleteProfileWithoutProfile:
-    """Tests for deleting user account when no profile exists."""
-
-    def test_delete_user_without_profile(self, nyu_user_factory):
-        """Test deleting user account when no profile exists."""
-        user = nyu_user_factory(1)
-        user_id = user.id
-
-        client = APIClient()
-        client.force_authenticate(user=user)
-
-        response = client.delete("/api/v1/profiles/me/")
-
-        assert response.status_code == 204
-        # User should be deleted
-        assert not User.objects.filter(id=user_id).exists()
-
-    def test_delete_user_without_profile_deletes_listings(self, nyu_user_factory):
-        """Test that deleting user without profile still deletes listings."""
-        user = nyu_user_factory(1)
-
-        # Create listing (user has no profile)
-        listing = Listing.objects.create(
-            user=user,
-            title="No Profile Listing",
-            description="Test",
-            price=25.00,
-            category="other",
-        )
-        listing_id = listing.listing_id
-
-        client = APIClient()
-        client.force_authenticate(user=user)
-
-        response = client.delete("/api/v1/profiles/me/")
-
-        assert response.status_code == 204
-        assert not Listing.objects.filter(listing_id=listing_id).exists()
 
 
 class TestDeleteProfilePermissions:
@@ -384,7 +344,7 @@ class TestDeleteProfilePermissions:
     def test_unauthenticated_cannot_delete(self):
         """Test that unauthenticated users cannot delete profile."""
         client = APIClient()
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete("/api/v1/profiles/1/")
 
         assert response.status_code in (401, 403)
 
@@ -395,7 +355,7 @@ class TestDeleteProfilePermissions:
         client = APIClient()
         # Don't authenticate
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code in (401, 403)
 
@@ -447,7 +407,7 @@ class TestDeleteProfileEdgeCases:
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete("/api/v1/profiles/me/")
+        response = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
 
         assert response.status_code == 204
 
@@ -466,7 +426,7 @@ class TestDeleteProfileEdgeCases:
         client.force_authenticate(user=user)
 
         # First delete
-        response1 = client.delete("/api/v1/profiles/me/")
+        response1 = client.delete(f"/api/v1/profiles/{profile.profile_id}/")
         assert response1.status_code == 204
 
         # User is deleted

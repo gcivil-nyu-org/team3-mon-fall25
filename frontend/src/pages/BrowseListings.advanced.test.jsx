@@ -4,9 +4,15 @@ import { vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
 // Mock listings API
+vi.mock("react-range-slider-input", () => ({
+  __esModule: true,
+  default: () => <div data-testid="mock-range-slider" />
+}));
+
 vi.mock('../api/listings', () => ({
   getListings: vi.fn(),
-  getFilterOptions: vi.fn()
+  getFilterOptions: vi.fn(),
+  getListingPriceStats: vi.fn(),
 }));
 import { getListings, getFilterOptions } from '../api/listings';
 import BrowseListings from './BrowseListings';

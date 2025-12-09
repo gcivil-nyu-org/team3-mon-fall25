@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { updateMyProfile, createProfile } from "../api/profiles.js";
+import { updateProfile, createProfile } from "../api/profiles.js";
 import { FaTimes, FaCamera, FaTrash, FaPlus } from "react-icons/fa";
 import "./EditProfile.css";
 
@@ -63,21 +63,24 @@ export default function EditProfile({ onClose, profile }) {
         payload.append("remove_avatar", "true");
       }
 
+      let updatedProfile = null;
       if (profile) {
-        // Update existing profile
-        await updateMyProfile(payload, {
+        // Update existing profile using profile_id
+        const response = await updateProfile(profile.profile_id, payload, {
           headers: { "Content-Type": "multipart/form-data" },
         });
+        updatedProfile = response.data;
       } else {
         // Create new profile
-        await createProfile(payload);
+        const response = await createProfile(payload);
+        updatedProfile = response.data;
       }
 
       // Dispatch event to notify other components (like ProfileDropdown) to refresh
       window.dispatchEvent(new Event('profileUpdated'));
 
-      // Close modal and trigger refresh
-      onClose(true);
+      // Close modal and trigger refresh with the new data
+      onClose(true, updatedProfile);
     } catch (err) {
       const errorData = err.response?.data;
       // Check for detail field first (single error message)

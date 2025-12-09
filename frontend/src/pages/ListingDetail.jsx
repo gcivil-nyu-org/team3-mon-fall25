@@ -17,6 +17,7 @@ export default function ListingDetail() {
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [creatingTx, setCreatingTx] = useState(false);
 
     useEffect(() => {
         // Don't try to load if there's no ID (e.g., when rendered in background on chat page)
@@ -47,26 +48,33 @@ export default function ListingDetail() {
     }, [id]);
 
     const handleViewProfile = () => {
-        const sellerUsername =
-            listing?.user_netid || listing?.user_email?.split("@")[0];
+        // If this is the user's own listing, go to their profile
+        if (listing?.is_owner) {
+            navigate("/profile");
+            return;
+        }
 
-        if (!sellerUsername) return;
+        // Get the seller's username for URL-friendly navigation
+        const sellerUsername = listing?.seller_username;
+
+        if (!sellerUsername) {
+            console.error("No seller username available");
+            return;
+        }
 
         // If not logged in, send to login and remember intended destination
         if (!isAuthenticated) {
             navigate("/login", {
                 replace: false,
                 state: {
-                    from: { pathname: `/seller/${sellerUsername}` },
+                    from: { pathname: `/profile/${sellerUsername}` },
                 },
             });
             return;
         }
 
-        // Logged in → go to seller profile as before
-        navigate(`/seller/${sellerUsername}`, {
-            state: { currentListing: listing },
-        });
+        // Logged in → go to seller's profile using username
+        navigate(`/profile/${sellerUsername}`);
     };
 
     const handleEditListing = () => {
@@ -119,6 +127,8 @@ export default function ListingDetail() {
     const handleBuyNow = async () => {
         if (!listing) return;
 
+        if (creatingTx) return;
+
         // Check if user is authenticated
         if (!isAuthenticated) {
             navigate("/login", {
@@ -128,14 +138,23 @@ export default function ListingDetail() {
         }
 
         try {
+            setCreatingTx(true);
+
             // Create a transaction for this listing
             const transaction = await createTransaction(id);
+
+            const txId = transaction.transaction_id || transaction.id;
+            if (!txId) {
+                throw new Error("Missing transaction id from response");
+            }
 
             // Redirect to transaction payment page
             navigate(`/transaction/${transaction.transaction_id}`);
         } catch (err) {
             console.error("Failed to create transaction:", err);
             alert("Failed to initiate purchase. Please try again.");
+        } finally {
+            setCreatingTx(false);
         }
     };
 
@@ -185,6 +204,7 @@ export default function ListingDetail() {
                 onMarkAsSold={handleMarkAsSold}
                 onDeleteListing={handleDeleteListing}
                 onBuyNow={handleBuyNow}
+                isBuying={creatingTx}
             />
 
             {/* Mobile Sticky Footer */}
@@ -263,7 +283,7 @@ export default function ListingDetail() {
                                 <button
                                     className="listing-detail-mobile-contact-button"
                                     onClick={handleBuyNow}
-                                    disabled={listing.status === "sold"}
+                                    disabled={listing.status === "sold" || creatingTx}
                                     style={{
                                         flex: 1,
                                         fontSize: "14px",
@@ -271,7 +291,7 @@ export default function ListingDetail() {
                                         background: "#059669"
                                     }}
                                 >
-                                    Buy
+                                    {creatingTx ? "Processing..." : "Buy"}
                                 </button>
                             </div>
                         </>

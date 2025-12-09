@@ -37,7 +37,9 @@ export default function ChatModal({
   const getDefaultPosition = () => {
     const sidebarWidth = 400;
     const headerHeight = 64;
-    return { x: window.innerWidth - sidebarWidth, y: headerHeight };
+    // Ensure panel doesn't go off-screen
+    const maxX = window.innerWidth - sidebarWidth;
+    return { x: Math.max(0, maxX), y: headerHeight };
   };
 
   const [position, setPosition] = useState(() => getDefaultPosition());
@@ -62,12 +64,85 @@ export default function ChatModal({
     if (isFullPage) return;
     const handleResize = () => {
       setPosition(() => {
-        return { x: window.innerWidth - 400, y: 64 };
+        const sidebarWidth = 400;
+        const headerHeight = 64;
+        // Always recalculate position to keep panel aligned to right edge
+        const maxX = window.innerWidth - sidebarWidth;
+        return { x: Math.max(0, maxX), y: headerHeight };
       });
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [isFullPage]);
+
+  // Update position when expanding to ensure it stays on screen
+  useEffect(() => {
+    if (isFullPage || isMobile) return;
+    
+    setPosition(() => {
+      const sidebarWidth = 400;
+      const headerHeight = 64;
+      const maxX = window.innerWidth - sidebarWidth;
+      // Always recalculate to keep panel aligned to right edge
+      return { x: Math.max(0, maxX), y: headerHeight };
+    });
+  }, [isExpanded, isFullPage, isMobile]);
+
+  // Handle click outside to collapse expanded panel (windowed mode only)
+  useEffect(() => {
+    if (isFullPage || !isExpanded || isMobile) return;
+
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setIsExpanded(false);
+      }
+    };
+
+    // Small delay to avoid immediate trigger from the click that expanded it
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isExpanded, isFullPage, isMobile]);
+
+  // Prevent body scroll when panel is expanded (windowed mode)
+  useEffect(() => {
+    if (isFullPage || !isExpanded) {
+      document.body.style.overflow = "";
+      return;
+    }
+
+    // Only prevent scroll on mobile when expanded
+    if (isMobile && isExpanded) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isExpanded, isFullPage, isMobile]);
+
+  // Handle Escape key to collapse expanded panel (windowed mode only)
+  useEffect(() => {
+    if (isFullPage || !isExpanded || isMobile) return;
+
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isExpanded, isFullPage, isMobile]);
 
   // Handle Initial Load
   useEffect(() => {
@@ -109,8 +184,17 @@ export default function ChatModal({
   };
 
   const handleBack = () => {
-    if (isMobile) setShowConversationList(true);
-    else if (!isFullPage) setIsExpanded(false);
+    if (isMobile) {
+      setShowConversationList(true);
+    } else if (!isFullPage) {
+      setIsExpanded(false);
+    }
+  };
+
+  const handleCollapse = () => {
+    if (!isFullPage && !isMobile) {
+      setIsExpanded(false);
+    }
   };
 
   const handleSend = (content) => {
@@ -216,6 +300,7 @@ export default function ChatModal({
         top: `${position.y}px`,
         width: '400px',
         height: 'calc(100vh - 64px)',
+        maxHeight: 'calc(100vh - 64px)',
         zIndex: 1001,
         transition: 'left 0.3s ease',
       }}
@@ -227,17 +312,29 @@ export default function ChatModal({
           <h2 className="chat-modal__title">Messages</h2>
         </div>
         <div className="chat-modal__header-actions">
+          {!isFullPage && isExpanded && !isMobile && (
+            <button
+              className="chat-modal__action-button"
+              onClick={handleCollapse}
+              aria-label="Collapse chat panel"
+              title="Collapse"
+            >
+              <FaCompress />
+            </button>
+          )}
           <button
             className="chat-modal__action-button"
             onClick={handleToggleFullPage}
-            aria-label={isFullPage ? "Minimize" : "Maximize"} // ADDED
+            aria-label={isFullPage ? "Minimize" : "Maximize"}
+            title={isFullPage ? "Minimize" : "Maximize"}
           >
             {isFullPage ? <FaCompress /> : <FaExpand />}
           </button>
           <button
             className="chat-modal__close-button"
             onClick={handleClose}
-            aria-label="Close" // ADDED
+            aria-label="Close"
+            title="Close"
           >
             <FaTimes />
           </button>

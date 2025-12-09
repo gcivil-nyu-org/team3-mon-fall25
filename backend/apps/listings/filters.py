@@ -29,6 +29,7 @@ class ListingFilter(django_filters.FilterSet):
     class Meta:
         model = Listing
         fields = [
+            "user",
             "min_price",
             "max_price",
             "location",

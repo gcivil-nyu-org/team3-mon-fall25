@@ -1,8 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const ChatContext = createContext();
 
 export const ChatProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  
   // Check sessionStorage for persisted chat state
   const [isChatOpen, setIsChatOpen] = useState(() => {
     const stored = sessionStorage.getItem('chatOpen');
@@ -13,6 +16,14 @@ export const ChatProvider = ({ children }) => {
   useEffect(() => {
     sessionStorage.setItem('chatOpen', isChatOpen.toString());
   }, [isChatOpen]);
+
+  // Close chat when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsChatOpen(false);
+      sessionStorage.removeItem('chatOpen');
+    }
+  }, [isAuthenticated]);
 
   const openChat = () => {
     setIsChatOpen(true);

@@ -9,13 +9,18 @@ export const endpoints = {
   },
   profiles: {
     base: '/profiles/',
-    me: '/profiles/me/',
+    byId: (id) => `/profiles/${id}/`,
   },
   listings: '/listings/',
   listingPriceStats: '/listings/price-stats/',
   products: '/products/',
   users: '/users/',
   orders: '/orders/',
+  transactions: {
+    base: '/transactions/',
+    detail: (id) => `/transactions/${id}/`,
+    myOrders: '/transactions/my-orders/',
+  },
   watchlist: '/watchlist/',
   notifications: {
     base: '/notifications/',

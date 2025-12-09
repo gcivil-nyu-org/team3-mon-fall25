@@ -1,0 +1,405 @@
+.myorders {
+  padding: 2rem 0 3rem;
+}
+
+/* Header */
+
+.myorders__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.75rem;
+  gap: 1rem;
+}
+
+.myorders__header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.myorders__header-icon {
+  background: linear-gradient(135deg, #56018d, #9333ea);
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.myorders__header-icon-svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #ffffff;
+}
+
+.myorders__heading {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #2b1152;
+}
+
+.myorders__subheading {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.myorders__back-btn {
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.myorders__back-btn:hover {
+  background-color: #f3f4f6;
+}
+
+/* Tabs */
+
+.myorders__tabs {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.15rem;
+  background-color: #f3e8ff;
+  border: 1px solid #e5defa;
+  margin-bottom: 1.5rem;
+}
+
+.myorders__tab {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #6b21a8;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.myorders__tab--active {
+  background-color: #ffffff;
+  color: #4c1d95;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.16);
+}
+
+/* State text */
+
+.myorders__state {
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.myorders__state--error {
+  color: #b91c1c;
+}
+
+/* List */
+
+.myorders__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Card */
+
+.myorders__card {
+  display: block;
+  text-decoration: none;
+  border-radius: 0.9rem;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.15s ease, transform 0.1s ease,
+    border-color 0.15s ease;
+}
+
+.myorders__card:hover {
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.myorders__card-inner {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Image */
+
+.myorders__image-wrapper {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.myorders__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.myorders__image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    #f3f4f6,
+    #f3f4f6 10px,
+    #e5e7eb 10px,
+    #e5e7eb 20px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.myorders__image-placeholder-icon {
+  width: 1.6rem;
+  height: 1.6rem;
+  color: #9ca3af;
+}
+
+/* Content */
+
+.myorders__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.myorders__content-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.myorders__title-block {
+  min-width: 0;
+}
+
+.myorders__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.myorders__counterpart {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.myorders__counterpart-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* Status badge */
+
+.myorders__status {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.myorders__status--pending,
+.myorders__status--initiated {
+  background-color: #fef9c3;
+  color: #854d0e;
+  border-color: #fef3c7;
+}
+
+.myorders__status--negotiating {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.myorders__status--scheduled {
+  background-color: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.myorders__status--completed {
+  background-color: #ede9fe;
+  color: #5b21b6;
+  border-color: #ddd6fe;
+}
+
+.myorders__status--cancelled {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border-color: #e5e7eb;
+}
+
+/* Meta row */
+
+.myorders__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.myorders__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.myorders__meta-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: #9ca3af;
+}
+
+.myorders__meta-item--muted span:first-child {
+  color: #9ca3af;
+}
+
+.myorders__meta-pill {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  font-size: 0.75rem;
+}
+
+/* Location */
+
+.myorders__location {
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.myorders__location-label {
+  color: #9ca3af;
+  margin-right: 0.2rem;
+}
+
+.myorders__location-text {
+  color: #4b5563;
+}
+
+.myorders__location-dot {
+  margin-left: 0.3rem;
+}
+
+/* CTA row */
+
+.myorders__cta-row {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.myorders__details-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4c1d95;
+}
+
+.myorders__details-link:hover {
+  text-decoration: underline;
+}
+
+.myorders__details-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* Empty state */
+
+.myorders__empty-card {
+  margin-top: 1.5rem;
+  border-radius: 0.9rem;
+  border: 1px dashed #e5e7eb;
+  background-color: #f9fafb;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.myorders__empty-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #e5e7eb;
+  margin-bottom: 0.5rem;
+}
+
+.myorders__empty-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.myorders__empty-link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #4c1d95;
+  text-decoration: none;
+}
+
+.myorders__empty-link:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+
+@media (max-width: 640px) {
+  .myorders__card-inner {
+    flex-direction: row;
+  }
+
+  .myorders__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .myorders__tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .myorders__tab {
+    flex: 1;
+    text-align: center;
+  }
+}
