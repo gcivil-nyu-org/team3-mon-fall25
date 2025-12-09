@@ -22,11 +22,9 @@ export default function GlobalChat() {
   const [selfId, setSelfId] = useState("");
   const [convs, setConvs] = useState([]);
   const [messages, setMessages] = useState({});
-  const [nextBefore, setNextBefore] = useState({});
-  const [isMobile, setIsMobile] = useState(false);
   const loadedConversationsRef = useRef(new Set());
-  console.log("NextBefore", nextBefore);
-  console.log("isMobile", isMobile);
+  // console.log("NextBefore", nextBefore);
+  // console.log("isMobile", isMobile);
   // --- FIX 1: STOP AUTO-SELECTING FIRST CONVERSATION ---
   // If no URL ID and no Internal Click, active ID is NULL.
   const activeConversationId =
@@ -48,12 +46,12 @@ export default function GlobalChat() {
     }
   }, [isUrlMode, isChatOpen, openChat]);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // useEffect(() => {
+  //   // const checkMobile = () => setIsMobile(window.innerWidth < 768);
+  //   // checkMobile();
+  //   window.addEventListener('resize', checkMobile);
+  //   return () => window.removeEventListener('resize', checkMobile);
+  // }, []);
 
   useEffect(() => {
     const jwtId = getSelfIdFromJWT();
@@ -183,7 +181,7 @@ export default function GlobalChat() {
 
     const fetchMsgs = async () => {
       try {
-        const { results, next_before } = await getMessages(activeConversationId, { limit: 50 });
+        const { results } = await getMessages(activeConversationId, { limit: 50 });
         const transformed = results.map((msg) => ({
           id: msg.id,
           conversationId: msg.conversation,
@@ -200,7 +198,7 @@ export default function GlobalChat() {
           [activeConversationId]: transformed,
         }));
 
-        setNextBefore((prev) => ({ ...prev, [activeConversationId]: next_before }));
+        // setNextBefore((prev) => ({ ...prev, [activeConversationId]: next_before }));
 
         // Mark the most recent message as read when conversation is loaded
         // This updates last_read_message in backend, ensuring unread count is accurate
