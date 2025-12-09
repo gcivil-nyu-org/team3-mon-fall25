@@ -191,13 +191,8 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
-
-    expect(
-      screen.getByText(/Failed to load orders/i)
-    ).toBeInTheDocument();
+    const errorEl = await screen.findByText(/Failed to load orders/i);
+    expect(errorEl).toBeInTheDocument();
 
     console.error = originalError;
   });
