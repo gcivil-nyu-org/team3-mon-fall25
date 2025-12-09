@@ -116,25 +116,59 @@ npm run dev # start the development server
 ```bash
 ├── backend/        # Django backend — APIs, business logic, database models, tests
 │   ├── api/        # REST API endpoints (Django REST Framework)
-│   ├── apps/       # Modular Django apps (users, listings, payments, etc.)
+│   │   └── v1/     # API version 1 endpoints
+│   ├── apps/       # Modular Django apps
+│   │   ├── users/      # User authentication and management
+│   │   ├── profiles/   # User profiles
+│   │   ├── listings/   # Product listings
+│   │   ├── transactions/  # Transaction management
+│   │   ├── chat/        # Real-time chat (WebSocket)
+│   │   ├── notifications/  # Notification system
+│   │   ├── catalog/     # Catalog management
+│   │   ├── orders/      # Order management
+│   │   ├── payments/    # Payment processing
+│   │   └── common/      # Shared utilities
 │   ├── core/       # Core configuration (settings, urls, WSGI/ASGI)
+│   ├── utils/      # Utility modules (S3 service, etc.)
 │   ├── scripts/    # Utility or maintenance scripts
 │   ├── tests/      # Unit and integration tests
+│   ├── templates/  # Email templates
+│   ├── static/     # Static files
+│   ├── staticfiles/  # Collected static files
+│   ├── frontend_build/  # Built frontend assets (served by Django)
+│   ├── htmlcov/    # HTML coverage reports
 │   ├── manage.py   # Django management CLI
-│   └── pyproject.toml  # Python dependencies and project metadata
+│   ├── requirements.in  # High-level Python dependencies
+│   ├── requirements.txt # Compiled Python dependencies
+│   ├── pyproject.toml  # Python project metadata
+│   ├── Procfile    # AWS Elastic Beanstalk process file
+│   ├── build_frontend.sh  # Frontend build script
+│   └── environment_deploy_guide.md  # Deployment documentation
 │
-├── frontend/       # React (Vite) frontend — SPA client with Axios and Ant Design
-│   ├── src/        # Source code: pages, routes, components, shared utilities
-│   ├── public/     # Static assets (index.html, favicon, etc.)
-│   ├── e2e/        # End-to-end tests (Playwright/Cypress)
-│   ├── package.json / vite.config.js  # Frontend build and configuration
-│   └── README.md   # Frontend-specific documentation
+├── frontend/       # React (Vite) frontend — SPA client with Axios and Bootstrap
+│   ├── src/        # Source code
+│   │   ├── api/        # API client functions
+│   │   ├── components/ # React components
+│   │   ├── pages/      # Page components
+│   │   ├── contexts/   # React contexts (Auth, Chat, Notifications)
+│   │   ├── hooks/      # Custom React hooks
+│   │   ├── routes/     # Route definitions
+│   │   ├── utils/      # Utility functions
+│   │   ├── constants/  # Constants and configuration
+│   │   ├── types/      # TypeScript type definitions
+│   │   └── test-utils/  # Testing utilities
+│   ├── public/     # Static assets (favicon, manifest, etc.)
+│   ├── e2e/        # End-to-end tests
+│   ├── package.json    # Node.js dependencies
+│   ├── vite.config.js  # Vite build configuration
+│   ├── eslint.config.js  # ESLint configuration
+│   ├── tsconfig.json   # TypeScript configuration
+│   ├── TESTING.md      # Frontend testing documentation
+│   └── README.md       # Frontend-specific documentation
 │
-├── docs/           # Project documentation and design materials
-│   ├── ADR/        # Architecture Decision Records
-│   ├── api.md      # API documentation
-│   ├── architecture.md  # High-level system design
-│   └── onboarding.md    # Developer onboarding guide
+├── docs/           # Project documentation
+│   └── api/        # API documentation
+│       └── transactions.md
 │
 ├── schema/         # API schema and code generation
 │   ├── openapi.yaml  # OpenAPI specification
@@ -142,8 +176,11 @@ npm run dev # start the development server
 │
 ├── scripts/        # General setup or deployment scripts
 │
+├── images/         # Project images and diagrams
+│
+├── .travis.yml     # Travis CI configuration
+│
 ├── LICENSE         # Project license
-├── Makefile        # Common build/test commands
 └── README.md       # This file
 ```
 
@@ -160,8 +197,6 @@ We followed a strict **1-week Sprint** cycle (Tuesday to Monday) to ensure rapid
 
 ### Estimation Strategy
 We use a modified Fibonacci scale restricted to **0, 0.5, 1, 2, 3** points to encourage breaking down tasks into small, manageable units. A "3" implies the story is too large and must be split.
-
----
 
 ## Development Workflow
 We utilize the **Forking Workflow** to maintain a pristine `main` branch.
