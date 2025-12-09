@@ -1,5 +1,8 @@
 import pytest
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -551,10 +554,10 @@ class TestDeliveryDetailsEndpoint:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_seller_cannot_update_delivery_details(
+    def test_seller_can_update_delivery_details(
         self, authenticated_seller, listing, two_users
     ):
-        """Test that seller cannot update delivery details"""
+        """Seller is allowed to propose new delivery details (for negotiation flow)"""
         client, seller = authenticated_seller
         buyer, _ = two_users
 
@@ -564,10 +567,17 @@ class TestDeliveryDetailsEndpoint:
 
         response = client.patch(
             f"/api/v1/transactions/{transaction.transaction_id}/delivery-details/",
-            {"delivery_method": "pickup"},
+            {
+                "delivery_method": "pickup",
+                "meet_location": "Kimmel Center",
+                "meet_time": "2025-12-01T15:00:00Z",
+            },
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
+        transaction.refresh_from_db()
+        assert transaction.delivery_method == "pickup"
+        assert transaction.meet_location == "Kimmel Center"
 
     def test_delivery_details_creates_system_message(
         self, authenticated_buyer, listing
@@ -598,13 +608,27 @@ class TestDeliveryDetailsEndpoint:
 class TestConfirmEndpoint:
     """Tests for PATCH /api/v1/transactions/{id}/confirm/"""
 
-    def test_confirm_success(self, authenticated_seller, listing, two_users):
-        """Test successful confirmation by seller"""
+    def test_seller_confirms_buyer_proposal_success(
+        self, authenticated_seller, listing, two_users
+    ):
+        """
+        Seller can confirm when:
+        - transaction is NEGOTIATING
+        - proposed_by = 'buyer'
+        - delivery details are already set
+        """
         client, seller = authenticated_seller
         buyer, _ = two_users
 
         transaction = Transaction.objects.create(
-            listing=listing, buyer=buyer, seller=seller, status="PENDING"
+            listing=listing,
+            buyer=buyer,
+            seller=seller,
+            status="NEGOTIATING",
+            delivery_method="meetup",
+            meet_location="Bobst Library",
+            meet_time=timezone.now() + timedelta(hours=2),
+            proposed_by="buyer",
         )
 
         response = client.patch(
@@ -615,13 +639,24 @@ class TestConfirmEndpoint:
         transaction.refresh_from_db()
         assert transaction.status == "SCHEDULED"
 
-    def test_confirm_from_negotiating(self, authenticated_seller, listing, two_users):
-        """Test confirming from NEGOTIATING status"""
-        client, seller = authenticated_seller
-        buyer, _ = two_users
+    def test_buyer_confirms_seller_proposal_success(self, authenticated_buyer, listing):
+        """
+        Buyer can confirm when:
+        - transaction is NEGOTIATING
+        - proposed_by = 'seller'
+        """
+        client, buyer = authenticated_buyer
+        seller = listing.user
 
         transaction = Transaction.objects.create(
-            listing=listing, buyer=buyer, seller=seller, status="NEGOTIATING"
+            listing=listing,
+            buyer=buyer,
+            seller=seller,
+            status="NEGOTIATING",
+            delivery_method="meetup",
+            meet_location="Bobst Library",
+            meet_time=timezone.now() + timedelta(hours=2),
+            proposed_by="seller",
         )
 
         response = client.patch(
@@ -632,13 +667,22 @@ class TestConfirmEndpoint:
         transaction.refresh_from_db()
         assert transaction.status == "SCHEDULED"
 
-    def test_confirm_invalid_state(self, authenticated_seller, listing, two_users):
-        """Test that confirming from invalid state fails"""
+    def test_confirm_without_proposal_returns_400(
+        self, authenticated_seller, listing, two_users
+    ):
+        """Confirming when there is no proposal should return 400"""
         client, seller = authenticated_seller
         buyer, _ = two_users
 
         transaction = Transaction.objects.create(
-            listing=listing, buyer=buyer, seller=seller, status="SCHEDULED"
+            listing=listing,
+            buyer=buyer,
+            seller=seller,
+            status="PENDING",
+            delivery_method="meetup",
+            meet_location="Bobst Library",
+            meet_time=timezone.now() + timedelta(hours=2),
+            proposed_by=None,
         )
 
         response = client.patch(
@@ -647,29 +691,71 @@ class TestConfirmEndpoint:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_buyer_cannot_confirm(self, authenticated_buyer, listing):
-        """Test that buyer cannot confirm"""
-        client, buyer = authenticated_buyer
+    def test_confirm_invalid_state(self, authenticated_seller, listing, two_users):
+        """Confirming from COMPLETED (or other invalid state) should fail"""
+        client, seller = authenticated_seller
+        buyer, _ = two_users
 
         transaction = Transaction.objects.create(
-            listing=listing, buyer=buyer, seller=listing.user, status="PENDING"
+            listing=listing,
+            buyer=buyer,
+            seller=seller,
+            status="COMPLETED",
+            delivery_method="meetup",
+            meet_location="Bobst Library",
+            meet_time=timezone.now() + timedelta(hours=2),
+            proposed_by="buyer",
         )
 
         response = client.patch(
             f"/api/v1/transactions/{transaction.transaction_id}/confirm/"
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_wrong_party_cannot_confirm(self, authenticated_buyer, listing):
+        """
+        The same party who proposed details (proposed_by) cannot
+        confirm their own proposal – should return 400.
+        """
+        client, buyer = authenticated_buyer
+        seller = listing.user
+
+        transaction = Transaction.objects.create(
+            listing=listing,
+            buyer=buyer,
+            seller=seller,
+            status="NEGOTIATING",
+            delivery_method="meetup",
+            meet_location="Bobst Library",
+            meet_time=timezone.now() + timedelta(hours=2),
+            proposed_by="buyer",  # buyer proposed
+        )
+
+        response = client.patch(
+            f"/api/v1/transactions/{transaction.transaction_id}/confirm/"
+        )
+
+        # Buyer is part of the transaction but not allowed to confirm
+        # their own proposal -> 400 (business rule), not 403.
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_confirm_creates_system_message(
         self, authenticated_seller, listing, two_users
     ):
-        """Test that confirming creates system message"""
+        """Successful confirm should create a system message in chat"""
         client, seller = authenticated_seller
         buyer, _ = two_users
 
         transaction = Transaction.objects.create(
-            listing=listing, buyer=buyer, seller=seller, status="PENDING"
+            listing=listing,
+            buyer=buyer,
+            seller=seller,
+            status="NEGOTIATING",
+            delivery_method="meetup",
+            meet_location="Bobst Library",
+            meet_time=timezone.now() + timedelta(hours=2),
+            proposed_by="buyer",
         )
 
         initial_message_count = Message.objects.count()

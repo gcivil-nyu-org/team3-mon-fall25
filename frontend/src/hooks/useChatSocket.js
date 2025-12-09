@@ -76,7 +76,6 @@ export default function useChatSocket({
         console.log("WS Closed", e.code, e.reason);
         setConnected(false);
         if (onCloseRef.current) onCloseRef.current();
-
         if (closed) return;
         
         // Don't retry if the backend rejected auth (4001/4003)

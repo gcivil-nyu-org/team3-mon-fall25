@@ -6,13 +6,30 @@ from .models import Review, Transaction
 class TransactionSerializer(serializers.ModelSerializer):
     """Serializer for Transaction model - used for read operations"""
 
+    buyer_netid = serializers.CharField(source="buyer.netid", read_only=True)
+    viewer_role = serializers.SerializerMethodField()
+    # For My Orders
+    listing_title = serializers.CharField(source="listing.title", read_only=True)
+    listing_price = serializers.DecimalField(
+        source="listing.price",
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+    )
+    buyer_id = serializers.IntegerField(source="buyer.id", read_only=True)
+    seller_id = serializers.IntegerField(source="seller.id", read_only=True)
+
     class Meta:
         model = Transaction
         fields = [
             "transaction_id",
             "listing",
+            "listing_title",
+            "listing_price",
             "buyer",
+            "buyer_id",
             "seller",
+            "seller_id",
             "payment_method",
             "delivery_method",
             "meet_location",
@@ -20,6 +37,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "updated_at",
+            "viewer_role",
+            "proposed_by",
+            "buyer_netid",
         ]
         read_only_fields = [
             "transaction_id",
@@ -28,7 +48,32 @@ class TransactionSerializer(serializers.ModelSerializer):
             "seller",
             "created_at",
             "updated_at",
+            "viewer_role",
+            "proposed_by",
+            "buyer_netid",
+            "listing_title",
+            "listing_price",
+            "buyer_id",
+            "seller_id",
         ]
+
+    def get_viewer_role(self, obj):
+        """
+        Return 'buyer' or 'seller' dependsing on the authenticated user.
+        """
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not user or user.is_anonymous:
+            return None
+
+        if obj.buyer_id == user.id:
+            return "buyer"
+
+        if obj.seller_id == user.id:
+            return "seller"
+
+        return None
 
 
 class PaymentMethodUpdateSerializer(serializers.Serializer):

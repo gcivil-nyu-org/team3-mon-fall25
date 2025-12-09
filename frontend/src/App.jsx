@@ -107,6 +107,9 @@ export default function App() {
                                 <NavLink to="/my-listings" className="nav__link">
                                     My Listings
                                 </NavLink>
+                                <NavLink to="/orders" className="nav__link">
+                                    My Orders
+                                </NavLink>
                             </>
                         )}
 

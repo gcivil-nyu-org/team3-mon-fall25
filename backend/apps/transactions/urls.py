@@ -9,7 +9,7 @@ router.register("reviews", ReviewViewSet, basename="reviews")
 
 urlpatterns = router.urls
 
-# Add custom update endpoints
+# Add custom update endpoints (buyer / seller actions)
 urlpatterns += [
     path(
         "transactions/<int:pk>/payment-method/",
@@ -30,5 +30,10 @@ urlpatterns += [
         "transactions/<int:pk>/mark-sold/",
         TransactionUpdateViewSet.as_view({"patch": "mark_sold"}),
         name="transaction-mark-sold",
+    ),
+    path(
+        "transactions/<int:pk>/cancel/",
+        TransactionUpdateViewSet.as_view({"patch": "cancel"}),
+        name="transaction-cancel",
     ),
 ]
