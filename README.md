@@ -32,11 +32,11 @@ This project leverages a modern, scalable architecture deployed on AWS.
 
 | Category | Technology |
 |----------|------------|
-| **Frontend** | React 19.2, Tailwind CSS (or your UI lib) |
+| **Frontend** | React 19.2, Vite, Bootstrap 5.3 |
 | **Backend** | Django 5.2.7, Django REST Framework (DRF) |
-| **Database** | PostgreSQL |
-| **DevOps/Cloud** | AWS Elastic Beanstalk, Docker, GitHub Actions (if used) |
-| **Project Mgmt** | Zenhub, GitHub Issues |
+| **Database** | PostgreSQL (Production) / MySQL (Local) |
+| **DevOps/Cloud** | AWS Elastic Beanstalk, Travis CI, Coveralls |
+| **Project Mgmt** | Zenhub, GitHub |
 ## Getting Started
 
 ### Backend — Django
@@ -147,13 +147,13 @@ npm run dev # start the development server
 └── README.md       # This file
 ```
 
-## 🔄 Agile & Scrum Process
+## Agile & Scrum Process
 > *This section documents our adherence to Scrum principles and course constraints.*
 
 We followed a strict **1-week Sprint** cycle (Tuesday to Monday) to ensure rapid feedback and continuous delivery.
 
 ### Sprint Structure
-- **Sprint Planning:** Tuesdays. We select stories based on our average velocity and verify INVEST criteria.
+- **Sprint Planning:** Tuesdays.
 - **Daily Scrums:** Brief sync-ups to identify blockers.
 - **Sprint Review & Demo:** Mondays. Live demonstration of working software to the Product Owner and Instructor.
 - **Retrospective:** Mondays. Inspect and adapt our process.
@@ -163,7 +163,7 @@ We use a modified Fibonacci scale restricted to **0, 0.5, 1, 2, 3** points to en
 
 ---
 
-## 🤝 Development Workflow
+## Development Workflow
 We utilize the **Forking Workflow** to maintain a pristine `main` branch.
 
 1.  **Fork & Clone:** Developers work on their independent forks.
@@ -172,6 +172,10 @@ We utilize the **Forking Workflow** to maintain a pristine `main` branch.
     - Requires at least 1 peer review before merging.
     - Must pass all automated tests (local/CI).
 4.  **Definition of Done (DoD):**
-    - Code complete & peer-reviewed.
-    - Unit tests passed.
-    - Deployed to staging (or local equivalent) and verified.
+    - [ ] Unit tests passed.
+    - [ ] Pass all tests
+    - [ ] Ensure coverage > 85%
+    - [ ] Linted with black/flake8/eslint
+    - [ ] Deployable to AWS Elastic Beanstalk
+    - [ ] Pass CI/CD pipeline
+    - [ ] Code reviewed and approved
