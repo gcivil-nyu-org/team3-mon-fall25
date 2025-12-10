@@ -10,7 +10,19 @@ import * as transactionsApi from '@/api/transactions';
 import { AuthProvider } from '../contexts/AuthContext';
 
 // Mock the APIs
-vi.mock('@/api/listings');
+vi.mock('@/api/listings', () => ({
+    getListing: vi.fn(),
+    getListings: vi.fn(),
+    patchListing: vi.fn(),
+    deleteListingAPI: vi.fn(),
+    createListing: vi.fn(),
+    updateListing: vi.fn(),
+    getMyListings: vi.fn(),
+    getListingsByUserId: vi.fn(),
+    getFilterOptions: vi.fn(),
+    getListingPriceStats: vi.fn(),
+    getListingSuggestions: vi.fn(),
+}));
 vi.mock('@/api/transactions');
 
 // Mock react-toastify

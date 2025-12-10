@@ -283,10 +283,8 @@ describe("ReviewPage", () => {
       expect(mockAlert).toHaveBeenCalledWith(
         "Review submitted successfully!"
       );
+      expect(screen.getByText("Orders Page")).toBeInTheDocument();
     });
-
-    // Should navigate to orders page
-    expect(screen.getByText("Orders Page")).toBeInTheDocument();
   });
 
   it("shows submitting state during submission", async () => {
