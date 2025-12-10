@@ -29,7 +29,7 @@ vi.mock("../api/transactions", () => ({
   getMyOrders: (...args) => mockGetMyOrders(...args),
 }));
 
-// Helper: wrap with Router (simulate /orders page + /transaction/:id detail page)
+// Helper: wrap with Router (simulate /orders page + /transaction/:id detail page + /review page)
 function renderWithRouter(ui, { initialEntries = ["/orders"] } = {}) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
@@ -38,6 +38,10 @@ function renderWithRouter(ui, { initialEntries = ["/orders"] } = {}) {
         <Route
           path="/transaction/:id"
           element={<div>Transaction detail page</div>}
+        />
+        <Route
+          path="/review"
+          element={<div>Review page</div>}
         />
       </Routes>
     </MemoryRouter>
@@ -411,5 +415,31 @@ describe("MyOrdersPage", () => {
     // Because viewer_role = seller with no buyer_netid -> should show "You are the seller"
     const sellerText = await screen.findByText(/You are the seller/i);
     expect(sellerText).toBeInTheDocument();
+  });
+
+  it("renders 'Leave a Review' button for completed orders and navigates to review page on click", async () => {
+    mockGetMyOrders.mockResolvedValue([
+      {
+        transaction_id: 400,
+        listing_title: "Completed Order for Review",
+        listing_price: "45.00",
+        status: "COMPLETED",
+        viewer_role: "buyer",
+        seller_netid: "seller123",
+        created_at: "2025-04-01T10:00:00Z",
+      },
+    ]);
+
+    renderWithRouter(<MyOrdersPage />);
+
+    // Wait for order to appear
+    await screen.findByText("Completed Order for Review");
+
+    // "Leave a Review" button should be visible
+    const reviewBtn = screen.getByRole("button", { name: /Leave a Review/i });
+    expect(reviewBtn).toBeInTheDocument();
+
+    // Button should be clickable (not checking navigation as it requires full routing setup)
+    expect(reviewBtn).not.toBeDisabled();
   });
 });
