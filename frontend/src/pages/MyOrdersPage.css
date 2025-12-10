@@ -319,12 +319,20 @@
   margin-left: 0.3rem;
 }
 
+/* Review Button Container */
+.myorders__review-container {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-start;
+}
+
 /* CTA row */
 
 .myorders__cta-row {
   margin-top: 0.6rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-end; /* Revert to flex-end as button is gone */
+  align-items: center;
 }
 
 .myorders__details-link {
@@ -335,6 +343,7 @@
   font-weight: 500;
   color: #4c1d95;
 }
+/* No longer need margin-left auto as it is the only item */
 
 .myorders__details-link:hover {
   text-decoration: underline;
@@ -344,6 +353,32 @@
   width: 0.95rem;
   height: 0.95rem;
 }
+
+/* Review Button */
+.myorders__review-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #56018d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    /* margin-right: auto;  Removed, handled by container */
+}
+
+.myorders__review-btn:hover {
+    background-color: #4a0175;
+}
+
+.myorders__review-icon {
+    /* lucide-react icon needs no specific style here usually */
+}
+
 
 /* Empty state */
 
@@ -401,5 +436,16 @@
   .myorders__tab {
     flex: 1;
     text-align: center;
+  }
+  
+  /* Reset previous responsive tweaks for cta-row as structure changed */
+  .myorders__cta-row {
+     /* flex-direction: column-reverse;  No longer needed */
+     /* gap: 1rem; */
+     /* align-items: flex-start; */
+  }
+  
+  .myorders__review-container {
+      /* margin-top: 1rem; already set */
   }
 }
