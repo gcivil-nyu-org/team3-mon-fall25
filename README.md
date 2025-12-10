@@ -23,11 +23,13 @@ Buy and sell with fellow NYU students. Find great deals on textbooks, furniture,
 
 ## Key Features
 *List the high-level Epics or capabilities delivered.*
-- **User Authentication:** Secure login via NYU credentials.
-- **Product Listing:** Create, edit, and delete items with image upload support.
-- **Search & Filtering:** Advanced filtering by category, price, and condition.
-- **Transaction Management:** Secure checkout flow (integration with Stripe/Mock payment).
-- **User Profiles:** Dashboard for managing listings and order history.
+- **User Authentication:** Secure login via NYU email with session management.
+- **Product Listing Management:** Create, edit, delete, and mark items as sold with multiple image uploads.
+- **Search & Discovery:** Advanced keyword search with filtering by category, price, location, and sorting options.
+- **Chat System:** Real-time messaging between buyers and sellers.
+- **Transaction Management:** Track transactions with custom payment methods and status updates.
+- **Notifications:** In-app alerts for messages, offers, listing expirations, and transaction updates.
+- **Admin Moderation:** Admin portal to manage listings, messages, and users.
 
 ---
 
@@ -39,8 +41,11 @@ This project leverages a modern, scalable architecture deployed on AWS.
 | **Frontend** | React 19.2, Vite, Bootstrap 5.3 |
 | **Backend** | Django 5.2.7, Django REST Framework (DRF) |
 | **Database** | PostgreSQL (Production) / MySQL (Local) |
+| **Linting** | Black, Flake8 (Python) / ESLint (JavaScript) |
+| **Test Suite** | Pytest, Pytest-Django (Backend) / Vitest, React Testing Library (Frontend) |
 | **DevOps/Cloud** | AWS Elastic Beanstalk, Travis CI, Coveralls |
 | **Project Mgmt** | Zenhub, GitHub |
+
 ## Getting Started
 
 ### Backend — Django
