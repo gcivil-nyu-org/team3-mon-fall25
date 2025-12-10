@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Package, User, Calendar, DollarSign, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Package, User, Calendar, DollarSign, ArrowRight, Star } from "lucide-react";
 import { getMyOrders } from "../api/transactions";
 import "./MyOrdersPage.css";
 
@@ -35,7 +35,7 @@ function EmptyState({ mode }) {
   );
 }
 
-function OrderCard({ order }) {
+function OrderCard({ order, onReview }) {
   const txId = order.transaction_id;
   const title = order.listing_title ?? `Listing #${order.listing}`;
   const price = order.listing_price ?? "—";
@@ -68,6 +68,8 @@ function OrderCard({ order }) {
     order.viewer_role === "seller" && order.buyer_netid
       ? `Buyer: ${order.buyer_netid}`
       : roleLabel;
+
+  const isCompleted = order.status === "COMPLETED";
 
   return (
     <Link to={`/transaction/${txId}`} className="myorders__card">
@@ -147,6 +149,21 @@ function OrderCard({ order }) {
             </div>
           )}
 
+          {isCompleted && (
+            <div className="myorders__review-container">
+                <button 
+                    className="myorders__review-btn"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        onReview(order);
+                    }}
+                >
+                    <Star className="myorders__review-icon" size={16} />
+                    Leave a Review
+                </button>
+            </div>
+          )}
+
           <div className="myorders__cta-row">
             <span className="myorders__details-link">
               View details
@@ -160,6 +177,7 @@ function OrderCard({ order }) {
 }
 
 export default function MyOrdersPage() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [mode, setMode] = useState("buying"); // "buying" | "selling"
   const [loading, setLoading] = useState(true);
@@ -202,6 +220,22 @@ export default function MyOrdersPage() {
   );
 
   const activeList = mode === "buying" ? buyingOrders : sellingOrders;
+
+  const handleReviewClick = (order) => {
+    // Determine the target name based on viewer role
+    const targetName =
+      order.viewer_role === "buyer"
+        ? order.seller_netid || "Seller"
+        : order.buyer_netid || "Buyer";
+
+    // Navigate to review page with order data
+    navigate("/review", {
+      state: {
+        order,
+        targetName,
+      },
+    });
+  };
 
   return (
     <div className="container myorders">
@@ -257,7 +291,11 @@ export default function MyOrdersPage() {
       ) : (
         <div className="myorders__list">
           {activeList.map((order) => (
-            <OrderCard key={order.transaction_id} order={order} />
+            <OrderCard 
+                key={order.transaction_id} 
+                order={order} 
+                onReview={handleReviewClick}
+            />
           ))}
         </div>
       )}
