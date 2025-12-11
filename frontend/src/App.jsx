@@ -215,7 +215,7 @@ export default function App() {
 
 
             {/* Page content */}
-            <div style={{flex: 1, paddingTop: '64px' }}>
+            <div className="app-content" style={{ flex: 1, paddingTop: '64px' }}>
                 <Outlet/>
             </div>
 
