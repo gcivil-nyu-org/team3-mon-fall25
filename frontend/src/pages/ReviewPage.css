@@ -138,17 +138,17 @@
   padding: 0;
   font-size: 2.5rem;
   line-height: 1;
-  color: #d1d5db; /* 預設灰色星星 */
+  color: #d1d5db; /* Default gray star */
   transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .review-page__star-btn:hover {
   transform: scale(1.05);
-  color: #7c3aed; /* hover 預覽用亮紫 */
+  color: #7c3aed; /* Bright purple for hover preview */
 }
 
 .review-page__star-btn.active {
-  color: #56018d; /* 選取/hover 範圍內用 NYU 深紫 */
+  color: #56018d; /* NYU deep purple when selected/hovered */
 }
 
 .review-page__rating-text {
@@ -274,7 +274,7 @@
   padding: 1rem 1.5rem;
   border-radius: 0.5rem;
   border: none;
-  background: #56018d; /* enabled 狀態的紫色 */
+  background: #56018d; /* Purple when enabled */
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
@@ -289,7 +289,7 @@
   transform: translateY(-1px);
 }
 
-/* disabled 狀態：淡紫 + 不可點 */
+/* Disabled state: light purple and not clickable */
 .review-page__submit-btn:disabled {
   background: #e9d5ff;
   color: #c4b5fd;

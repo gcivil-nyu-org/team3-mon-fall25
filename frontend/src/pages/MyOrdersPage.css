@@ -458,7 +458,7 @@
 .myorders__review-summary {
   padding: 0.45rem 0.75rem;
   border-radius: 999px;
-  background-color: #f5f3ff; /* 淡紫 */
+  background-color: #f5f3ff; /* Light purple */
   display: inline-flex;
   flex-direction: column;
   gap: 0.2rem;

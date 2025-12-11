@@ -2,8 +2,8 @@ import client from "./client";
 import { endpoints } from './endpoints';
 
 /**
- * 建立一筆交易的 review
- * payload 格式：
+ * Create a review for a transaction.
+ * Payload format:
  * {
  *   transaction_id: number,
  *   rating: number (1-5),

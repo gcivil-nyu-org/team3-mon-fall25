@@ -455,6 +455,6 @@
 .stat-number .stat-max {
   margin-left: 0.1rem;
   font-size: 0.9em;
-  color: #56018d;      /* 紫色，與主數字一致 */
-  font-weight: 600;    /* 稍微加粗一點 */
+  color: #56018d;      /* Purple to match the main number */
+  font-weight: 600;    /* Slightly heavier weight */
 }

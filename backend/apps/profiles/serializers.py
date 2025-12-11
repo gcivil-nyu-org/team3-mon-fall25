@@ -60,7 +60,7 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
             "avatar_url",
         ]
 
-    # 計算平均評分（只算他當 seller 的 review）
+    # Calculate average rating (only reviews where the user is the seller)
     def get_seller_average_rating(self, obj):
         user = getattr(obj, "user", None)
         if not user:
@@ -72,10 +72,10 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
         avg = agg["avg"]
         if avg is None:
             return None
-        # 四捨五入到一位小數
+        # Round to one decimal place
         return round(float(avg), 1)
 
-    # 計算總評價數
+    # Calculate total number of ratings
     def get_seller_rating_count(self, obj):
         user = getattr(obj, "user", None)
         if not user:

@@ -83,7 +83,7 @@ function OrderCard({ order, onReview }) {
     ? review.what_went_well
     : [];
 
-  // 只顯示前兩個 tag
+  // Show only the first two tags
   const reviewTagsPreview = reviewTags.slice(0, 2).join(", ");
 
   const reviewCommentSnippet = review?.additional_comments

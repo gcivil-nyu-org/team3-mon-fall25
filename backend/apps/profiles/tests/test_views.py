@@ -248,7 +248,7 @@ def test_profile_detail_includes_all_fields(user_with_profile):
         "created_at",
         "updated_at",
         "is_own_profile",
-        # ⭐ 新增的兩個欄位
+        # ⭐ Newly added rating fields
         "seller_average_rating",
         "seller_rating_count",
     }
