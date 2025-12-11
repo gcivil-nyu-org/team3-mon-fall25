@@ -2,6 +2,9 @@
   position: relative;
   display: inline-block;
   z-index: 1010; /* Higher than chat modal (1001) to appear above it */
+  overflow: visible;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
 }
 
 .profile-avatar {
@@ -36,11 +39,12 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 220px;
+  width: 280px;
+  min-width: 280px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  z-index: 1010; /* Higher than chat modal (1001) to appear above it */
+  z-index: 1020; /* Higher than chat modal (1001) to appear above it */
   overflow: hidden;
   animation: fadeIn 0.2s ease;
 }
@@ -62,6 +66,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .user-avatar-small {
