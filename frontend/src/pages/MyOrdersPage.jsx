@@ -70,6 +70,8 @@ function OrderCard({ order, onReview }) {
       : roleLabel;
 
   const isCompleted = order.status === "COMPLETED";
+  const isBuyer = order.viewer_role === "buyer";
+  const canLeaveReview = isCompleted && isBuyer;
 
   return (
     <Link to={`/transaction/${txId}`} className="myorders__card">
@@ -149,18 +151,18 @@ function OrderCard({ order, onReview }) {
             </div>
           )}
 
-          {isCompleted && (
+          {canLeaveReview && (
             <div className="myorders__review-container">
-                <button 
-                    className="myorders__review-btn"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        onReview(order);
-                    }}
-                >
-                    <Star className="myorders__review-icon" size={16} />
-                    Leave a Review
-                </button>
+              <button
+                className="myorders__review-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onReview(order);
+                }}
+              >
+                <Star className="myorders__review-icon" size={16} />
+                Leave a Review
+              </button>
             </div>
           )}
 

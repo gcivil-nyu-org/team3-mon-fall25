@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaStar, FaArrowLeft } from "react-icons/fa";
 import { Package } from "lucide-react";
+import { createReview } from "../api/reviews";
 import "./ReviewPage.css";
 
 const TAGS = [
-  "Punctuality",
-  "Communication",
-  "Pricing",
-  "Item Description",
+  { label: "Punctuality", value: "punctuality" },
+  { label: "Communication", value: "communication" },
+  { label: "Pricing", value: "pricing" },
+  { label: "Item Description", value: "item_description" },
 ];
 
 export default function ReviewPage() {
@@ -46,11 +47,11 @@ export default function ReviewPage() {
     );
   }
 
-  const handleTagToggle = (tag) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter((t) => t !== tag));
+  const handleTagToggle = (tagValue) => {
+    if (selectedTags.includes(tagValue)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tagValue));
     } else {
-      setSelectedTags([...selectedTags, tag]);
+      setSelectedTags([...selectedTags, tagValue]);
     }
   };
 
@@ -65,27 +66,27 @@ export default function ReviewPage() {
     setIsSubmitting(true);
 
     try {
-      // In a real app, you'd send this data to the backend
-      const reviewData = {
-        transactionId: order.transaction_id,
+      const payload = {
+        transaction_id: order.transaction_id,
         rating,
-        tags: selectedTags,
-        comment,
+        what_went_well: selectedTags,          // ex: ["punctuality", "pricing"]
+        additional_comments: comment.trim() || "",
       };
 
-      console.log("Submitting review:", reviewData);
+      const res = await createReview(payload);
+      console.log("Review created:", res);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Show success message
       alert("Review submitted successfully!");
-
-      // Navigate back to orders page
-      navigate("/orders");
+      navigate("/orders", { state: { reviewSubmitted: true } });
     } catch (error) {
       console.error("Failed to submit review:", error);
-      alert("Failed to submit review. Please try again.");
+
+      const backendMsg =
+        error?.response?.data?.error ||
+        error?.response?.data?.detail ||
+        "Failed to submit review. Please try again.";
+
+      alert(backendMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -167,14 +168,14 @@ export default function ReviewPage() {
               <div className="review-page__tags">
                 {TAGS.map((tag) => (
                   <button
-                    key={tag}
+                    key={tag.value}
                     type="button"
                     className={`review-page__tag ${
-                      selectedTags.includes(tag) ? "selected" : ""
+                      selectedTags.includes(tag.value) ? "selected" : ""
                     }`}
-                    onClick={() => handleTagToggle(tag)}
+                    onClick={() => handleTagToggle(tag.value)}
                   >
-                    {tag}
+                    {tag.label}
                   </button>
                 ))}
               </div>
