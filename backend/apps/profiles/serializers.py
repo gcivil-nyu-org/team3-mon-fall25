@@ -1,9 +1,11 @@
 from django.db import transaction
+from django.db.models import Avg, Count
 from rest_framework import serializers
 
 from utils.s3_service import s3_service
 
 from .models import Profile
+from apps.transactions.models import Review
 
 
 class ProfileDetailSerializer(serializers.ModelSerializer):
@@ -20,6 +22,10 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
     )
     sold_items = serializers.IntegerField(source="sold_items_count", read_only=True)
 
+    # Seller rating info
+    seller_average_rating = serializers.SerializerMethodField(read_only=True)
+    seller_rating_count = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Profile
         fields = [
@@ -34,6 +40,8 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
             "avatar_url",
             "active_listings",
             "sold_items",
+            "seller_average_rating",
+            "seller_rating_count",
             "member_since",
             "created_at",
             "updated_at",
@@ -44,11 +52,39 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
             "email",
             "active_listings",
             "sold_items",
+            "seller_average_rating",
+            "seller_rating_count",
             "member_since",
             "created_at",
             "updated_at",
             "avatar_url",
         ]
+
+    # Calculate average rating (only reviews where the user is the seller)
+    def get_seller_average_rating(self, obj):
+        user = getattr(obj, "user", None)
+        if not user:
+            return None
+
+        agg = Review.objects.filter(transaction__seller=user).aggregate(
+            avg=Avg("rating")
+        )
+        avg = agg["avg"]
+        if avg is None:
+            return None
+        # Round to one decimal place
+        return round(float(avg), 1)
+
+    # Calculate total number of ratings
+    def get_seller_rating_count(self, obj):
+        user = getattr(obj, "user", None)
+        if not user:
+            return 0
+
+        agg = Review.objects.filter(transaction__seller=user).aggregate(
+            count=Count("rating")
+        )
+        return agg["count"] or 0
 
 
 class ProfileCreateSerializer(serializers.ModelSerializer):

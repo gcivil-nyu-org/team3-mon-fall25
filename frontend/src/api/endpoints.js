@@ -21,6 +21,11 @@ export const endpoints = {
     detail: (id) => `/transactions/${id}/`,
     myOrders: '/transactions/my-orders/',
   },
+  reviews: {
+    base: '/reviews/',
+    detail: (id) => `/reviews/${id}/`,
+    byTransaction: (txId) => `/reviews/?transaction_id=${txId}`,
+  },
   watchlist: '/watchlist/',
   notifications: {
     base: '/notifications/',

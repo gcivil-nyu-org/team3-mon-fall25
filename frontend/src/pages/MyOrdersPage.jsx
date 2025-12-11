@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Package, User, Calendar, DollarSign, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Package, User, Calendar, DollarSign, ArrowRight, Star } from "lucide-react";
 import { getMyOrders } from "../api/transactions";
 import "./MyOrdersPage.css";
 
@@ -35,7 +35,7 @@ function EmptyState({ mode }) {
   );
 }
 
-function OrderCard({ order }) {
+function OrderCard({ order, onReview }) {
   const txId = order.transaction_id;
   const title = order.listing_title ?? `Listing #${order.listing}`;
   const price = order.listing_price ?? "—";
@@ -68,6 +68,29 @@ function OrderCard({ order }) {
     order.viewer_role === "seller" && order.buyer_netid
       ? `Buyer: ${order.buyer_netid}`
       : roleLabel;
+
+  const isCompleted = order.status === "COMPLETED";
+  const isBuyer = order.viewer_role === "buyer";
+  const canLeaveReview = isCompleted && isBuyer;
+
+  const review = order.review || null;
+  const hasReview = !!review;
+
+  const ratingLabel =
+    order.viewer_role === "buyer" ? "Your rating" : "Buyer rating";
+
+  const reviewTags = Array.isArray(review?.what_went_well)
+    ? review.what_went_well
+    : [];
+
+  // Show only the first two tags
+  const reviewTagsPreview = reviewTags.slice(0, 2).join(", ");
+
+  const reviewCommentSnippet = review?.additional_comments
+    ? review.additional_comments.length > 80
+      ? review.additional_comments.slice(0, 80) + "…"
+      : review.additional_comments
+    : null;
 
   return (
     <Link to={`/transaction/${txId}`} className="myorders__card">
@@ -147,6 +170,46 @@ function OrderCard({ order }) {
             </div>
           )}
 
+          {/* Review Section */}
+          {hasReview ? (
+            <div className="myorders__review-container">
+              <div className="myorders__review-summary">
+                <div className="myorders__review-summary-row">
+                  <Star className="myorders__review-icon" size={16} />
+                  <span className="myorders__review-rating">
+                    {ratingLabel}: {review.rating}/5
+                  </span>
+                  {reviewTagsPreview && (
+                    <span className="myorders__review-tags">
+                      • {reviewTagsPreview}
+                    </span>
+                  )}
+                </div>
+                {reviewCommentSnippet && (
+                  <p className="myorders__review-comment">
+                    “{reviewCommentSnippet}”
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            canLeaveReview && (
+              <div className="myorders__review-container">
+                <button
+                  className="myorders__review-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onReview(order);
+                  }}
+                >
+                  <Star className="myorders__review-icon" size={16} />
+                  Leave a Review
+                </button>
+              </div>
+            )
+          )}
+
+
           <div className="myorders__cta-row">
             <span className="myorders__details-link">
               View details
@@ -160,6 +223,7 @@ function OrderCard({ order }) {
 }
 
 export default function MyOrdersPage() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [mode, setMode] = useState("buying"); // "buying" | "selling"
   const [loading, setLoading] = useState(true);
@@ -202,6 +266,22 @@ export default function MyOrdersPage() {
   );
 
   const activeList = mode === "buying" ? buyingOrders : sellingOrders;
+
+  const handleReviewClick = (order) => {
+    // Determine the target name based on viewer role
+    const targetName =
+      order.viewer_role === "buyer"
+        ? order.seller_netid || "Seller"
+        : order.buyer_netid || "Buyer";
+
+    // Navigate to review page with order data
+    navigate("/review", {
+      state: {
+        order,
+        targetName,
+      },
+    });
+  };
 
   return (
     <div className="container myorders">
@@ -257,7 +337,11 @@ export default function MyOrdersPage() {
       ) : (
         <div className="myorders__list">
           {activeList.map((order) => (
-            <OrderCard key={order.transaction_id} order={order} />
+            <OrderCard 
+                key={order.transaction_id} 
+                order={order} 
+                onReview={handleReviewClick}
+            />
           ))}
         </div>
       )}

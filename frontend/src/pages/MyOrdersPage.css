@@ -319,12 +319,21 @@
   margin-left: 0.3rem;
 }
 
+/* Review Button Container */
+.myorders__review-container {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
 /* CTA row */
 
 .myorders__cta-row {
   margin-top: 0.6rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-end; /* Revert to flex-end as button is gone */
+  align-items: center;
 }
 
 .myorders__details-link {
@@ -335,6 +344,7 @@
   font-weight: 500;
   color: #4c1d95;
 }
+/* No longer need margin-left auto as it is the only item */
 
 .myorders__details-link:hover {
   text-decoration: underline;
@@ -344,6 +354,35 @@
   width: 0.95rem;
   height: 0.95rem;
 }
+
+/* When there is NO review yet → purple button */
+.myorders__review-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background-color: #56018d;
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.18s ease, box-shadow 0.18s ease,
+      transform 0.08s ease;
+}
+
+.myorders__review-btn:hover {
+  background-color: #4a0175;
+  box-shadow: 0 3px 8px rgba(88, 28, 135, 0.25);
+  transform: translateY(-0.5px);
+}
+
+.myorders__review-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
 
 /* Empty state */
 
@@ -401,5 +440,67 @@
   .myorders__tab {
     flex: 1;
     text-align: center;
+  }
+  
+  /* Reset previous responsive tweaks for cta-row as structure changed */
+  .myorders__cta-row {
+     /* flex-direction: column-reverse;  No longer needed */
+     /* gap: 1rem; */
+     /* align-items: flex-start; */
+  }
+  
+  .myorders__review-container {
+      /* margin-top: 1rem; already set */
+  }
+}
+
+/* When there IS a review → compact summary pill */
+.myorders__review-summary {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background-color: #f5f3ff; /* Light purple */
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 100%;
+}
+
+.myorders__review-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: #4b2bbf;
+  white-space: nowrap;
+}
+
+.myorders__review-rating {
+  font-weight: 600;
+}
+
+.myorders__review-tags {
+  font-size: 0.78rem;
+  color: #6b6b8c;
+}
+
+/* Comment snippet under the summary row */
+.myorders__review-comment {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #4b4b63;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile tweaks */
+@media (max-width: 640px) {
+  .myorders__review-summary {
+    border-radius: 0.75rem;
+  }
+
+  .myorders__review-summary-row,
+  .myorders__review-comment {
+    white-space: normal;
   }
 }

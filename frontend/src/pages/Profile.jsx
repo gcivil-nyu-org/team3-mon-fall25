@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getMyListings, getListingsByUserId } from "../api/listings.js";
 import { getProfileById, searchProfiles, deleteProfile } from "../api/profiles.js";
-import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen, FaExclamationTriangle, FaTrash } from "react-icons/fa";
+import { FaArrowLeft, FaEdit, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCalendar, FaBoxOpen, FaExclamationTriangle, FaTrash, FaStar } from "react-icons/fa";
 import EditProfile from "./EditProfile";
 import DeleteAccountModal from "../components/DeleteAccountModal";
 import "./Profile.css";
@@ -249,6 +249,18 @@ export default function Profile() {
   const activeListings = profile?.active_listings ?? 0;
   const soldItems = profile?.sold_items ?? 0;
 
+  // Seller rating data from backend
+  const sellerAverageRating =
+    profile?.seller_average_rating != null
+      ? Number(profile.seller_average_rating)
+      : null;
+  const sellerRatingCount = profile?.seller_rating_count ?? 0;
+  const hasSellerRatings =
+    sellerAverageRating !== null && sellerRatingCount > 0;
+  const sellerRatingDisplay = hasSellerRatings
+    ? sellerAverageRating.toFixed(1)
+    : "—";
+
   // Show error state if profile not found
   if (profileError) {
     return (
@@ -355,6 +367,28 @@ export default function Profile() {
               <div className="stat-item">
                 <div className="stat-number">{soldItems}</div>
                 <div className="stat-label">Items Sold</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-number">
+                  {hasSellerRatings ? (
+                    <>
+                      {sellerRatingDisplay}
+                      <span className="stat-max"> / 5</span>
+                      <FaStar className="stat-icon-star" />
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+                <div className="stat-label">
+                  Seller Rating
+                  {hasSellerRatings && (
+                    <span className="stat-subtext">
+                      {sellerRatingCount} rating
+                      {sellerRatingCount > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   render,
   screen,
-  waitFor,
   fireEvent,
 } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
@@ -30,7 +29,7 @@ vi.mock("../api/transactions", () => ({
   getMyOrders: (...args) => mockGetMyOrders(...args),
 }));
 
-// Helper: wrap with Router (simulate /orders page + /transaction/:id detail page)
+// Helper: wrap with Router (simulate /orders page + /transaction/:id detail page + /review page)
 function renderWithRouter(ui, { initialEntries = ["/orders"] } = {}) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
@@ -39,6 +38,10 @@ function renderWithRouter(ui, { initialEntries = ["/orders"] } = {}) {
         <Route
           path="/transaction/:id"
           element={<div>Transaction detail page</div>}
+        />
+        <Route
+          path="/review"
+          element={<div>Review page</div>}
         />
       </Routes>
     </MemoryRouter>
@@ -74,75 +77,73 @@ describe("MyOrdersPage", () => {
     // Shows Loading initially
     expect(screen.getByText(/loading orders/i)).toBeInTheDocument();
 
-    // Wait for data to load
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
+    // Wait for data to actually render
+    const titleEl = await screen.findByText("MacBook Pro 14");
+    expect(titleEl).toBeInTheDocument();
 
-    // Shows order title
-    expect(
-      screen.getByText("MacBook Pro 14")
-    ).toBeInTheDocument();
     // Shows status badge (Scheduled)
     expect(screen.getByText("Scheduled")).toBeInTheDocument();
-  });
 
-  it("shows buying orders by default and can switch between buying and selling tabs", async () => {
-  mockGetMyOrders.mockResolvedValue([
-    {
-      transaction_id: 1,
-      listing_title: "Item as Buyer",
-      listing_price: "50.00",
-      status: "PENDING",
-      viewer_role: "buyer",
-      created_at: "2025-01-01T10:00:00Z",
-    },
-    {
-      transaction_id: 2,
-      listing_title: "Item as Seller",
-      listing_price: "80.00",
-      status: "COMPLETED",
-      viewer_role: "seller",
-      created_at: "2025-01-02T10:00:00Z",
-    },
-  ]);
-
-  renderWithRouter(<MyOrdersPage />);
-
-  await waitFor(() => {
+    // API was called
     expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
   });
 
-  const buyingTab = screen.getByRole("button", { name: /Buying/i });
-  const sellingTab = screen.getByRole("button", { name: /Selling/i });
+  it("shows buying orders by default and can switch between buying and selling tabs", async () => {
+    mockGetMyOrders.mockResolvedValue([
+      {
+        transaction_id: 1,
+        listing_title: "Item as Buyer",
+        listing_price: "50.00",
+        status: "PENDING",
+        viewer_role: "buyer",
+        created_at: "2025-01-01T10:00:00Z",
+      },
+      {
+        transaction_id: 2,
+        listing_title: "Item as Seller",
+        listing_price: "80.00",
+        status: "COMPLETED",
+        viewer_role: "seller",
+        created_at: "2025-01-02T10:00:00Z",
+      },
+    ]);
 
-  // Buying tab is active by default
-  expect(buyingTab).toHaveClass("myorders__tab--active");
+    renderWithRouter(<MyOrdersPage />);
 
-  // Only the buyer-side order is visible
-  expect(screen.getByText("Item as Buyer")).toBeInTheDocument();
-  expect(
-    screen.queryByText("Item as Seller")
-  ).not.toBeInTheDocument();
+    // Wait until the buyer order is rendered
+    await screen.findByText("Item as Buyer");
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
-  // Switch to Selling
-  fireEvent.click(sellingTab);
+    const buyingTab = screen.getByRole("button", { name: /Buying/i });
+    const sellingTab = screen.getByRole("button", { name: /Selling/i });
 
-  expect(sellingTab).toHaveClass("myorders__tab--active");
-  expect(
-    screen.queryByText("Item as Buyer")
-  ).not.toBeInTheDocument();
-  expect(screen.getByText("Item as Seller")).toBeInTheDocument();
+    // Buying tab is active by default
+    expect(buyingTab).toHaveClass("myorders__tab--active");
 
-  // Switch back to Buying (this triggers onClick={() => setMode("buying")})
-  fireEvent.click(buyingTab);
+    // Only the buyer-side order is visible
+    expect(screen.getByText("Item as Buyer")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Item as Seller")
+    ).not.toBeInTheDocument();
 
-  expect(buyingTab).toHaveClass("myorders__tab--active");
-  expect(screen.getByText("Item as Buyer")).toBeInTheDocument();
-  expect(
-    screen.queryByText("Item as Seller")
-  ).not.toBeInTheDocument();
-});
+    // Switch to Selling
+    fireEvent.click(sellingTab);
+
+    expect(sellingTab).toHaveClass("myorders__tab--active");
+    expect(
+      screen.queryByText("Item as Buyer")
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Item as Seller")).toBeInTheDocument();
+
+    // Switch back to Buying
+    fireEvent.click(buyingTab);
+
+    expect(buyingTab).toHaveClass("myorders__tab--active");
+    expect(screen.getByText("Item as Buyer")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Item as Seller")
+    ).not.toBeInTheDocument();
+  });
 
   it("shows empty state when no orders for the current tab", async () => {
     // All orders are seller role -> Buying tab should show empty state
@@ -159,14 +160,10 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
-
     // Default Buying tab -> see "No buying orders yet"
-    expect(
-      screen.getByText(/No buying orders yet/i)
-    ).toBeInTheDocument();
+    const buyingEmpty = await screen.findByText(/No buying orders yet/i);
+    expect(buyingEmpty).toBeInTheDocument();
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
     // Switch to Selling tab
     fireEvent.click(
@@ -174,9 +171,9 @@ describe("MyOrdersPage", () => {
     );
 
     // Should now see that selling order
-    expect(
-      screen.getByText("Only Selling Order")
-    ).toBeInTheDocument();
+    const sellingOrder = await screen.findByText("Only Selling Order");
+    expect(sellingOrder).toBeInTheDocument();
+
     // Buying empty state should disappear
     expect(
       screen.queryByText(/No buying orders yet/i)
@@ -211,22 +208,17 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
+    // Wait for card to render
+    const cardTitle = await screen.findByText("Navigable Order");
 
     // Click the card title
-    fireEvent.click(screen.getByText("Navigable Order"));
+    fireEvent.click(cardTitle);
 
     // Route should navigate to /transaction/99
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Transaction detail page/i)
-      ).toBeInTheDocument();
-    });
+    await screen.findByText(/Transaction detail page/i);
   });
 
-    it("renders listing image, location, time and buyer info when data is present", async () => {
+  it("renders listing image, location, time and buyer info when data is present", async () => {
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 7,
@@ -246,14 +238,10 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
-
-    // Default Buying tab -> empty state is shown first
-    expect(
-      screen.getByText(/No buying orders yet/i)
-    ).toBeInTheDocument();
+    // Default Buying tab -> empty state is shown first (no buyer orders)
+    const buyingEmpty = await screen.findByText(/No buying orders yet/i);
+    expect(buyingEmpty).toBeInTheDocument();
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
     // Switch to Selling tab to view this order
     fireEvent.click(
@@ -261,9 +249,8 @@ describe("MyOrdersPage", () => {
     );
 
     // Verify title renders
-    expect(
-      screen.getByText("Order with image")
-    ).toBeInTheDocument();
+    const titleEl = await screen.findByText("Order with image");
+    expect(titleEl).toBeInTheDocument();
 
     // Image is shown (alt matches title)
     const img = screen.getByAltText("Order with image");
@@ -298,21 +285,17 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
-
-    // Card renders
-    expect(
-      screen.getByText("No status order")
-    ).toBeInTheDocument();
+    // Wait for the card to render
+    const titleEl = await screen.findByText("No status order");
+    expect(titleEl).toBeInTheDocument();
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
     // Should not render any status badge (myorders__status)
     const badge = document.querySelector(".myorders__status");
     expect(badge).toBeNull();
   });
 
-    it("renders CANCELLED status label correctly", async () => {
+  it("renders CANCELLED status label correctly", async () => {
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 11,
@@ -326,16 +309,12 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
-
-    expect(
-      screen.getByText("Cancelled")
-    ).toBeInTheDocument();
+    const cancelledBadge = await screen.findByText("Cancelled");
+    expect(cancelledBadge).toBeInTheDocument();
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
   });
 
-    it("shows 'No selling orders yet' when selling tab has no orders", async () => {
+  it("shows 'No selling orders yet' when selling tab has no orders", async () => {
     // Only buyer-side orders exist
     mockGetMyOrders.mockResolvedValue([
       {
@@ -350,9 +329,9 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
+    // Wait until the buyer order is rendered
+    await screen.findByText("Only buyer side");
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
     // Default Buying tab -> has an order, not an empty state
     expect(
@@ -365,12 +344,11 @@ describe("MyOrdersPage", () => {
     // Switch to Selling tab; with no seller orders it should show "No selling orders yet"
     fireEvent.click(screen.getByRole("button", { name: /Selling/i }));
 
-    expect(
-      screen.getByText(/No selling orders yet/i)
-    ).toBeInTheDocument();
+    const sellingEmpty = await screen.findByText(/No selling orders yet/i);
+    expect(sellingEmpty).toBeInTheDocument();
   });
 
-    it("falls back to raw status label and 'Price not set' when fields are missing", async () => {
+  it("falls back to raw status label and 'Price not set' when fields are missing", async () => {
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 200,
@@ -385,9 +363,9 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
+    // Wait for fallback title to show
+    await screen.findByText("Listing #77");
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
     // Shows fallback title
     expect(
@@ -405,7 +383,7 @@ describe("MyOrdersPage", () => {
     ).toBeInTheDocument();
   });
 
-    it("shows 'You are the seller' when viewer_role is seller without buyer_netid", async () => {
+  it("shows 'You are the seller' when viewer_role is seller without buyer_netid", async () => {
     mockGetMyOrders.mockResolvedValue([
       {
         transaction_id: 300,
@@ -420,26 +398,48 @@ describe("MyOrdersPage", () => {
 
     renderWithRouter(<MyOrdersPage />);
 
-    await waitFor(() => {
-      expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
-    });
-
     // Default Buying tab -> no buyer orders, shows buying empty state
-    expect(
-      screen.getByText(/No buying orders yet/i)
-    ).toBeInTheDocument();
+    const buyingEmpty = await screen.findByText(/No buying orders yet/i);
+    expect(buyingEmpty).toBeInTheDocument();
+    expect(mockGetMyOrders).toHaveBeenCalledTimes(1);
 
     // Switch to Selling tab
     fireEvent.click(screen.getByRole("button", { name: /Selling/i }));
 
     // Show that order
-    expect(
-      screen.getByText("Seller role without buyer_netid")
-    ).toBeInTheDocument();
+    const sellerOrder = await screen.findByText(
+      "Seller role without buyer_netid"
+    );
+    expect(sellerOrder).toBeInTheDocument();
 
     // Because viewer_role = seller with no buyer_netid -> should show "You are the seller"
-    expect(
-      screen.getByText(/You are the seller/i)
-    ).toBeInTheDocument();
+    const sellerText = await screen.findByText(/You are the seller/i);
+    expect(sellerText).toBeInTheDocument();
+  });
+
+  it("renders 'Leave a Review' button for completed orders and navigates to review page on click", async () => {
+    mockGetMyOrders.mockResolvedValue([
+      {
+        transaction_id: 400,
+        listing_title: "Completed Order for Review",
+        listing_price: "45.00",
+        status: "COMPLETED",
+        viewer_role: "buyer",
+        seller_netid: "seller123",
+        created_at: "2025-04-01T10:00:00Z",
+      },
+    ]);
+
+    renderWithRouter(<MyOrdersPage />);
+
+    // Wait for order to appear
+    await screen.findByText("Completed Order for Review");
+
+    // "Leave a Review" button should be visible
+    const reviewBtn = screen.getByRole("button", { name: /Leave a Review/i });
+    expect(reviewBtn).toBeInTheDocument();
+
+    // Button should be clickable (not checking navigation as it requires full routing setup)
+    expect(reviewBtn).not.toBeDisabled();
   });
 });

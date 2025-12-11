@@ -22,20 +22,13 @@ export default function GlobalChat() {
   const [selfId, setSelfId] = useState("");
   const [convs, setConvs] = useState([]);
   const [messages, setMessages] = useState({});
-  const [nextBefore, setNextBefore] = useState({});
-  const [isMobile, setIsMobile] = useState(false);
   const loadedConversationsRef = useRef(new Set());
-  console.log("NextBefore", nextBefore);
-  console.log("isMobile", isMobile);
-  // --- FIX 1: STOP AUTO-SELECTING FIRST CONVERSATION ---
-  // If no URL ID and no Internal Click, active ID is NULL.
+
   const activeConversationId =
     (isUrlMode ? paramConversationId : null) ||
     internalSelectedId ||
-    null; // Was: (convs.length > 0 ? convs[0].id : null);
-  // -----------------------------------------------------
+    null;
 
-  // Navigate away from chat routes if user is not authenticated
   useEffect(() => {
     if (isUrlMode && !currentUser) {
       navigate("/");
@@ -48,12 +41,6 @@ export default function GlobalChat() {
     }
   }, [isUrlMode, isChatOpen, openChat]);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     const jwtId = getSelfIdFromJWT();
@@ -178,12 +165,12 @@ export default function GlobalChat() {
 
   // Load Messages
   useEffect(() => {
-    // --- FIX 2: Stop loading messages if no active ID ---
+
     if (!activeConversationId || !selfId) return;
 
     const fetchMsgs = async () => {
       try {
-        const { results, next_before } = await getMessages(activeConversationId, { limit: 50 });
+        const { results } = await getMessages(activeConversationId, { limit: 50 });
         const transformed = results.map((msg) => ({
           id: msg.id,
           conversationId: msg.conversation,
@@ -200,10 +187,6 @@ export default function GlobalChat() {
           [activeConversationId]: transformed,
         }));
 
-        setNextBefore((prev) => ({ ...prev, [activeConversationId]: next_before }));
-
-        // Mark the most recent message as read when conversation is loaded
-        // This updates last_read_message in backend, ensuring unread count is accurate
         if (transformed.length > 0) {
           const mostRecentMessage = transformed[0]; // Messages are sorted newest first
           markRead(activeConversationId, mostRecentMessage.id).catch(() => {});
@@ -222,12 +205,10 @@ export default function GlobalChat() {
   }, [activeConversationId, selfId]);
 
   // Mark all unread messages as read when conversation becomes active
-  // This effect runs when activeConversationId changes
   useEffect(() => {
     if (!activeConversationId || !selfId) return;
 
-    // Clear unread count immediately when conversation is selected
-    setConvs(prev => prev.map(c => 
+    setConvs(prev => prev.map(c =>
       c.id === activeConversationId && c.unreadCount > 0 
         ? { ...c, unreadCount: 0 } 
         : c
@@ -235,15 +216,13 @@ export default function GlobalChat() {
 
     // Get messages for this conversation
     const conversationMessages = messages[activeConversationId] || [];
-    
-    // If no messages yet, we're done (unread count already cleared)
+
     if (conversationMessages.length === 0) {
       return;
     }
     
     // Mark the most recent message as read (this updates last_read_message in backend)
-    // This ensures unread count only counts messages received after opening the chat
-    const mostRecentMessage = conversationMessages[0]; // Messages are sorted newest first
+    const mostRecentMessage = conversationMessages[0];
     if (mostRecentMessage) {
       markRead(activeConversationId, mostRecentMessage.id).catch(() => {});
       
@@ -261,7 +240,6 @@ export default function GlobalChat() {
         return { ...prev, [activeConversationId]: updated };
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConversationId, selfId]);
 
   // Also mark messages as read when messages are loaded for the active conversation
@@ -272,7 +250,7 @@ export default function GlobalChat() {
     if (!activeConversationId || !selfId || activeMessagesLength === 0) return;
 
     // Mark the most recent message as read (this updates last_read_message in backend)
-    const mostRecentMessage = activeMessages[0]; // Messages are sorted newest first
+    const mostRecentMessage = activeMessages[0];
     if (mostRecentMessage) {
       markRead(activeConversationId, mostRecentMessage.id).catch(() => {});
       
@@ -290,14 +268,12 @@ export default function GlobalChat() {
         return { ...prev, [activeConversationId]: updated };
       });
 
-      // Ensure unread count is cleared
-      setConvs(prev => prev.map(c => 
+      setConvs(prev => prev.map(c =>
         c.id === activeConversationId && c.unreadCount > 0 
           ? { ...c, unreadCount: 0 } 
           : c
       ));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConversationId, selfId, activeMessagesLength]);
 
   // Socket
@@ -307,7 +283,6 @@ export default function GlobalChat() {
       console.log("📩 WS Msg:", msg);
       const convId = msg.conversation || activeConversationId;
 
-      // Only process if we have a valid ID or message belongs to known conversation
       if (!convId) return;
 
       const newMsg = {
@@ -329,8 +304,7 @@ export default function GlobalChat() {
 
       setConvs(prev => prev.map(c => {
         if (String(c.id) === String(convId)) {
-          // If we're viewing this conversation, unread count is 0
-          // (we'll mark messages as read when viewing)
+
           if (activeConversationId === convId) {
             return {
               ...c,
@@ -339,8 +313,6 @@ export default function GlobalChat() {
             };
           }
 
-          // If message is from current user, set unread count to 0
-          // (sending a message means we're viewing the chat, backend updates last_read_message)
           if (String(newMsg.senderId) === String(selfId)) {
             return {
               ...c,
@@ -349,8 +321,7 @@ export default function GlobalChat() {
             };
           }
 
-          // Message is from another user and we're not viewing this conversation
-          // Increment unread count (backend will provide accurate count on next refresh)
+
           return {
             ...c,
             lastMessage: { content: newMsg.text, timestamp: newMsg.timestamp },
@@ -360,7 +331,6 @@ export default function GlobalChat() {
         return c;
       }));
 
-      // Send Read Receipt ONLY if I am actively looking at THIS conversation
       if (activeConversationId && activeConversationId === convId && String(newMsg.senderId) !== String(selfId)) {
           sendRead(newMsg.id);
       }
@@ -369,22 +339,15 @@ export default function GlobalChat() {
         const { message_id, reader_id } = evt;
         if (String(reader_id) === String(selfId)) return;
 
-        // We need to find which conversation this message belongs to
-        // Since we might not have the conversation ID in the event, we check loaded messages
-        // or we use activeConversationId if available.
-
-        // Try active first
         if (activeConversationId) {
              updateReadStatus(activeConversationId, message_id);
         }
-        // Loop others (in case read receipt comes for a background tab)
         Object.keys(messages).forEach(cid => {
             if (cid !== activeConversationId) updateReadStatus(cid, message_id);
         });
     }
   });
 
-  // Helper to update state for read receipts
   const updateReadStatus = (convId, messageId) => {
       setMessages(prev => {
           const list = prev[convId] || [];
