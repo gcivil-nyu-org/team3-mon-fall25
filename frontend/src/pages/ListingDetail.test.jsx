@@ -104,7 +104,7 @@ vi.mock('react-toastify', () => ({
     toast: {
         success: vi.fn(),
         error: vi.fn(),
-        info: vi.fn(),   // 👈 added so toast.info is a function
+        info: vi.fn(),
     },
     ToastContainer: () => null,
 }));
@@ -155,7 +155,6 @@ vi.mock('../api/watchlist', () => ({
     removeFromWatchlist: vi.fn(),
 }));
 
-// Import after mocking
 import * as watchlistApi from '../api/watchlist';
 
 
