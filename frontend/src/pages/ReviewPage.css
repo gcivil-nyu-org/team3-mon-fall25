@@ -136,18 +136,19 @@
   border: none;
   cursor: pointer;
   padding: 0;
-  transition: transform 0.2s;
-  color: #d1d5db;
   font-size: 2.5rem;
   line-height: 1;
+  color: #d1d5db; /* Default gray star */
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .review-page__star-btn:hover {
   transform: scale(1.05);
+  color: #7c3aed; /* Bright purple for hover preview */
 }
 
 .review-page__star-btn.active {
-  color: #d1d5db;
+  color: #56018d; /* NYU deep purple when selected/hovered */
 }
 
 .review-page__rating-text {
@@ -266,29 +267,35 @@
   display: none;
 }
 
+/* Submit button */
 .review-page__submit-btn {
   width: 100%;
   max-width: 520px;
   padding: 1rem 1.5rem;
   border-radius: 0.5rem;
   border: none;
-  background: #9b87f5;
+  background: #56018d; /* Purple when enabled */
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.1s ease;
+  box-shadow: 0 4px 10px rgba(88, 28, 135, 0.35);
 }
 
 .review-page__submit-btn:hover:not(:disabled) {
   background: #8b7ae5;
-  transform: none;
+  transform: translateY(-1px);
 }
 
+/* Disabled state: light purple and not clickable */
 .review-page__submit-btn:disabled {
-  opacity: 0.5;
+  background: #e9d5ff;
+  color: #c4b5fd;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Error State */

@@ -21,7 +21,7 @@
 }
 
 .back-button:hover {
-  color: #56018D;
+  color: #56018d;
 }
 
 .profile-card {
@@ -96,9 +96,9 @@
   gap: 8px;
   padding: 10px 20px;
   background: white;
-  border: 2px solid #56018D;
+  border: 2px solid #56018d;
   border-radius: 8px;
-  color: #56018D;
+  color: #56018d;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -106,7 +106,7 @@
 }
 
 .edit-profile-button:hover {
-  background: #56018D;
+  background: #56018d;
   color: white;
 }
 
@@ -132,7 +132,7 @@
 .contact-icon {
   width: 20px;
   height: 20px;
-  color: #56018D;
+  color: #56018d;
   flex-shrink: 0;
 }
 
@@ -149,7 +149,7 @@
 .stat-number {
   font-size: 36px;
   font-weight: 700;
-  color: #56018D;
+  color: #56018d;
   margin-bottom: 4px;
   line-height: 1;
 }
@@ -178,12 +178,12 @@
 }
 
 .filter-dropdown:hover {
-  border-color: #56018D;
+  border-color: #56018d;
 }
 
 .filter-dropdown:focus {
   outline: none;
-  border-color: #56018D;
+  border-color: #56018d;
   box-shadow: 0 0 0 3px rgba(86, 1, 141, 0.1);
 }
 
@@ -256,7 +256,7 @@
 .listing-price {
   font-size: 20px;
   font-weight: 700;
-  color: #56018D;
+  color: #56018d;
   margin: 0 0 12px 0;
 }
 
@@ -307,7 +307,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #56018D;
+  color: #56018d;
   font-size: 40px;
 }
 
@@ -436,4 +436,25 @@
   .danger-zone-text {
     text-align: center;
   }
+}
+
+/* Seller rating small styles */
+.stat-number .stat-icon-star {
+  margin-left: 0.25rem;
+  font-size: 0.9rem;
+  color: #facc15;
+}
+
+.stat-label .stat-subtext {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.1rem;
+}
+
+.stat-number .stat-max {
+  margin-left: 0.1rem;
+  font-size: 0.9em;
+  color: #56018d;      /* Purple to match the main number */
+  font-weight: 600;    /* Slightly heavier weight */
 }

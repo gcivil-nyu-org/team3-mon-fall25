@@ -70,6 +70,27 @@ function OrderCard({ order, onReview }) {
       : roleLabel;
 
   const isCompleted = order.status === "COMPLETED";
+  const isBuyer = order.viewer_role === "buyer";
+  const canLeaveReview = isCompleted && isBuyer;
+
+  const review = order.review || null;
+  const hasReview = !!review;
+
+  const ratingLabel =
+    order.viewer_role === "buyer" ? "Your rating" : "Buyer rating";
+
+  const reviewTags = Array.isArray(review?.what_went_well)
+    ? review.what_went_well
+    : [];
+
+  // Show only the first two tags
+  const reviewTagsPreview = reviewTags.slice(0, 2).join(", ");
+
+  const reviewCommentSnippet = review?.additional_comments
+    ? review.additional_comments.length > 80
+      ? review.additional_comments.slice(0, 80) + "…"
+      : review.additional_comments
+    : null;
 
   return (
     <Link to={`/transaction/${txId}`} className="myorders__card">
@@ -149,20 +170,45 @@ function OrderCard({ order, onReview }) {
             </div>
           )}
 
-          {isCompleted && (
+          {/* Review Section */}
+          {hasReview ? (
             <div className="myorders__review-container">
-                <button 
-                    className="myorders__review-btn"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        onReview(order);
-                    }}
-                >
-                    <Star className="myorders__review-icon" size={16} />
-                    Leave a Review
-                </button>
+              <div className="myorders__review-summary">
+                <div className="myorders__review-summary-row">
+                  <Star className="myorders__review-icon" size={16} />
+                  <span className="myorders__review-rating">
+                    {ratingLabel}: {review.rating}/5
+                  </span>
+                  {reviewTagsPreview && (
+                    <span className="myorders__review-tags">
+                      • {reviewTagsPreview}
+                    </span>
+                  )}
+                </div>
+                {reviewCommentSnippet && (
+                  <p className="myorders__review-comment">
+                    “{reviewCommentSnippet}”
+                  </p>
+                )}
+              </div>
             </div>
+          ) : (
+            canLeaveReview && (
+              <div className="myorders__review-container">
+                <button
+                  className="myorders__review-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onReview(order);
+                  }}
+                >
+                  <Star className="myorders__review-icon" size={16} />
+                  Leave a Review
+                </button>
+              </div>
+            )
           )}
+
 
           <div className="myorders__cta-row">
             <span className="myorders__details-link">
