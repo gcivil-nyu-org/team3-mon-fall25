@@ -7,6 +7,7 @@ from utils.s3_service import s3_service
 from .models import Profile
 from apps.transactions.models import Review
 
+
 class ProfileDetailSerializer(serializers.ModelSerializer):
     """Detailed profile serializer with all information"""
 
@@ -58,7 +59,7 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
             "updated_at",
             "avatar_url",
         ]
-    
+
     # 計算平均評分（只算他當 seller 的 review）
     def get_seller_average_rating(self, obj):
         user = getattr(obj, "user", None)
