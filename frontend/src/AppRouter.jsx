@@ -52,13 +52,13 @@ export default function AppRouter() {
 
                             {/* Shared layout (navbar + outlet) */}
                             <Route path={ROUTES.HOME} element={<App />}>
-                                {/* ✅ PUBLIC routes (no ProfileGate / ProtectedRoute) */}
+                                {/* PUBLIC routes (no ProfileGate / ProtectedRoute) */}
                                 <Route index element={<Home />} />
                                 <Route path="browse" element={<BrowseListings />} />
                                 <Route path="listing/:id" element={<ListingDetail />} />
                                 <Route path="dev/transaction" element={<TransactionPaymentPage />} />
 
-                                {/* 🔒 GATED routes: ProfileGate + ProtectedRoute */}
+                                {/*  GATED routes: ProfileGate + ProtectedRoute */}
                                 <Route element={<ProfileGate />}>
                                     <Route
                                         path="create-listing"
