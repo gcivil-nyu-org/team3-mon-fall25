@@ -34,6 +34,81 @@ vi.mock('react-toastify', () => ({
     ToastContainer: () => null,
 }));
 
+// // Mock navigate function
+// // @ts-ignore
+// const mockNavigate = vi.fn();
+//
+// // Mock useParams function that can be changed per test
+// const mockUseParams = vi.fn(() => ({ id: '123' }));
+
+// Mock react-router-dom hooks
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom');
+    return {
+        ...actual,
+        useParams: () => mockUseParams(),
+        useNavigate: () => mockNavigate,
+    };
+});
+
+// Mock SellerCard component
+vi.mock('../components/SellerCard', () => ({
+    default: ({ username, memberSince, activeListings, soldItems, onViewProfile }) => (
+        <div data-testid="seller-card">
+            <div>Username: {username}</div>
+            <div>Member Since: {memberSince}</div>
+            <div>Active Listings: {activeListings}</div>
+            <div>Sold Items: {soldItems}</div>
+            <button onClick={onViewProfile}>View Profile</button>
+        </div>
+    ),
+}));
+
+// Mock ContactSellerModal component
+vi.mock('../components/ContactSellerModal', () => ({
+    default: ({ open, onClose, listingTitle }) =>
+        open ? (
+            <div data-testid="contact-modal">
+                <div>Contact Seller for {listingTitle}</div>
+                <button onClick={onClose}>Close</button>
+            </div>
+        ) : null,
+}));
+
+// Mock watchlist API
+vi.mock('../api/watchlist', () => ({
+    addToWatchlist: vi.fn(),
+    removeFromWatchlist: vi.fn(),
+}));
+
+// Import after mocking
+
+// Mock the APIs
+vi.mock('@/api/listings', () => ({
+    getListing: vi.fn(),
+    getListings: vi.fn(),
+    patchListing: vi.fn(),
+    deleteListingAPI: vi.fn(),
+    createListing: vi.fn(),
+    updateListing: vi.fn(),
+    getMyListings: vi.fn(),
+    getListingsByUserId: vi.fn(),
+    getFilterOptions: vi.fn(),
+    getListingPriceStats: vi.fn(),
+    getListingSuggestions: vi.fn(),
+}));
+vi.mock('@/api/transactions');
+
+// Mock react-toastify
+vi.mock('react-toastify', () => ({
+    toast: {
+        success: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),   // 👈 added so toast.info is a function
+    },
+    ToastContainer: () => null,
+}));
+
 // Mock navigate function
 const mockNavigate = vi.fn();
 
@@ -82,6 +157,7 @@ vi.mock('../api/watchlist', () => ({
 
 // Import after mocking
 import * as watchlistApi from '../api/watchlist';
+
 
 describe('ListingDetail - Share Functionality', () => {
     const mockListing = {
