@@ -193,7 +193,8 @@ class TransactionSerializer(serializers.ModelSerializer):
     def _get_primary_listing_image(self, obj):
         """
         Return the primary listing image URL if available, otherwise the first image.
-        This mirrors the CompactListingSerializer logic so My Orders cards can show thumbnails.
+        This mirrors the CompactListingSerializer logic,
+        so My Orders cards can show thumbnails.
         """
         listing = getattr(obj, "listing", None)
         if not listing:
