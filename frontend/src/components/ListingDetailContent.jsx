@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
     FaBoxOpen,
     FaChevronLeft,
@@ -17,6 +18,7 @@ import { toast } from "react-toastify";
 import { getListings, getListing } from "@/api/listings";
 import { addToWatchlist, removeFromWatchlist } from "../api/watchlist";
 import { useAuth } from "../contexts/AuthContext";
+import { ROUTES } from "../constants/routes";
 import SellerCard from "./SellerCard";
 import ContactSellerModal from "./ContactSellerModal";
 import "../pages/ListingDetail.css";
@@ -33,6 +35,9 @@ export default function ListingDetailContent({
     isBuying = false,
 }) {
     const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -43,6 +48,16 @@ export default function ListingDetailContent({
         soldItems: 0,
     });
 
+    const redirectToLogin = () => {
+        navigate(ROUTES.LOGIN, {
+            state: { from: location.pathname + location.search },
+        });
+        toast.info("Please log in to continue.", {
+            position: "top-right",
+            autoClose: 2500,
+        });
+    };
+
     useEffect(() => {
         if (listing) {
             setIsSaved(listing?.is_saved || false);
@@ -50,9 +65,8 @@ export default function ListingDetailContent({
     }, [listing]);
 
     // Prepare images array (use listing images or empty array)
-    const images = listing?.images && listing.images.length > 0
-        ? listing.images
-        : [];
+    const images =
+        listing?.images && listing.images.length > 0 ? listing.images : [];
     const imagesLength = images.length;
 
     // Keyboard navigation for lightbox
@@ -63,7 +77,9 @@ export default function ListingDetailContent({
             if (e.key === "Escape") {
                 setLightboxOpen(false);
             } else if (e.key === "ArrowLeft") {
-                setCurrentImageIndex((prev) => (prev - 1 + imagesLength) % imagesLength);
+                setCurrentImageIndex(
+                    (prev) => (prev - 1 + imagesLength) % imagesLength,
+                );
             } else if (e.key === "ArrowRight") {
                 setCurrentImageIndex((prev) => (prev + 1) % imagesLength);
             }
@@ -80,7 +96,9 @@ export default function ListingDetailContent({
         let mounted = true;
         (async () => {
             try {
-                const sellerUsername = listing.user_netid || listing.user_email?.split("@")[0];
+                const sellerUsername =
+                    listing.user_netid ||
+                    listing.user_email?.split("@")[0];
                 if (!sellerUsername) return;
 
                 const allListings = [];
@@ -89,7 +107,10 @@ export default function ListingDetailContent({
 
                 while (hasMore) {
                     try {
-                        const response = await getListings({ page, page_size: 100 });
+                        const response = await getListings({
+                            page,
+                            page_size: 100,
+                        });
 
                         let pageResults = [];
                         let hasNextPage = false;
@@ -97,7 +118,11 @@ export default function ListingDetailContent({
                         if (Array.isArray(response)) {
                             pageResults = response;
                             hasNextPage = false;
-                        } else if (response && typeof response === "object" && "results" in response) {
+                        } else if (
+                            response &&
+                            typeof response === "object" &&
+                            "results" in response
+                        ) {
                             pageResults = response.results || [];
                             hasNextPage = !!response.next;
                         }
@@ -118,9 +143,12 @@ export default function ListingDetailContent({
                 // Fetch details for all listings to get user info
                 const listingPromises = allListings.map((l) =>
                     getListing(l.listing_id).catch((err) => {
-                        console.error(`Failed to fetch listing ${l.listing_id}:`, err);
+                        console.error(
+                            `Failed to fetch listing ${l.listing_id}:`,
+                            err,
+                        );
                         return null;
-                    })
+                    }),
                 );
                 const listingDetails = await Promise.all(listingPromises);
 
@@ -128,24 +156,37 @@ export default function ListingDetailContent({
                 const sellerListings = listingDetails
                     .filter(Boolean)
                     .filter((detail) => {
-                        if (!detail.user_netid && !detail.user_email) return false;
+                        if (!detail.user_netid && !detail.user_email)
+                            return false;
 
-                        const detailNetid = detail.user_netid?.toLowerCase();
-                        const detailEmail = detail.user_email?.split("@")[0]?.toLowerCase();
+                        const detailNetid =
+                            detail.user_netid?.toLowerCase();
+                        const detailEmail = detail.user_email
+                            ?.split("@")[0]
+                            ?.toLowerCase();
 
-                        return detailNetid === sellerUsernameLower || detailEmail === sellerUsernameLower;
+                        return (
+                            detailNetid === sellerUsernameLower ||
+                            detailEmail === sellerUsernameLower
+                        );
                     });
 
                 // Include current listing if it's not already in the list
                 const currentListingId = listing.listing_id;
-                const currentListingIncluded = sellerListings.some(l => l.listing_id === currentListingId);
+                const currentListingIncluded = sellerListings.some(
+                    (l) => l.listing_id === currentListingId,
+                );
                 if (!currentListingIncluded && listing) {
                     sellerListings.push(listing);
                 }
 
                 if (mounted) {
-                    const activeCount = sellerListings.filter((l) => l.status === "active").length;
-                    const soldCount = sellerListings.filter((l) => l.status === "sold").length;
+                    const activeCount = sellerListings.filter(
+                        (l) => l.status === "active",
+                    ).length;
+                    const soldCount = sellerListings.filter(
+                        (l) => l.status === "sold",
+                    ).length;
 
                     setSellerStats({
                         activeListings: activeCount,
@@ -171,7 +212,8 @@ export default function ListingDetailContent({
         if (diffDays === 0) return "Posted today";
         if (diffDays === 1) return "Posted yesterday";
         if (diffDays < 7) return `Posted ${diffDays} days ago`;
-        if (diffDays < 30) return `Posted ${Math.floor(diffDays / 7)} weeks ago`;
+        if (diffDays < 30)
+            return `Posted ${Math.floor(diffDays / 7)} weeks ago`;
         return `Posted on ${date.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -222,10 +264,13 @@ export default function ListingDetailContent({
                         autoClose: 3000,
                     });
                 } catch {
-                    toast.error("Failed to copy link. Please try again.", {
-                        position: "top-right",
-                        autoClose: 3000,
-                    });
+                    toast.error(
+                        "Failed to copy link. Please try again.",
+                        {
+                            position: "top-right",
+                            autoClose: 3000,
+                        },
+                    );
                 }
                 document.body.removeChild(textArea);
             }
@@ -240,6 +285,7 @@ export default function ListingDetailContent({
 
     const handleToggleSave = async () => {
         if (!isAuthenticated) {
+            redirectToLogin();
             return;
         }
 
@@ -275,25 +321,35 @@ export default function ListingDetailContent({
 
     const prevImage = () => {
         if (imagesLength === 0) return;
-        setCurrentImageIndex((prev) => (prev - 1 + imagesLength) % imagesLength);
+        setCurrentImageIndex(
+            (prev) => (prev - 1 + imagesLength) % imagesLength,
+        );
     };
 
     // Format price with thousand separators (handles both string and number from API)
-    const priceDisplay = parseFloat(listing.price || 0).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
+    const priceDisplay = parseFloat(listing.price || 0).toLocaleString(
+        "en-US",
+        {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        },
+    );
     const statusClass = (listing.status || "").toLowerCase();
 
     const sellerData = {
-        username: listing.user_netid || listing.user_email?.split("@")[0] || "Seller",
+        username:
+            listing.user_netid ||
+            listing.user_email?.split("@")[0] ||
+            "Seller",
         memberSince: listing.created_at || new Date().toISOString(),
         activeListings: sellerStats.activeListings,
         soldItems: sellerStats.soldItems,
         avatarUrl: null,
     };
 
-    const rootClass = `listing-detail-content${isPreview ? " listing-detail-preview" : ""}`;
+    const rootClass = `listing-detail-content${
+        isPreview ? " listing-detail-preview" : ""
+    }`;
 
     return (
         <div className={rootClass}>
@@ -306,20 +362,35 @@ export default function ListingDetailContent({
                         <div className="listing-detail-main-image-wrapper">
                             <div
                                 className="listing-detail-main-image"
-                                onClick={() => !isPreview && hasImages && setLightboxOpen(true)}
-                                style={{ cursor: !isPreview && hasImages ? "pointer" : "default" }}
+                                onClick={() =>
+                                    !isPreview &&
+                                    hasImages &&
+                                    setLightboxOpen(true)
+                                }
+                                style={{
+                                    cursor:
+                                        !isPreview && hasImages
+                                            ? "pointer"
+                                            : "default",
+                                }}
                             >
                                 {hasImages ? (
                                     <>
                                         <img
-                                            src={images[currentImageIndex].image_url}
-                                            alt={`${listing.title} - Image ${currentImageIndex + 1}`}
+                                            src={
+                                                images[currentImageIndex]
+                                                    .image_url
+                                            }
+                                            alt={`${listing.title} - Image ${
+                                                currentImageIndex + 1
+                                            }`}
                                             loading="lazy"
                                         />
                                         {/* Image Counter Badge */}
                                         {images.length > 1 && (
                                             <div className="listing-detail-image-counter">
-                                                {currentImageIndex + 1} / {images.length}
+                                                {currentImageIndex + 1} /{" "}
+                                                {images.length}
                                             </div>
                                         )}
                                         {/* Navigation Arrows */}
@@ -350,7 +421,10 @@ export default function ListingDetailContent({
                                     </>
                                 ) : (
                                     <div className="listing-detail-placeholder">
-                                        <FaBoxOpen size={80} color="#56018D" />
+                                        <FaBoxOpen
+                                            size={80}
+                                            color="#56018D"
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -362,15 +436,20 @@ export default function ListingDetailContent({
                                 {images.map((img, idx) => (
                                     <button
                                         key={idx}
-                                        className={`listing-detail-thumbnail ${currentImageIndex === idx
-                                            ? "listing-detail-thumbnail--active"
-                                            : ""
-                                            }`}
-                                        onClick={() => setCurrentImageIndex(idx)}
+                                        className={`listing-detail-thumbnail ${
+                                            currentImageIndex === idx
+                                                ? "listing-detail-thumbnail--active"
+                                                : ""
+                                        }`}
+                                        onClick={() =>
+                                            setCurrentImageIndex(idx)
+                                        }
                                     >
                                         <img
                                             src={img.image_url}
-                                            alt={`${listing.title} thumbnail ${idx + 1}`}
+                                            alt={`${listing.title} thumbnail ${
+                                                idx + 1
+                                            }`}
                                             loading="lazy"
                                         />
                                     </button>
@@ -384,7 +463,9 @@ export default function ListingDetailContent({
                         <div className="listing-detail-details">
                             {/* Title with Share Button */}
                             <div className="listing-detail-title-container">
-                                <h1 className="listing-detail-title">{listing.title}</h1>
+                                <h1 className="listing-detail-title">
+                                    {listing.title}
+                                </h1>
                                 {!isPreview && (
                                     <button
                                         className="listing-detail-share-button"
@@ -398,7 +479,9 @@ export default function ListingDetailContent({
                             </div>
 
                             {/* Price */}
-                            <div className="listing-detail-price">${priceDisplay}</div>
+                            <div className="listing-detail-price">
+                                ${priceDisplay}
+                            </div>
 
                             {/* Status and Category Badges */}
                             <div className="listing-detail-badges">
@@ -417,7 +500,11 @@ export default function ListingDetailContent({
                             {/* Location */}
                             <div className="listing-detail-meta">
                                 <FaMapMarkerAlt className="listing-detail-meta-icon" />
-                                <span>{listing.dorm_location || listing.location || "Not specified"}</span>
+                                <span>
+                                    {listing.dorm_location ||
+                                        listing.location ||
+                                        "Not specified"}
+                                </span>
                             </div>
 
                             {/* Posted Date */}
@@ -430,7 +517,9 @@ export default function ListingDetailContent({
 
                             {/* Description Section */}
                             <div className="listing-detail-description-section">
-                                <h3 className="listing-detail-description-title">Description</h3>
+                                <h3 className="listing-detail-description-title">
+                                    Description
+                                </h3>
                                 <p className="listing-detail-description-text">
                                     {listing.description ||
                                         "No description provided."}
@@ -456,7 +545,14 @@ export default function ListingDetailContent({
                                 <div className="listing-detail-actions">
                                     {listing.is_owner ? (
                                         // Show Edit, Mark as Sold, and Delete buttons for owner
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: "12px",
+                                                width: "100%",
+                                            }}
+                                        >
                                             <button
                                                 className="listing-detail-contact-button"
                                                 onClick={onEditListing}
@@ -500,16 +596,30 @@ export default function ListingDetailContent({
                                                 className="listing-detail-save-button"
                                                 onClick={handleToggleSave}
                                                 disabled={saving}
-                                                title={isSaved ? "Remove from watchlist" : "Save to watchlist"}
+                                                title={
+                                                    isSaved
+                                                        ? "Remove from watchlist"
+                                                        : "Save to watchlist"
+                                                }
                                                 style={{
-                                                    background: isSaved ? "#dc2626" : "#fff",
-                                                    color: isSaved ? "#fff" : "#56018D",
-                                                    border: `2px solid ${isSaved ? "#dc2626" : "#56018D"}`,
+                                                    background: isSaved
+                                                        ? "#dc2626"
+                                                        : "#fff",
+                                                    color: isSaved
+                                                        ? "#fff"
+                                                        : "#56018D",
+                                                    border: `2px solid ${
+                                                        isSaved
+                                                            ? "#dc2626"
+                                                            : "#56018D"
+                                                    }`,
                                                     padding: "12px 20px",
                                                     borderRadius: 8,
                                                     fontSize: 16,
                                                     fontWeight: 600,
-                                                    cursor: saving ? "not-allowed" : "pointer",
+                                                    cursor: saving
+                                                        ? "not-allowed"
+                                                        : "pointer",
                                                     display: "flex",
                                                     alignItems: "center",
                                                     gap: 8,
@@ -519,17 +629,23 @@ export default function ListingDetailContent({
                                                 }}
                                                 onMouseOver={(e) => {
                                                     if (!saving) {
-                                                        e.target.style.transform = "scale(1.05)";
+                                                        e.target.style.transform =
+                                                            "scale(1.05)";
                                                     }
                                                 }}
                                                 onMouseOut={(e) => {
-                                                    e.target.style.transform = "scale(1)";
+                                                    e.target.style.transform =
+                                                        "scale(1)";
                                                 }}
                                             >
                                                 <FaHeart
                                                     style={{
-                                                        fill: isSaved ? "#fff" : "transparent",
-                                                        stroke: isSaved ? "#fff" : "#56018D",
+                                                        fill: isSaved
+                                                            ? "#fff"
+                                                            : "transparent",
+                                                        stroke: isSaved
+                                                            ? "#fff"
+                                                            : "#56018D",
                                                         strokeWidth: 2,
                                                         transition: "all 0.2s",
                                                     }}
@@ -540,24 +656,40 @@ export default function ListingDetailContent({
                                                 className="listing-detail-contact-button"
                                                 onClick={() => {
                                                     if (!isAuthenticated) {
+                                                        redirectToLogin();
                                                         return;
                                                     }
                                                     setContactModalOpen(true);
                                                 }}
-                                                disabled={listing.status === "sold"}
+                                                disabled={
+                                                    listing.status === "sold"
+                                                }
                                             >
                                                 <FaCommentDots className="listing-detail-contact-icon" />
                                                 Contact Seller
                                             </button>
                                             <button
                                                 className="listing-detail-contact-button"
-                                                onClick={onBuyNow}
-                                                disabled={listing.status === "sold" || isBuying}
+                                                onClick={() => {
+                                                    if (!isAuthenticated) {
+                                                        redirectToLogin();
+                                                        return;
+                                                    }
+                                                    if (onBuyNow) {
+                                                        onBuyNow();
+                                                    }
+                                                }}
+                                                disabled={
+                                                    listing.status ===
+                                                        "sold" || isBuying
+                                                }
                                                 style={{
                                                     background: "#059669",
                                                 }}
                                             >
-                                                {isBuying ? "Processing..." : "Buy Now"}     
+                                                {isBuying
+                                                    ? "Processing..."
+                                                    : "Buy Now"}
                                             </button>
                                         </>
                                     )}
@@ -634,4 +766,3 @@ export default function ListingDetailContent({
         </div>
     );
 }
-
