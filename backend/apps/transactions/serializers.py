@@ -122,6 +122,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         decimal_places=2,
         read_only=True,
     )
+    listing_image_url = serializers.SerializerMethodField()
+    listing_thumbnail_url = serializers.SerializerMethodField()
     buyer_id = serializers.IntegerField(source="buyer.id", read_only=True)
     seller_id = serializers.IntegerField(source="seller.id", read_only=True)
     review = ReviewSerializer(read_only=True)
@@ -133,6 +135,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             "listing",
             "listing_title",
             "listing_price",
+            "listing_image_url",
+            "listing_thumbnail_url",
             "buyer",
             "buyer_id",
             "seller",
@@ -161,6 +165,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             "buyer_netid",
             "listing_title",
             "listing_price",
+            "listing_image_url",
+            "listing_thumbnail_url",
             "buyer_id",
             "seller_id",
             "review",
@@ -183,6 +189,33 @@ class TransactionSerializer(serializers.ModelSerializer):
             return "seller"
 
         return None
+
+    def _get_primary_listing_image(self, obj):
+        """
+        Return the primary listing image URL if available, otherwise the first image.
+        This mirrors the CompactListingSerializer logic,
+        so My Orders cards can show thumbnails.
+        """
+        listing = getattr(obj, "listing", None)
+        if not listing:
+            return None
+
+        primary_img = listing.images.filter(is_primary=True).first()
+        if primary_img:
+            return primary_img.image_url
+
+        first_img = listing.images.order_by("display_order").first()
+        if first_img:
+            return first_img.image_url
+
+        return None
+
+    def get_listing_image_url(self, obj):
+        return self._get_primary_listing_image(obj)
+
+    def get_listing_thumbnail_url(self, obj):
+        # Alias for compatibility with the frontend prop name
+        return self._get_primary_listing_image(obj)
 
 
 class PaymentMethodUpdateSerializer(serializers.Serializer):
