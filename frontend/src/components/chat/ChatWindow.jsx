@@ -5,19 +5,6 @@ import MessageInput from "./MessageInput";
 import UserInfoBlock from "./UserInfoBlock";
 import "./ChatWindow.css";
 
-/**
- * ChatWindow - Active chat view with messages and input
- * @param {Object} props
- * @param {Object} props.conversation - Conversation object
- * @param {Array} props.messages - Array of message objects
- * @param {string} props.currentUserId - Current user's ID
- * @param {Function} props.onSendMessage - Callback when message is sent
- * @param {Function} [props.onListingClick] - Callback when listing is clicked
- * @param {Function} [props.onBack] - Callback for back button (mobile)
- * @param {boolean} [props.showBackButton=false] - Show back button (mobile)
- * @param {string|null} [props.nextBefore] - Cursor for loading older messages
- * @param {Function} [props.onLoadOlder] - Callback to load older messages
- */
 export default function ChatWindow({
   conversation,
   messages = [],
@@ -42,7 +29,6 @@ export default function ChatWindow({
   // Group messages by date
   const groupMessagesByDate = (msgs) => {
     const groups = [];
-
     msgs.forEach((message) => {
       const messageDate = new Date(message.timestamp || message.created_at);
       const today = new Date();
@@ -55,10 +41,7 @@ export default function ChatWindow({
       } else if (messageDate.toDateString() === yesterday.toDateString()) {
         dateLabel = "Yesterday";
       } else {
-        const options = {
-          month: "short",
-          day: "numeric",
-        };
+        const options = { month: "short", day: "numeric" };
         if (messageDate.getFullYear() !== today.getFullYear()) {
           options.year = "numeric";
         }
@@ -72,11 +55,9 @@ export default function ChatWindow({
         groups.push({ date: dateLabel, messages: [message] });
       }
     });
-
     return groups;
   };
 
-  // Sort messages chronologically (oldest first for display)
   const sortedMessages = [...messages].sort((a, b) => {
     const timeA = new Date(a.timestamp || a.created_at).getTime();
     const timeB = new Date(b.timestamp || b.created_at).getTime();
@@ -99,20 +80,14 @@ export default function ChatWindow({
     );
   }
 
-  // Ensure otherUser exists with required properties
-  const otherUser = conversation.otherUser || { 
+  // Ensure otherUser exists
+  const otherUser = conversation.otherUser || {
     id: conversation.id || "unknown",
     name: "User",
     initials: "U",
     isOnline: false,
     memberSince: new Date().toISOString()
   };
-
-  // Get listing image - handle various formats
-  const listingImage = conversation.listingImage || 
-                       conversation.listing?.primary_image?.url ||
-                       conversation.listing?.images?.[0]?.image_url ||
-                       conversation.listing?.images?.[0]?.url;
 
   return (
     <div className="chat-window">
@@ -135,32 +110,11 @@ export default function ChatWindow({
           />
         </div>
 
-        {/* Listing Info */}
-        {conversation.listingTitle && (
-          <button
-            className="chat-window__listing-info"
-            onClick={() => onListingClick?.(conversation.listingId || conversation.id)}
-          >
-            {listingImage && (
-              <div className="chat-window__listing-thumbnail">
-                <img src={listingImage} alt={conversation.listingTitle} />
-              </div>
-            )}
-            <div className="chat-window__listing-details">
-              <p className="chat-window__listing-title">{conversation.listingTitle}</p>
-              {conversation.listingPrice !== undefined && conversation.listingPrice !== null && (
-                <p className="chat-window__listing-price">
-                  ${conversation.listingPrice}
-                </p>
-              )}
-            </div>
-          </button>
-        )}
+        {/* --- LISTING INFO BANNER REMOVED --- */}
       </div>
 
       {/* Messages */}
       <div className="chat-window__messages" ref={scrollAreaRef}>
-        {/* Load Older Button */}
         {nextBefore !== null && onLoadOlder && (
           <div style={{ padding: "12px", textAlign: "center" }}>
             <button
@@ -199,12 +153,10 @@ export default function ChatWindow({
         )}
         {messageGroups.map((group, groupIndex) => (
           <div key={groupIndex}>
-            {/* Date Separator */}
             <div className="chat-window__date-separator">
               <div className="chat-window__date-label">{group.date}</div>
             </div>
 
-            {/* Messages in this group */}
             {group.messages.map((message, index) => {
               const isOwnMessage = String(message.sender || message.senderId) === String(currentUserId);
               const prevMessage = index > 0 ? group.messages[index - 1] : null;
@@ -233,5 +185,3 @@ export default function ChatWindow({
     </div>
   );
 }
-
-
