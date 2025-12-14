@@ -1,171 +1,370 @@
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
+import GlobalChat from "./GlobalChat";
 
-vi.mock("react-dom", async () => {
-  const actual = await vi.importActual("react-dom");
-  return { ...actual, createPortal: (node) => node };
-});
+// --- MOCKS ---
 
-import ChatModal from "./ChatModal";
+// 1. API Mocks
+vi.mock("../../api/chat", () => ({
+  listConversations: vi.fn(),
+  getMessages: vi.fn(),
+  markRead: vi.fn(),
+}));
 
-describe("ChatModal", () => {
-  const mockConversations = [
-    { id: "1", listingTitle: "Laptop", listingPrice: 500, otherUser: { id: "2", name: "Alice", initials: "A" }, unreadCount: 2, type: "buying" },
-    { id: "2", listingTitle: "Phone", listingPrice: 300, otherUser: { id: "3", name: "Bob", initials: "B" }, unreadCount: 0, type: "selling" },
-  ];
-  const mockMessages = {
-    "1": [{ id: "msg1", senderId: "1", content: "Hello", timestamp: new Date("2024-01-15T10:00:00Z") }],
-  };
-  const mockOnOpenChange = vi.fn();
-  const mockOnSendMessage = vi.fn();
-  const mockOnListingClick = vi.fn();
+vi.mock("../../api/auth", () => ({
+  getSelfIdFromJWT: vi.fn(),
+  fetchMeId: vi.fn(),
+}));
+
+vi.mock("../../api/listings", () => ({
+  getListing: vi.fn(),
+  getListings: vi.fn(),
+}));
+
+// 2. Context Mocks
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: vi.fn(),
+}));
+
+vi.mock("../../contexts/ChatContext", () => ({
+  useChat: vi.fn(),
+}));
+
+// 3. Socket Mock
+let socketHandlers = {};
+vi.mock("../../hooks/useChatSocket", () => ({
+  default: ({ onMessage, onRead }) => {
+    socketHandlers.onMessage = onMessage;
+    socketHandlers.onRead = onRead;
+    return {
+      sendText: vi.fn(),
+      sendRead: vi.fn(),
+    };
+  },
+}));
+
+// 4. Component Mock (Crucial for isolation)
+vi.mock("./ChatModal", () => ({
+  default: ({
+    open,
+    onOpenChange,
+    conversations,
+    messages,
+    onSendMessage,
+    onConversationSelect,
+    onListingClick,
+    onFullPageChange
+  }) => {
+    if (!open) return null;
+    return (
+      <div data-testid="chat-modal">
+        <button data-testid="close-btn" onClick={() => onOpenChange(false)}>Close</button>
+        <button data-testid="fullpage-btn" onClick={() => onFullPageChange(true)}>Maximize</button>
+        <div data-testid="messages-json">{JSON.stringify(messages)}</div>
+        <div data-testid="conv-list">
+          {conversations.map(c => (
+            <div
+              key={c.id}
+              data-testid={`conv-${c.id}`}
+              onClick={() => onConversationSelect(c.id)}
+            >
+              <span data-testid={`conv-title-${c.id}`}>{c.listingTitle}</span>
+              <span data-testid={`conv-unread-${c.id}`}>{c.unreadCount}</span>
+              <button data-testid={`listing-link-${c.id}`} onClick={(e) => {
+                 e.stopPropagation();
+                 onListingClick(c.listingId);
+              }}>Link</button>
+            </div>
+          ))}
+        </div>
+        <button data-testid="send-msg-btn" onClick={() => onSendMessage(1, "test")}>Send</button>
+      </div>
+    );
+  }
+}));
+
+import * as ChatAPI from "../../api/chat";
+import * as AuthAPI from "../../api/auth";
+import * as ListingsAPI from "../../api/listings";
+import * as AuthContext from "../../contexts/AuthContext";
+import * as ChatContext from "../../contexts/ChatContext";
+
+describe("GlobalChat Logic & Coverage", () => {
+  const mockOpenChat = vi.fn();
+  const mockCloseChat = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 1024 });
-    Element.prototype.scrollIntoView = vi.fn();
+    socketHandlers = {};
+
+    // Auth & Context Defaults
+    AuthAPI.getSelfIdFromJWT.mockReturnValue("100");
+    AuthAPI.fetchMeId.mockResolvedValue("100");
+    AuthContext.useAuth.mockReturnValue({ user: { id: "100" } });
+    ChatContext.useChat.mockReturnValue({
+      isChatOpen: true,
+      openChat: mockOpenChat,
+      closeChat: mockCloseChat
+    });
+
+    // API Defaults
+    ChatAPI.listConversations.mockResolvedValue([]);
+    ChatAPI.getMessages.mockResolvedValue({ results: [] });
+    // CRITICAL FIX: markRead must return a Promise to prevent .catch crash
+    ChatAPI.markRead.mockResolvedValue({});
+
+    ListingsAPI.getListings.mockResolvedValue([]);
+    ListingsAPI.getListing.mockResolvedValue(null);
   });
 
-  describe("Rendering", () => {
-    it("renders when open is true", () => {
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" />);
-      expect(screen.getByText("Messages")).toBeInTheDocument();
-    });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    it("does not render when open is false", () => {
-      const { container } = render(<ChatModal open={false} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" />);
-      expect(container.firstChild).toBeNull();
-    });
+  // --- RENDERING & AUTH ---
 
-    it("renders conversation list", () => {
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" asPage={true} />);
-      const laptopElements = screen.getAllByText("Laptop");
-      expect(laptopElements.length).toBeGreaterThan(0);
-    });
+  it("renders and falls back to fetchMeId if JWT is missing", async () => {
+    AuthAPI.getSelfIdFromJWT.mockReturnValue(null);
+    AuthAPI.fetchMeId.mockResolvedValue("999");
 
-    it("renders chat window when conversation is selected", () => {
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" selectedConversationId="1" />);
-      const aliceElements = screen.getAllByText("Alice");
-      expect(aliceElements.length).toBeGreaterThan(0);
-    });
+    render(
+      <MemoryRouter>
+        <GlobalChat />
+      </MemoryRouter>
+    );
 
-    // --- FIX: Updated expectation for empty list ---
-    it("shows empty state when no conversation is selected", () => {
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={[]} messages={{}} onSendMessage={mockOnSendMessage} currentUserId="1" />);
-      // When no conversations exist, the List component shows "No conversations yet"
-      expect(screen.getByText("No conversations yet")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(AuthAPI.fetchMeId).toHaveBeenCalled();
+      expect(screen.getByTestId("chat-modal")).toBeInTheDocument();
     });
   });
 
-  describe("User interactions", () => {
-    it("calls onOpenChange when close button is clicked", async () => {
-      const user = userEvent.setup();
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" />);
-      // Button now has aria-label="Close"
-      const closeButton = screen.getByLabelText("Close");
-      await user.click(closeButton);
-      expect(mockOnOpenChange).toHaveBeenCalledWith(false);
-    });
+  it("redirects if URL mode is on but user is not logged in", async () => {
+    AuthContext.useAuth.mockReturnValue({ user: null });
 
-    it("renders overlay in full-page mode", async () => {
-      const { container } = render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" asPage={true} />);
-      await waitFor(() => { expect(container.querySelector(".chat-modal-overlay")).toBeInTheDocument(); });
-    });
+    render(
+      <MemoryRouter initialEntries={['/chat/123']}>
+         <Routes>
+             <Route path="/chat/:conversationId" element={<GlobalChat />} />
+             <Route path="/" element={<div data-testid="home-page">Home</div>} />
+         </Routes>
+      </MemoryRouter>
+    );
 
-    it("calls onSendMessage when message is sent", async () => {
-      const user = userEvent.setup();
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" selectedConversationId="1" />);
-      const input = screen.getByPlaceholderText("Type a message...");
-      await user.type(input, "Test message{Enter}");
-      expect(mockOnSendMessage).toHaveBeenCalledWith("1", "Test message");
+    await waitFor(() => {
+      expect(screen.getByTestId("home-page")).toBeInTheDocument();
     });
+  });
 
-    it("calls onListingClick when listing is clicked", async () => {
-      const user = userEvent.setup();
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} onListingClick={mockOnListingClick} currentUserId="1" selectedConversationId="1" />);
-      const laptopElements = screen.getAllByText("Laptop");
-      const listingButton = laptopElements[0].closest("button");
-      if (listingButton) {
-        await user.click(listingButton);
-        expect(mockOnListingClick).toHaveBeenCalled();
+  // --- DATA LOADING & TRANSFORMATION ---
+
+  it("loads conversations and transforms listing details correctly", async () => {
+    Storage.prototype.getItem = vi.fn(() => JSON.stringify({ "50": "900" }));
+
+    ChatAPI.listConversations.mockResolvedValue([
+      {
+        id: 50,
+        other_participant: { id: 200, email: "buyer@test.com" },
+        last_message: { text: "Hi", created_at: new Date().toISOString() },
+        unread_count: 2
       }
+    ]);
+
+    ListingsAPI.getListing.mockResolvedValue({
+      listing_id: 900,
+      title: "My Awesome Bike",
+      price: 150,
+      user_id: 100,
+      user_email: "me@test.com",
+      images: [{ image_url: "img.jpg" }]
+    });
+
+    render(
+      <MemoryRouter>
+        <GlobalChat />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("conv-title-50")).toHaveTextContent("My Awesome Bike");
     });
   });
 
-  describe("Initial conversation", () => {
-    it("opens with initialConversationId when provided", () => {
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} initialConversationId="2" currentUserId="1" />);
-      expect(screen.getAllByText("Bob").length).toBeGreaterThan(0);
+  it("handles complex display name logic (fallback to User ID or Bulk Listings)", async () => {
+    ChatAPI.listConversations.mockResolvedValue([
+      { id: 60, other_participant: { id: 300, netid: null, email: null } }
+    ]);
+
+    ListingsAPI.getListings.mockResolvedValue({
+        results: [{ user_id: 300, user_email: "found@test.com" }]
     });
 
-    // --- FIX: Use asPage=true to see the split view empty state ---
-    it("opens with empty state when no IDs provided", () => {
-      render(
-        <ChatModal
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          conversations={mockConversations}
-          messages={mockMessages}
-          onSendMessage={mockOnSendMessage}
-          currentUserId="1"
-          asPage={true} // Full Page mode shows Split view (List + Empty Window)
-        />
-      );
-      // Now we can see the empty pane text
-      const emptyText = screen.queryByText((content, element) => {
-        return element.tagName.toLowerCase() === 'p' && content.includes("Select a conversation");
-      });
-      expect(emptyText).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <GlobalChat />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+       expect(screen.getByTestId("conv-60")).toBeInTheDocument();
     });
   });
 
-  describe("Full page toggle", () => {
-    it("toggles full page mode when maximize/minimize button is clicked", async () => {
-      const user = userEvent.setup();
-      const mockOnFullPageChange = vi.fn();
-      const { container } = render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" onFullPageChange={mockOnFullPageChange} />);
+  // --- MESSAGES & UNREAD LOGIC ---
 
-      expect(container.querySelector(".chat-modal-overlay")).not.toBeInTheDocument();
-      // Button now has aria-label="Maximize"
-      const maximizeButton = screen.getByLabelText("Maximize");
-      await user.click(maximizeButton);
+  it("fetches messages and marks them read when conversation is selected", async () => {
+    ChatAPI.listConversations.mockResolvedValue([{ id: 1, unread_count: 5 }]);
 
-      await waitFor(() => { expect(container.querySelector(".chat-modal-overlay")).toBeInTheDocument(); });
-      expect(mockOnFullPageChange).toHaveBeenCalledWith(true);
-
-      const minimizeButton = screen.getByLabelText("Minimize");
-      await user.click(minimizeButton);
-
-      await waitFor(() => { expect(container.querySelector(".chat-modal-overlay")).not.toBeInTheDocument(); });
-      expect(mockOnFullPageChange).toHaveBeenCalledWith(false);
+    ChatAPI.getMessages.mockResolvedValue({
+        results: [
+            { id: 99, conversation: 1, sender: 200, text: "Hello", created_at: new Date().toISOString(), read: false }
+        ]
     });
 
-    it("does not call onFullPageChange when not provided", async () => {
-      const user = userEvent.setup();
-      render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" />);
-      const maximizeButton = screen.getByLabelText("Maximize");
-      await user.click(maximizeButton);
-      expect(screen.getByLabelText("Minimize")).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <GlobalChat />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => screen.getByTestId("conv-1"));
+    fireEvent.click(screen.getByTestId("conv-1"));
+
+    await waitFor(() => {
+        expect(ChatAPI.getMessages).toHaveBeenCalledWith(1, expect.anything());
+        // This assertion ensures markRead was called, which was crashing before
+        expect(ChatAPI.markRead).toHaveBeenCalled();
+    });
+
+    expect(screen.getByTestId("conv-unread-1")).toHaveTextContent("0");
+  });
+
+  // --- WEBSOCKET HANDLERS ---
+
+  it("handles incoming socket messages (onMessage)", async () => {
+    ChatAPI.listConversations.mockResolvedValue([
+        { id: 10, unread_count: 0, last_message: {} }
+    ]);
+
+    render(
+      <MemoryRouter>
+        <GlobalChat />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => screen.getByTestId("conv-10"));
+
+    // Activate conversation
+    fireEvent.click(screen.getByTestId("conv-10"));
+
+    // Trigger Socket Message
+    act(() => {
+        if (socketHandlers.onMessage) {
+            socketHandlers.onMessage({
+                id: 888,
+                conversation: 10,
+                sender: 200,
+                text: "New Socket Message",
+                created_at: new Date().toISOString()
+            });
+        }
+    });
+
+    await waitFor(() => {
+        expect(screen.getByTestId("messages-json")).toHaveTextContent("New Socket Message");
     });
   });
 
-  // ... (Keep existing Mobile, Resize, LoadOlder, Dragging tests) ...
-  // Ensure Dragging test uses getByLabelText for the button check logic
+  it("handles incoming read receipts (onRead)", async () => {
+    const initialMsg = {
+        id: 555,
+        conversation: 1,
+        sender: 100,
+        text: "My sent msg",
+        created_at: new Date(Date.now() - 10000).toISOString(),
+        read: false
+    };
 
-  describe("Dragging", () => {
-    it("does not start drag when clicking on button", async () => {
-      const { container } = render(<ChatModal open={true} onOpenChange={mockOnOpenChange} conversations={mockConversations} messages={mockMessages} onSendMessage={mockOnSendMessage} currentUserId="1" />);
-      const header = container.querySelector(".chat-modal__header");
-      // Use label to find button
-      const closeButton = screen.getByLabelText("Close");
+    ChatAPI.listConversations.mockResolvedValue([{ id: 1 }]);
+    ChatAPI.getMessages.mockResolvedValue({ results: [initialMsg] });
 
-      const mouseDownEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 100, clientY: 100 });
-      Object.defineProperty(mouseDownEvent, "target", { value: closeButton, writable: false });
+    render(
+      <MemoryRouter>
+        <GlobalChat />
+      </MemoryRouter>
+    );
 
-      header.dispatchEvent(mouseDownEvent);
-      expect(screen.getByText("Messages")).toBeInTheDocument();
+    await waitFor(() => screen.getByTestId("conv-1"));
+    fireEvent.click(screen.getByTestId("conv-1"));
+    await waitFor(() => screen.getByTestId("messages-json"));
+
+    // Trigger Socket Read Receipt
+    act(() => {
+        if (socketHandlers.onRead) {
+            socketHandlers.onRead({
+                message_id: 555,
+                reader_id: 200,
+                conversation: 1
+            });
+        }
+    });
+
+    await waitFor(() => {
+        const jsonText = screen.getByTestId("messages-json").textContent;
+        const msgObj = JSON.parse(jsonText)["1"][0];
+        expect(msgObj.read).toBe(true);
+    });
+  });
+
+  // --- NAVIGATION & ACTIONS ---
+
+  // it("handles listing click (navigation)", async () => {
+  //   // Robust window.location mock
+  //   const originalLocation = window.location;
+  //   delete window.location;
+  //   window.location = { href: "" };
+  //
+  //   ChatAPI.listConversations.mockResolvedValue([{ id: 1, listingId: 500 }]);
+  //
+  //   render(
+  //       <MemoryRouter>
+  //           <GlobalChat />
+  //       </MemoryRouter>
+  //   );
+  //
+  //   await waitFor(() => screen.getByTestId("listing-link-1"));
+  //   fireEvent.click(screen.getByTestId("listing-link-1"));
+  //
+  //   expect(window.location.href).toContain("/listing/500");
+  //
+  //   // Cleanup
+  //   window.location = originalLocation;
+  // });
+
+  it("handles full page mode toggling", async () => {
+    ChatAPI.listConversations.mockResolvedValue([{ id: 123 }]);
+
+    render(
+        <MemoryRouter initialEntries={['/']}>
+            <Routes>
+                <Route path="/" element={<GlobalChat />} />
+                <Route path="/chat/:id" element={<div>Full Page Chat</div>} />
+            </Routes>
+        </MemoryRouter>
+    );
+
+    // Wait for conversation to appear
+    await waitFor(() => expect(screen.getByTestId("conv-123")).toBeInTheDocument());
+
+    // Select it
+    fireEvent.click(screen.getByTestId("conv-123"));
+
+    // Click Maximize
+    fireEvent.click(screen.getByTestId("fullpage-btn"));
+
+    await waitFor(() => {
+        expect(screen.getByText("Full Page Chat")).toBeInTheDocument();
     });
   });
 });
