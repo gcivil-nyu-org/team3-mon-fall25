@@ -10,7 +10,6 @@ export default function ChatWindow({
   messages = [],
   currentUserId,
   onSendMessage,
-  onListingClick,
   onBack,
   showBackButton = false,
   nextBefore = null,
