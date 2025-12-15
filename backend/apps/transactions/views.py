@@ -53,7 +53,11 @@ class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """Filter transactions to only show those where user is buyer or seller"""
         user = self.request.user
-        return Transaction.objects.filter(Q(buyer=user) | Q(seller=user))
+        return (
+            Transaction.objects.filter(Q(buyer=user) | Q(seller=user))
+            .select_related("listing")
+            .prefetch_related("listing__images")
+        )
 
     @action(
         detail=False,

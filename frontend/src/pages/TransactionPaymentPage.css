@@ -748,3 +748,57 @@
     opacity: 0.6;
     cursor: default;
 }
+
+/* --- Cancel card & button --- */
+.cancel-card {
+    position: relative;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.cancel-card::before {
+    content: none;
+}
+
+.cancel-btn {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border-radius: 0.65rem;
+    border: 1px solid #ef4444;
+    background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+    color: #b91c1c;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    box-shadow: 0 10px 18px rgba(185, 28, 28, 0.18);
+    transform: translateY(-1px);
+}
+
+.cancel-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 6px 10px rgba(185, 28, 28, 0.14);
+}
+
+.cancel-btn:disabled {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.cancel-btn .spinner {
+    border-color: rgba(185, 28, 28, 0.18);
+    border-top-color: #b91c1c;
+}

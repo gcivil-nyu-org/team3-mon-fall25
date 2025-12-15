@@ -3,10 +3,6 @@ import "./ConversationItem.css";
 
 /**
  * ConversationItem - Single conversation preview in the conversation list
- * @param {Object} props
- * @param {Object} props.conversation - Conversation object
- * @param {boolean} [props.isActive=false] - Whether this conversation is currently active
- * @param {Function} props.onClick - Callback when conversation is clicked
  */
 export default function ConversationItem({ conversation, isActive = false, onClick }) {
   if (!conversation) return null;
@@ -34,18 +30,13 @@ export default function ConversationItem({ conversation, isActive = false, onCli
   const lastMessageText = lastMessage?.text || lastMessage?.content || "Start the conversation…";
   const lastMessageTime = lastMessage?.created_at || lastMessage?.timestamp || conversation.last_message_at;
 
-  // Handle deleted users (sender will be null)
-  // Only check if sender is not null (null means deleted user)
   const senderId = lastMessage?.sender ?? lastMessage?.senderId;
   const isSentByMe = senderId !== null && senderId !== undefined &&
                      (senderId === conversation.currentUserId ||
                       String(senderId) === String(conversation.currentUserId));
 
-  // Get listing image - handle various formats
-  const listingImage = conversation.listingImage || 
-                       conversation.listing?.primary_image?.url ||
-                       conversation.listing?.images?.[0]?.image_url ||
-                       conversation.listing?.images?.[0]?.url;
+  // --- LOGIC: Get User Initial (Sender) ---
+  const userInitial = conversation.otherUser?.name?.charAt(0)?.toUpperCase() || "?";
 
   return (
     <button
@@ -55,15 +46,11 @@ export default function ConversationItem({ conversation, isActive = false, onCli
       }`}
     >
       <div className="conversation-item__content">
-        {/* Listing Thumbnail */}
+        {/* --- UI CHANGE: Always show User Initial (No Listing Image) --- */}
         <div className="conversation-item__thumbnail">
-          {listingImage ? (
-            <img src={listingImage} alt={conversation.listingTitle || "Listing"} />
-          ) : (
-            <div className="conversation-item__thumbnail-placeholder">
-              {conversation.listingTitle?.charAt(0)?.toUpperCase() || "?"}
-            </div>
-          )}
+          <div className="conversation-item__thumbnail-placeholder">
+            {userInitial}
+          </div>
         </div>
 
         {/* Conversation Info */}
@@ -116,4 +103,3 @@ export default function ConversationItem({ conversation, isActive = false, onCli
     </button>
   );
 }
-
