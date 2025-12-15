@@ -40,7 +40,7 @@ This project leverages a modern, scalable architecture deployed on AWS.
 |----------|------------|
 | **Frontend** | React 19.2, Vite, Bootstrap 5.3 |
 | **Backend** | Django 5.2.7, Django REST Framework (DRF) |
-| **Database** | PostgreSQL (Production) / MySQL (Local) |
+| **Database** | MySQL (Production) / SQLite (Local) |
 | **Linting** | Black, Flake8 (Python) / ESLint (JavaScript) |
 | **Test Suite** | Pytest, Pytest-Django (Backend) / Vitest, React Testing Library (Frontend) |
 | **DevOps/Cloud** | AWS Elastic Beanstalk, Travis CI, Coveralls |
